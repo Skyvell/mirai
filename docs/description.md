@@ -1,0 +1,1 @@
+I'm building a biohacker/Health data/precision medicine app for individuals interested in optimizing their own health. The app will start of simple with just blood biomarkers. Later I will add support for wearables and omics data. Users will be able to upload their lab results and track biomarkers over time.
