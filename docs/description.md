@@ -20,11 +20,13 @@ While the first version will focus on personal health tracking and biohacking, t
 * Personalized insights based on each individual’s biological profile
 * Regulatory readiness for future healthcare and medical use cases
 
-The product direction can be summarized as:
+The product direction is built around a continuous loop:
 
 ```text
-Measure → interpret → intervene → evaluate → personalize
+Measure → Interpret → Plan → Intervene → Evaluate → Adjust → Repeat
 ```
+
+The goal is to use the individual’s own data to create a personalized plan, apply an intervention, evaluate whether it worked, and then adjust the plan based on the person’s actual response.
 
 ## Future Platform Capabilities
 
