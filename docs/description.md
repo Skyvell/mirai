@@ -8,31 +8,15 @@ The MVP will focus on blood biomarker tracking. Users will be able to upload lab
 
 The goal is to help users move beyond isolated lab reports and understand how their biology changes across lifestyle, time, and interventions.
 
-## Long-Term Vision
+## Personalization Loop
 
-The product should be designed from the beginning so it can evolve into a precision medicine platform in the future.
-
-While the first version will focus on personal health tracking and biohacking, the long-term architecture should support:
-
-* Clinical-grade use cases
-* Multi-omics data integration
-* Machine learning models
-* Personalized insights based on each individual’s biological profile
-* Regulatory readiness for future healthcare and medical use cases
-
-The product direction is built around a continuous loop:
+The product direction is built around a continuous personalization loop:
 
 ```text
-Measure → Interpret → Plan → Intervene → Evaluate → Adjust → Repeat
+Measure → Interpret → Personalize Plan → Intervene → Evaluate Response → Adjust → Repeat
 ```
 
 The goal is to use the individual’s own data to create a personalized plan, apply an intervention, evaluate whether it worked, and then adjust the plan based on the person’s actual response.
-
-## Future Platform Capabilities
-
-In the future, the platform could also support access to lab testing directly through the app. This may include biomarker testing, hormone panels, metabolic and inflammatory markers, and eventually omics-based tests such as genomics, epigenomics, proteomics, metabolomics, and microbiome analysis.
-
-This would allow the platform to move beyond passive data tracking and become a more complete personal health and precision medicine ecosystem, where users can test, track, interpret, intervene, and evaluate results over time.
 
 ## Data and Functionality
 
@@ -59,7 +43,7 @@ The app will organize health data and functionality into the following areas:
 * Immune markers
 * Aging/longevity markers
 
-### Signals
+### Physiology
 
 * Sleep
 * HRV
@@ -81,7 +65,7 @@ The app will organize health data and functionality into the following areas:
 * Metabolomics
 * Microbiome
 
-### Phenotype
+### Body
 
 * Weight
 * Body fat
@@ -89,11 +73,17 @@ The app will organize health data and functionality into the following areas:
 * Blood pressure
 * VO2 max
 * Grip strength
+
+### Symptoms & Wellbeing
+
 * Symptoms
 * Mood
 * Energy
 * Libido
 * Cognitive performance
+
+### Medical History
+
 * Diagnoses
 * Family history
 
@@ -124,7 +114,7 @@ The app will organize health data and functionality into the following areas:
 * Adherence
 * Notes
 * Side effects
-* Target biomarkers/signals
+* Target biomarkers/physiology
 * Before/during/after comparison
 
 ### Models
@@ -155,6 +145,24 @@ The app will organize health data and functionality into the following areas:
 * Intervention evaluation reports
 * Doctor/export reports
 
+## Future Platform Capabilities
+
+In the future, the platform could support access to lab testing directly through the app. This may include biomarker testing, hormone panels, metabolic and inflammatory markers, and eventually omics-based tests such as genomics, epigenomics, proteomics, metabolomics, and microbiome analysis.
+
+This would allow the platform to move beyond passive data tracking and become a more complete personal health and precision medicine ecosystem, where users can test, track, interpret, intervene, and evaluate results over time.
+
+## Long-Term Vision
+
+The product should be designed from the beginning so it can evolve into a precision medicine platform in the future.
+
+While the first version will focus on personal health tracking and biohacking, the long-term architecture should support:
+
+* Clinical-grade use cases
+* Multi-omics data integration
+* Machine learning models
+* Personalized insights based on each individual’s biological profile
+* Regulatory readiness for future healthcare and medical use cases
+
 ## Regulatory and Healthcare Readiness
 
 The platform should be architected with future healthcare and regulatory requirements in mind, even if the MVP is not positioned as a medical device or diagnostic product.
@@ -177,6 +185,6 @@ The product should avoid making diagnostic or treatment claims in the early stag
 
 ## Architecture Direction
 
-The system should be future-proofed so biomarkers, physiological signals, phenotype data, lifestyle context, interventions, lab testing, and omics data can eventually be combined, modeled, validated, and translated into personalized health insights.
+The system should be future-proofed so biomarkers, physiology, phenotype data, lifestyle context, interventions, lab testing, and omics data can eventually be combined, modeled, validated, and translated into personalized health insights.
 
 The architecture should also allow the product to evolve from a personal biohacking and health tracking app into a regulated precision medicine platform if future clinical validation, partnerships, and regulatory approvals support that direction.
