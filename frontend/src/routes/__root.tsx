@@ -10,12 +10,33 @@ const navLinkClass =
 function RootComponent() {
   return (
     <div className="min-h-svh bg-background text-foreground">
-      <nav className="flex gap-4 border-b px-6 py-4 text-sm font-medium">
+      <nav className="flex flex-wrap gap-4 border-b px-6 py-4 text-sm font-medium">
         <Link to="/" activeOptions={{ exact: true }} className={navLinkClass}>
-          Home
+          Overview
         </Link>
-        <Link to="/about" className={navLinkClass}>
-          About
+        <Link to="/biomarkers" className={navLinkClass}>
+          Biomarkers
+        </Link>
+        <Link to="/physiology" className={navLinkClass}>
+          Physiology
+        </Link>
+        <Link to="/omics" className={navLinkClass}>
+          Omics
+        </Link>
+        <Link to="/body" className={navLinkClass}>
+          Body
+        </Link>
+        <Link to="/lifestyle" className={navLinkClass}>
+          Lifestyle
+        </Link>
+        <Link to="/insights" className={navLinkClass}>
+          Insights
+        </Link>
+        <Link to="/interventions" className={navLinkClass}>
+          Interventions
+        </Link>
+        <Link to="/reports" className={navLinkClass}>
+          Reports
         </Link>
       </nav>
       <main className="p-6">
