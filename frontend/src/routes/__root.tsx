@@ -23,20 +23,11 @@ function RootComponent() {
         <Link to="/omics" className={navLinkClass}>
           Omics
         </Link>
-        <Link to="/body" className={navLinkClass}>
-          Body
-        </Link>
-        <Link to="/lifestyle" className={navLinkClass}>
-          Lifestyle
-        </Link>
         <Link to="/insights" className={navLinkClass}>
           Insights
         </Link>
         <Link to="/interventions" className={navLinkClass}>
           Interventions
-        </Link>
-        <Link to="/reports" className={navLinkClass}>
-          Reports
         </Link>
       </nav>
       <main className="p-6">

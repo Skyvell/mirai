@@ -9,21 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PhysiologyRouteImport } from './routes/physiology'
 import { Route as OmicsRouteImport } from './routes/omics'
-import { Route as LifestyleRouteImport } from './routes/lifestyle'
 import { Route as InterventionsRouteImport } from './routes/interventions'
 import { Route as InsightsRouteImport } from './routes/insights'
-import { Route as BodyRouteImport } from './routes/body'
 import { Route as BiomarkersRouteImport } from './routes/biomarkers'
 import { Route as IndexRouteImport } from './routes/index'
 
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PhysiologyRoute = PhysiologyRouteImport.update({
   id: '/physiology',
   path: '/physiology',
@@ -34,11 +26,6 @@ const OmicsRoute = OmicsRouteImport.update({
   path: '/omics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LifestyleRoute = LifestyleRouteImport.update({
-  id: '/lifestyle',
-  path: '/lifestyle',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const InterventionsRoute = InterventionsRouteImport.update({
   id: '/interventions',
   path: '/interventions',
@@ -47,11 +34,6 @@ const InterventionsRoute = InterventionsRouteImport.update({
 const InsightsRoute = InsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BodyRoute = BodyRouteImport.update({
-  id: '/body',
-  path: '/body',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BiomarkersRoute = BiomarkersRouteImport.update({
@@ -68,94 +50,66 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/biomarkers': typeof BiomarkersRoute
-  '/body': typeof BodyRoute
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
-  '/lifestyle': typeof LifestyleRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/biomarkers': typeof BiomarkersRoute
-  '/body': typeof BodyRoute
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
-  '/lifestyle': typeof LifestyleRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/reports': typeof ReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/biomarkers': typeof BiomarkersRoute
-  '/body': typeof BodyRoute
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
-  '/lifestyle': typeof LifestyleRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/reports': typeof ReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/biomarkers'
-    | '/body'
     | '/insights'
     | '/interventions'
-    | '/lifestyle'
     | '/omics'
     | '/physiology'
-    | '/reports'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/biomarkers'
-    | '/body'
     | '/insights'
     | '/interventions'
-    | '/lifestyle'
     | '/omics'
     | '/physiology'
-    | '/reports'
   id:
     | '__root__'
     | '/'
     | '/biomarkers'
-    | '/body'
     | '/insights'
     | '/interventions'
-    | '/lifestyle'
     | '/omics'
     | '/physiology'
-    | '/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BiomarkersRoute: typeof BiomarkersRoute
-  BodyRoute: typeof BodyRoute
   InsightsRoute: typeof InsightsRoute
   InterventionsRoute: typeof InterventionsRoute
-  LifestyleRoute: typeof LifestyleRoute
   OmicsRoute: typeof OmicsRoute
   PhysiologyRoute: typeof PhysiologyRoute
-  ReportsRoute: typeof ReportsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/physiology': {
       id: '/physiology'
       path: '/physiology'
@@ -170,13 +124,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OmicsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lifestyle': {
-      id: '/lifestyle'
-      path: '/lifestyle'
-      fullPath: '/lifestyle'
-      preLoaderRoute: typeof LifestyleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/interventions': {
       id: '/interventions'
       path: '/interventions'
@@ -189,13 +136,6 @@ declare module '@tanstack/react-router' {
       path: '/insights'
       fullPath: '/insights'
       preLoaderRoute: typeof InsightsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/body': {
-      id: '/body'
-      path: '/body'
-      fullPath: '/body'
-      preLoaderRoute: typeof BodyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/biomarkers': {
@@ -218,13 +158,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BiomarkersRoute: BiomarkersRoute,
-  BodyRoute: BodyRoute,
   InsightsRoute: InsightsRoute,
   InterventionsRoute: InterventionsRoute,
-  LifestyleRoute: LifestyleRoute,
   OmicsRoute: OmicsRoute,
   PhysiologyRoute: PhysiologyRoute,
-  ReportsRoute: ReportsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
