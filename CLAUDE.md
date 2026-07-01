@@ -1,34 +1,48 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repository.
 
-## What this is
+## Product
 
-**Mirai** — a direct-to-consumer precision-health app for individuals optimizing their own health. MVP scope is **blood biomarkers only**; wearables and omics come later. D2C, not HIPAA-regulated yet (see `docs/`).
+**Mirai** — a direct-to-consumer precision-health app: individuals understand, track, and optimize their own biology from their own data. The loop is Measure → Interpret → Personalize → Intervene → Evaluate → Adjust.
+
+**MVP scope is blood biomarkers only** (users upload lab PDFs; biomarkers tracked over time). Physiology (Oura/wearables), omics, interventions, and AI recommendations are product vision, not MVP. Not positioned as a medical device.
+
+## Source of truth
+
+`docs/` holds the decisions; code follows it, not the reverse.
+
+- `docs/description.md` — product, personalization loop, full data model, long-term vision.
+- `docs/stack.md` — frontend + backend stack, every choice tagged `[MVP]` (needed to ship) or `[LATER]` (add when a stated trigger hits). Consult before adding a dependency; respect the tags.
 
 ## Repo layout
 
-- `docs/` — **stack decisions** (the source of truth for tech choices): `description.md` (product), `stack.md` (frontend + backend stack, tagged `[MVP]`/`[LATER]`).
-- `frontend/` — the web app (built). Everything below lives here.
-- Backend — **not built yet.** Planned: FastAPI + Pydantic v2, SQLAlchemy 2.0 async, on Cloud Run, with Cloud SQL for Postgres and Clerk auth.
+- `frontend/` — the web app. Built. Everything below concerns it.
+- Backend — **not built.** Planned per `stack.md`: FastAPI on Cloud Run, Cloud SQL for Postgres (operational data), Cloud Storage for uploaded lab files, Clerk auth (Clerk `user_id` linked to own user table; no health data in Clerk). `[LATER]`: DuckLake lakehouse + SQLMesh once omics/wearable scale demands it.
 
 ## Frontend
 
-Run all commands from `frontend/` (package manager is **pnpm**):
+Run from `frontend/` (package manager **pnpm**):
 
 ```bash
-pnpm dev      # Vite dev server (http://localhost:5173); also regenerates the route tree
+pnpm dev      # Vite dev server (http://localhost:5173); regenerates the route tree
 pnpm build    # tsc -b (typecheck) then vite build
 pnpm lint     # oxlint
 ```
 
-Stack: Vite 8 + React 19 + TS, TanStack Router, Tailwind v4, shadcn/ui.
+Stack: Vite 8 + React 19 + TypeScript, TanStack Router, Tailwind v4, shadcn/ui (Radix + lucide-react, Geist font).
 
-**Routing — TanStack Router, file-based.** Add a file under `src/routes/` and the filename becomes the URL (`index.tsx`→`/`, `about.tsx`→`/about`). The Vite plugin regenerates `src/routeTree.gen.ts` on dev/build — **never edit it by hand.** `src/routes/__root.tsx` is the shared layout (nav + `<Outlet/>`). `src/main.tsx` builds the router and mounts it.
+**Current state.** Six routes scaffolded as placeholder pages: `/` (Overview), `/biomarkers`, `/physiology`, `/omics`, `/insights`, `/interventions`. Nav lives in `__root.tsx`. Routes cover the full product vision; only biomarkers is in MVP scope.
 
-**Styling — Tailwind v4 + shadcn tokens.** `src/index.css` holds `@import "tailwindcss"` plus the design tokens. The real colors live in `:root` / `.dark` as `--background`, `--primary`, etc.; the `@theme inline` block maps them to Tailwind's color namespace so `bg-background`/`text-primary` work and dark-mode overrides resolve live. **To re-theme the whole app, edit the `:root`/`.dark` values — not the `@theme` mapping.**
+**Routing — TanStack Router, file-based.** A file under `src/routes/` becomes a URL (`index.tsx`→`/`, `about.tsx`→`/about`). The Vite plugin regenerates `src/routeTree.gen.ts` on dev/build — **never edit it by hand.** `src/routes/__root.tsx` is the shared layout (nav + `<Outlet/>`); `src/main.tsx` builds and mounts the router.
 
-**shadcn/ui.** Components land in `src/components/ui/` (`pnpm dlx shadcn@latest add <name>`). `cn()` in `src/lib/utils.ts` merges class strings. The `@/*` import alias → `src/*` is configured in both `vite.config.ts` and the tsconfigs (the duplication is intentional: bundler vs. typechecker/shadcn CLI).
+**Styling — Tailwind v4 + shadcn tokens.** `src/index.css` holds `@import "tailwindcss"` plus tokens. Real colors live in `:root` / `.dark` (`--background`, `--primary`, …); the `@theme inline` block maps them to Tailwind's color namespace so `bg-background`/`text-primary` work and dark-mode overrides resolve live. **Re-theme by editing `:root`/`.dark` values, not the `@theme` mapping.**
+
+**shadcn/ui.** Components land in `src/components/ui/` via `pnpm dlx shadcn@latest add <name>`. `cn()` in `src/lib/utils.ts` merges class strings. The `@/*` → `src/*` alias is declared in both `vite.config.ts` and the tsconfigs (duplication is intentional: bundler vs. typechecker/shadcn CLI).
+
+## Deferred until the backend exists
+
+Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the FastAPI OpenAPI schema. Not yet wired.
 
 ## Commits
 
@@ -37,7 +51,3 @@ Stack: Vite 8 + React 19 + TS, TanStack Router, Tailwind v4, shadcn/ui.
 
 ## Writing
 Concise without losing vital context. Scientific report style writing. Zero fluff tolerated.
-
-## Not yet wired (deliberately deferred until the backend exists)
-
-Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the FastAPI OpenAPI schema.
