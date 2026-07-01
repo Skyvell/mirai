@@ -10,22 +10,22 @@ Measure → Interpret → Personalize Plan → Intervene → Evaluate Response �
 
 The goal is to use the individual’s own data to create a personalized plan, apply an intervention, evaluate whether it worked, and then adjust the plan based on the person’s actual response.
 
-## Data and functionality
+## Data and Functionality
 
 ### Biomarkers
-Users will be able to upload PDF with blood test date. Biomarkers will be tracked over time.
+Users will be able to upload a PDF with blood test data. Biomarkers will be tracked over time.
 
 ### Physiology
-Users will be able to connect their oura ring and their wearable health data will be synced automatically.
+Users will be able to connect their Oura ring, and their wearable health data will be synced automatically.
 
 ### Omics
-Users will be able to upload any omics data such as genomics, transcriptomics, epigenomics, proteoomics, metabolomics and microbiome.
+Users will be able to upload any omics data such as genomics, transcriptomics, epigenomics, proteomics, metabolomics, and microbiome.
 
 ### Interventions
-Users should be able to create "interventions" (some action to take over time), and be able to follow on a timeline how the data changes.
+Users should be able to create "interventions" (some action to take over time), and track how the data changes on a timeline.
 
 ### AI recommendations
-Ai should give personalized recommendations based on the users data.
+AI should give personalized recommendations based on the user’s data.
 
 ## Long-Term Vision
 The product should be designed from the beginning so it can evolve into a precision medicine platform in the future. Lab tests may be integrated into the app in the future.
