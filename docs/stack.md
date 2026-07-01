@@ -22,7 +22,7 @@ FastAPI on Cloud Run.
 Cloud SQL for Postgres. Contains operational data for the app.
 
 ### Storage — [MVP]
-Cloud Storage (GCS). Holds user-uploaded lab files (blood-test PDFs); the parsed biomarkers land in Cloud SQL.
+Cloud Storage (GCS). Holds user-uploaded lab files. Parsed biomarkers land in Cloud SQL.
 
 ### Lakehouse — [LATER]
 DuckLake. Metadata in Cloud SQL and file storage in GCS. Add when omics or dense wearable data create analytical scale. Will contain all biological data in the future. Even biomarkers. Medallion architecture.

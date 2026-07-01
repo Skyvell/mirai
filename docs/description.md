@@ -1,34 +1,31 @@
 # Personal Health Intelligence Platform
-A personal health intelligence platform for individuals who want to understand, track, and optimize their own biology.
+For individuals to understand, track, and optimize their own biology from their own data.
 
 ## Personalization Loop
-The product direction is built around a continuous personalization loop:
-
 ```text
 Measure → Interpret → Personalize Plan → Intervene → Evaluate Response → Adjust → Repeat
 ```
-
-The goal is to use the individual’s own data to create a personalized plan, apply an intervention, evaluate whether it worked, and then adjust the plan based on the person’s actual response.
+Each plan is built from the individual's data; interventions are evaluated against actual response, then the plan is adjusted.
 
 ## Data and Functionality
 
 ### Biomarkers
-Users will be able to upload a PDF with blood test data. Biomarkers will be tracked over time.
+Users upload blood-test PDFs; biomarkers are tracked over time.
 
 ### Physiology
-Users will be able to connect their Oura ring, and their wearable health data will be synced automatically.
+Users connect an Oura ring; wearable data syncs automatically.
 
 ### Omics
-Users will be able to upload any omics data such as genomics, transcriptomics, epigenomics, proteomics, metabolomics, and microbiome.
+Users upload omics data: genomics, transcriptomics, epigenomics, proteomics, metabolomics, microbiome.
 
 ### Interventions
-Users should be able to create "interventions" (some action to take over time), and track how the data changes on a timeline.
+Users create interventions (actions taken over time) and track how the data changes on a timeline.
 
 ### AI recommendations
-AI should give personalized recommendations based on the user’s data.
+Personalized recommendations derived from the user's data.
 
 ## Long-Term Vision
-The product should be designed from the beginning so it can evolve into a precision medicine platform in the future. Lab tests may be integrated into the app in the future.
+Architected from the start to evolve into a precision-medicine platform; lab-test integration may come later.
 
 ## Regulatory and Healthcare Readiness
-The platform should be architected with future healthcare and regulatory requirements in mind, even if the MVP is not positioned as a medical device or diagnostic product.
+Designed for future healthcare and regulatory requirements, though the MVP is not positioned as a medical device or diagnostic.
