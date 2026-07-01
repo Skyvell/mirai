@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repo layout
 
-- `docs/` — **stack decisions** (the source of truth for tech choices): `description.md` (product), `backend.md` (API/data/auth), `frontend.md`.
+- `docs/` — **stack decisions** (the source of truth for tech choices): `description.md` (product), `stack.md` (frontend + backend stack, tagged `[MVP]`/`[LATER]`).
 - `frontend/` — the web app (built). Everything below lives here.
-- Backend — **not built yet.** Planned: FastAPI + Pydantic v2, SQLAlchemy 2.0 async, on Cloud Run, with Neon Postgres and Clerk auth.
+- Backend — **not built yet.** Planned: FastAPI + Pydantic v2, SQLAlchemy 2.0 async, on Cloud Run, with Cloud SQL for Postgres and Clerk auth.
 
 ## Frontend
 
@@ -34,6 +34,9 @@ Stack: Vite 8 + React 19 + TS, TanStack Router, Tailwind v4, shadcn/ui.
 
 - Short and concise.
 - No mention of Claude / AI authorship (no `Co-Authored-By`, no generated-with footer).
+
+## Writing
+Concise without losing vital context. Scientific report style writing. Zero fluff tolerated.
 
 ## Not yet wired (deliberately deferred until the backend exists)
 
