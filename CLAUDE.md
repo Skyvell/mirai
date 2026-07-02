@@ -61,7 +61,9 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 
 ## Infrastructure
 
-`infra/opentofu/` — OpenTofu on GCP, layout mirrors the `xdata` reference (`live/ + modules/ + config/`; see `infra/opentofu/README.md`). Bootstrap is a stateless script (`scripts/bootstrap.sh`, run via `just bootstrap <project>`): state bucket (`tofu-state-<project>`) + Artifact Registry + API enablement. `live/` is the only stateful stack — composes `database` (Cloud SQL Postgres 17, IAM auth) + `api` (Cloud Run v2), state in GCS. Commands run through the repo-root `justfile` (`just tofu-plan/apply <env>`, `just build-push`). Cloud Run reaches Cloud SQL via the built-in connector (public IP, no VPC); private IP is an additive change later. The runtime SA lives in `live/main.tf` (bridges both modules — avoids a cycle).
+`infra/opentofu/` — OpenTofu on GCP, layout mirrors the `xdata` reference (`live/ + modules/ + config/`; see `infra/opentofu/README.md`). Bootstrap is two stateless scripts: `scripts/bootstrap_state.sh` (`just bootstrap-state <project>`) provisions state bucket (`tofu-state-<project>`) + Artifact Registry + API enablement; `scripts/bootstrap_ci.sh` (`just bootstrap-ci <project> <owner/repo>`) provisions the Workload Identity Federation pool + `ci-deployer` SA for GitHub Actions. `live/` is the only stateful stack — composes `database` (Cloud SQL Postgres 17, IAM auth) + `api` (Cloud Run v2), state in GCS. Commands run through the repo-root `justfile` (`just tofu-plan/apply <env>`). Cloud Run reaches Cloud SQL via the built-in connector (public IP, no VPC); private IP is an additive change later. The runtime SA lives in `live/main.tf` (bridges both modules — avoids a cycle).
+
+**CI/CD** — `.github/workflows/deploy.yml` runs on push to `main`: `_deploy-image.yml` (build + push `mirai-api:<sha>` to Artifact Registry) → `_deploy-infrastructure.yml` (`just tofu-apply dev` with the SHA image threaded via `-var`). Keyless GCP auth via WIF; GitHub Environment `dev` holds `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`, `GCP_REGION`.
 
 ## Deferred frontend wiring
 
