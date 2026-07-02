@@ -1,0 +1,3 @@
+# bucket = tofu-state-<project> (created by `just bootstrap`).
+bucket = "tofu-state-REPLACE_ME"
+prefix = "live"
