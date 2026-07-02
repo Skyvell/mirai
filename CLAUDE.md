@@ -17,8 +17,12 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 
 ## Repo layout
 
-- `frontend/` — the web app. Built. Everything below concerns it.
-- Backend — **not built.** Planned per `stack.md`: FastAPI on Cloud Run, Cloud SQL for Postgres (operational data), Cloud Storage for uploaded lab files, Clerk auth (Clerk `user_id` linked to own user table; no health data in Clerk). `[LATER]`: DuckLake lakehouse + SQLMesh once omics/wearable scale demands it.
+Polyglot monorepo — each concern is a top-level sibling owning its own toolchain (no shared root package manager). Kept in one repo because the frontend generates its API client from the backend's OpenAPI schema (an atomic contract) and infra deploys the backend image. **Split trigger:** extract `infra/` into its own repo only when someone else owns infrastructure, or health-data compliance requires prod infra/state/secrets under separate access.
+
+- `frontend/` — the web app (pnpm). Built.
+- `backend/` — FastAPI on Cloud Run (uv). **Scaffold only:** settings, Cloud SQL engine, Clerk JWT auth dep, health endpoints. No domain models yet.
+- `infra/` — GCP infrastructure (OpenTofu). Cloud SQL + Cloud Run for MVP.
+- Planned per `stack.md`: Cloud Storage for uploaded lab files, biomarker data model. `[LATER]`: DuckLake lakehouse + SQLMesh once omics/wearable scale demands it.
 
 ## Frontend
 
@@ -40,9 +44,28 @@ Stack: Vite 8 + React 19 + TypeScript, TanStack Router, Tailwind v4, shadcn/ui (
 
 **shadcn/ui.** Components land in `src/components/ui/` via `pnpm dlx shadcn@latest add <name>`. `cn()` in `src/lib/utils.ts` merges class strings. The `@/*` → `src/*` alias is declared in both `vite.config.ts` and the tsconfigs (duplication is intentional: bundler vs. typechecker/shadcn CLI).
 
-## Deferred until the backend exists
+## Backend
 
-Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the FastAPI OpenAPI schema. Not yet wired.
+Run from `backend/` (package manager **uv**):
+
+```bash
+uv sync                                   # resolve deps + venv
+uv run uvicorn mirai_api.main:app --reload
+```
+
+src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS), `core/` (`config` settings, `db` Cloud SQL engine, `security` Clerk JWT verify, `deps` FastAPI dependencies), `routers/` (`health` → `/healthz`, `/readyz`). Scaffold only — add domain models/routers per MVP scope.
+
+**Cloud SQL:** SQLAlchemy engine via the Cloud SQL Python Connector with **IAM DB auth** (no password) in `core/db.py`. Same code path for public-IP-now and private-IP-later.
+
+**Clerk:** JWTs verified against the public JWKS (`core/security.py`); no secret key needed for verification. `Dockerfile` builds with `uv sync --frozen`, runs non-root, serves on `$PORT`.
+
+## Infrastructure
+
+`infra/opentofu/` — OpenTofu on GCP, layout mirrors the `xdata` reference (`live/ + modules/ + config/`; see `infra/opentofu/README.md`). Bootstrap is a stateless script (`scripts/bootstrap.sh`, run via `just bootstrap <project>`): state bucket (`tofu-state-<project>`) + Artifact Registry + API enablement. `live/` is the only stateful stack — composes `database` (Cloud SQL Postgres 17, IAM auth) + `api` (Cloud Run v2), state in GCS. Commands run through the repo-root `justfile` (`just tofu-plan/apply <env>`, `just build-push`). Cloud Run reaches Cloud SQL via the built-in connector (public IP, no VPC); private IP is an additive change later. The runtime SA lives in `live/main.tf` (bridges both modules — avoids a cycle).
+
+## Deferred frontend wiring
+
+Not yet wired in `frontend/`: Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema (the backend now exposes one).
 
 ## Commits
 
