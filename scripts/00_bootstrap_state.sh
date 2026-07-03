@@ -8,16 +8,16 @@ project="${1:?project required}"
 region="${2:-europe-north1}"
 bucket="tofu-state-${project}"
 
-echo ">> Enabling state APIs (idempotent)..."
+export CLOUDSDK_CORE_PROJECT="$project"
+
+echo ">> Enabling APIs for storage and service management..."
 gcloud services enable \
     serviceusage.googleapis.com \
-    storage.googleapis.com \
-    --project "$project"
+    storage.googleapis.com
 
-echo ">> State bucket gs://$bucket ..."
-if ! gcloud storage buckets describe "gs://$bucket" --project "$project" >/dev/null 2>&1; then
+echo ">> Ensuring the tofu state bucket exists (gs://$bucket)..."
+if ! gcloud storage buckets describe "gs://$bucket" >/dev/null 2>&1; then
     gcloud storage buckets create "gs://$bucket" \
-        --project "$project" \
         --location "$region" \
         --uniform-bucket-level-access \
         --public-access-prevention
