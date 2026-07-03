@@ -7,6 +7,7 @@ resource "google_sql_database_instance" "main" {
 
   settings {
     tier              = var.tier
+    edition           = "ENTERPRISE" # db-f1-micro is shared-core, ENTERPRISE-only
     availability_type = "ZONAL"
     user_labels       = var.labels
 
