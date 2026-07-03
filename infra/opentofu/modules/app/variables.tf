@@ -1,3 +1,4 @@
+# Variables without defaults.
 variable "project_id" {
   type        = string
   description = "GCP project id to deploy into."
@@ -29,9 +30,7 @@ variable "db_deletion_protection" {
   description = "Block destroy of the Cloud SQL instance."
 }
 
-# Internal knobs — no env varies these, so they default here and are not
-# exposed at the root. Surface one at the root only when an env needs to vary it.
-
+# Variables with defaults.
 variable "instance_name" {
   type        = string
   description = "Cloud SQL instance name."
