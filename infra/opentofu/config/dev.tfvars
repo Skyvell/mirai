@@ -1,5 +1,5 @@
 # Fill project_id. The Cloud Run image is CI-owned, not set here.
-project_id = "REPLACE_ME"
+project_id = "mirai-dev-501218"
 region     = "europe-north1"
 
 db_tier                = "db-f1-micro"
