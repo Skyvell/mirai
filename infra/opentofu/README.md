@@ -21,17 +21,19 @@ built-in connector (public IP); Clerk JWTs verified in-app; CI is keyless via
 
 ## Setup (once per project)
 
+Bootstrap creates the foundation tofu can't manage itself — the state bucket and
+the keyless GitHub↔GCP trust. Both are idempotent; run once from the repo root:
+
 ```bash
-just bootstrap-state <PROJECT>                 # state bucket
-just bootstrap-trust <PROJECT> <owner/repo>    # WIF + ci-deployer SA
+just bootstrap-state <PROJECT>                 # OpenTofu state bucket
+just bootstrap-trust <PROJECT> <owner/repo>    # WIF pool + ci-deployer SA
 ```
 
-Fill `config/dev.gcs.tfbackend` (`bucket = tofu-state-<PROJECT>`) and
-`config/dev.tfvars` (`project_id`). Create a GitHub Environment `dev` with the
-four variables printed by `bootstrap-trust`
-(`GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`,
-`GCP_REGION`). Push to `main` → `.github/workflows/deploy.yml` applies infra then
-releases the app.
+Then fill `config/dev.gcs.tfbackend` (`bucket = tofu-state-<PROJECT>`) and
+`config/dev.tfvars` (`project_id`), and set the four `dev` GitHub Environment
+variables printed by `bootstrap-trust` (`GCP_WORKLOAD_IDENTITY_PROVIDER`,
+`GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`, `GCP_REGION`). Push to `main` →
+`deploy.yml` applies infra then releases the app.
 
 ## Local
 
