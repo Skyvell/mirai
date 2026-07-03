@@ -35,10 +35,6 @@ output "api_url" {
   value = module.app.api_url
 }
 
-output "api_service_account" {
-  value = module.app.api_service_account
-}
-
 output "database_connection_name" {
   value = module.app.database_connection_name
 }
