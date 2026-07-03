@@ -1,25 +1,11 @@
 #!/usr/bin/env bash
-# One-time per project: set up keyless auth for GitHub Actions deploys.
-# Creates a Workload Identity pool + OIDC provider trusting one GitHub repo, a
-# CI deployer service account, and the IAM grants tofu needs to manage the
-# stack. Idempotent — safe to re-run.
-#
-# Separate from bootstrap_state.sh on purpose: the state substrate is needed for
-# any deploy (including local), while CI trust is opt-in, needs the repo name,
-# and carries a broad IAM grant worth isolating.
-#
-# Usage: bootstrap_ci.sh <project> <github_repo> [region]
-#   github_repo: "owner/name" (e.g. Skyvell/mirai)
+# Keyless GitHub Actions -> GCP trust (WIF pool + provider + ci-deployer SA). Idempotent.
+# Create-if-absent only: config changes to the pool/provider/SA are not reapplied on re-run.
+# Usage: 01_bootstrap_github_trust.sh <project> <github_repo> [region]
 set -euo pipefail
 
-if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <project> <github_repo> [region]" >&2
-    echo "  github_repo: owner/name (e.g. Skyvell/mirai)" >&2
-    exit 1
-fi
-
-project="$1"
-github_repo="$2"
+project="${1:?project required}"
+github_repo="${2:?github_repo required}"
 region="${3:-europe-north1}"
 
 pool="github-pool"
@@ -30,23 +16,21 @@ bucket="tofu-state-${project}"
 
 project_number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
 
-# CI runs tofu, which creates the runtime SA and grants it project roles, builds
-# and pushes images, and manages Cloud Run + Cloud SQL. projectIamAdmin is broad
-# — acceptable for a single dev project; tighten to a custom role when prod lands.
+# Broad deployer so this script stays generic across projects/stacks. Tighten to
+# a custom, resource-scoped role for prod.
 ci_roles=(
-    roles/run.admin
-    roles/artifactregistry.writer
-    roles/cloudsql.admin
-    roles/iam.serviceAccountAdmin
-    roles/iam.serviceAccountUser
+    roles/editor
     roles/resourcemanager.projectIamAdmin
-    roles/serviceusage.serviceUsageConsumer
 )
 
-echo ">> Enabling APIs (idempotent)..."
+echo ">> Enabling trust/IAM APIs (idempotent)..."
 gcloud services enable \
+    serviceusage.googleapis.com \
+    cloudresourcemanager.googleapis.com \
+    iam.googleapis.com \
     iamcredentials.googleapis.com \
     sts.googleapis.com \
+    storage.googleapis.com \
     --project "$project"
 
 echo ">> Workload Identity pool $pool ..."
@@ -83,7 +67,7 @@ done
 
 echo ">> State bucket access (gs://$bucket) ..."
 gcloud storage buckets add-iam-policy-binding "gs://$bucket" \
-    --member "serviceAccount:${sa_email}" --role roles/storage.admin >/dev/null
+    --member "serviceAccount:${sa_email}" --role roles/storage.objectAdmin >/dev/null
 
 echo ">> Letting the repo impersonate $sa_name via WIF ..."
 principal="principalSet://iam.googleapis.com/projects/${project_number}/locations/global/workloadIdentityPools/${pool}/attribute.repository/${github_repo}"

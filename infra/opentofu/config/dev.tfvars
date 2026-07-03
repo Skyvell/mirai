@@ -1,7 +1,6 @@
-# Fill project_id and image (image = <bootstrap registry_url>/mirai-api:<tag>).
+# Fill project_id. The Cloud Run image is CI-owned, not set here.
 project_id = "REPLACE_ME"
 region     = "europe-north1"
-image      = "europe-north1-docker.pkg.dev/REPLACE_ME/mirai/mirai-api:latest"
 
 db_tier                = "db-f1-micro"
 db_deletion_protection = false # dev only; true in prod

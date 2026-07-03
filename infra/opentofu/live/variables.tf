@@ -9,9 +9,10 @@ variable "region" {
   default     = "europe-north1"
 }
 
-variable "image" {
+variable "initial_image" {
   type        = string
-  description = "Backend container image (Artifact Registry URL + tag). Updated by CI on each push."
+  description = "Placeholder image at Cloud Run creation; the live image is owned by CI (ignore_changes)."
+  default     = "us-docker.pkg.dev/cloudrun/container/hello"
 }
 
 variable "db_tier" {

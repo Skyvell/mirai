@@ -1,69 +1,53 @@
 # Infrastructure — OpenTofu (GCP)
 
-MVP infra for Mirai: **Cloud SQL (Postgres 17)** + **Cloud Run** (FastAPI). Two
-run-once scripts bootstrap the state bucket + Artifact Registry + APIs and the
-GitHub Actions trust; `just` wraps the OpenTofu commands. AWS→GCP translation of
-the `xdata` reference layout. See `../../docs/stack.md` for scope.
+MVP infra for Mirai: **Cloud SQL (Postgres 17)** + **Cloud Run** (FastAPI).
 
 ```
-live/        the deployable stack — database + api modules (only stateful tofu)
+live/        the deployable stack — APIs, registry, database + api modules
 modules/     database (Cloud SQL), api (Cloud Run + IAM)
 config/      dev.tfvars, dev.gcs.tfbackend
 ```
 
-Bootstrap is two stateless scripts (`../../scripts/bootstrap_state.sh`,
-`../../scripts/bootstrap_ci.sh`), not tofu stacks — create-once resources with
-nothing to track. Commands run via the repo-root `justfile`. Auth: **IAM DB auth**
-(no DB password); Cloud Run connects to Cloud SQL over the built-in connector
-(public IP, no VPC); Clerk JWTs are verified in-app. CI authenticates to GCP with
-**Workload Identity Federation** (keyless).
+**Two planes.** Bootstrap (bash, once) creates only the chicken-and-egg
+foundation — the state bucket and the GitHub↔GCP trust. OpenTofu owns everything
+declarative: APIs, Artifact Registry, Cloud SQL, IAM, and the
+Cloud Run **service shape**. GitHub Actions owns **releases**: build → push →
+`deploy-cloudrun` updates only the image. tofu creates Cloud Run with a
+placeholder image and `ignore_changes` on it, so the two never fight.
 
-Run from the repo root.
+Auth: **IAM DB auth** (no DB password); Cloud Run reaches Cloud SQL over the
+built-in connector (public IP); Clerk JWTs verified in-app; CI is keyless via
+**Workload Identity Federation**. Run from the repo root.
 
-## 1. Bootstrap (once per project)
+## Setup (once per project)
 
 ```bash
-just bootstrap-state <PROJECT>              # state bucket (tofu-state-<PROJECT>) + registry + APIs
-just bootstrap-ci <PROJECT> <owner/repo>    # WIF + ci-deployer SA for GitHub Actions
+just bootstrap-state <PROJECT>                 # state bucket
+just bootstrap-trust <PROJECT> <owner/repo>    # WIF + ci-deployer SA
 ```
 
-Then fill `config/dev.gcs.tfbackend` (`bucket = tofu-state-<PROJECT>`) and
-`config/dev.tfvars` (`project_id`, and `image` under the printed registry URL).
+Fill `config/dev.gcs.tfbackend` (`bucket = tofu-state-<PROJECT>`) and
+`config/dev.tfvars` (`project_id`). Create a GitHub Environment `dev` with the
+four variables printed by `bootstrap-trust`
+(`GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`,
+`GCP_REGION`). Push to `main` → `.github/workflows/deploy.yml` applies infra then
+releases the app.
 
-For CI, create a GitHub Environment `dev` and set the variables printed by
-`bootstrap-ci`: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`,
-`GCP_PROJECT_ID`, `GCP_REGION`. Push to `main` then runs `.github/workflows/deploy.yml`
-(build+push image → `tofu apply`); steps 2–3 below are the manual equivalent.
-
-## 2. Build & push the API image (normally CI does this)
-
-CI builds and pushes on every push to `main`; run this by hand only to debug the
-image or seed one before CI is wired.
+## Local
 
 ```bash
-gcloud auth configure-docker <REGION>-docker.pkg.dev
-docker build -t <REGISTRY_URL>/mirai-api:<TAG> backend
-docker push <REGISTRY_URL>/mirai-api:<TAG>
-```
-
-## 3. Deploy the live stack
-
-```bash
-just tofu-plan dev
+just tofu-plan dev      # needs: gcloud auth application-default login
 just tofu-apply dev
 ```
 
 Verify: `curl $(tofu -chdir=infra/opentofu/live output -raw api_url)/healthz` →
-`{"status":"ok"}`; `/readyz` returns `200` once the IAM DB grant exists (see below).
+`{"status":"ok"}`.
 
 ## Notes
 
-- **CI order:** `just bootstrap-state` + `just bootstrap-ci` (manual, once) →
-  build+push image → `just tofu-apply`. On push to `main` the last two run in CI
-  (image build via `docker/build-push-action` with GHA layer cache); the image is
-  tagged with the commit SHA and passed to tofu via `-var="image=..."`.
-- **IAM DB grants:** table-level `GRANT`s to the IAM DB role are not
+- **IAM DB grants:** table-level `GRANT`s to the IAM DB role aren't
   Terraform-manageable — run once as SQL (or fold into the first Alembic migration).
-- **Private IP** is an additive change later (set `ipv4_enabled = false` +
-  `private_network` on the instance, add `vpc_access` on Cloud Run) — see the TODO
-  in `modules/database/cloudsql.tf`.
+- **Release drift:** after the first release, `just tofu-plan dev` should be clean.
+  If it churns a `run.googleapis.com/client-name` annotation, add that path to the
+  Cloud Run `ignore_changes`.
+- **Private IP** is an additive change later — see the TODO in `modules/database/cloudsql.tf`.

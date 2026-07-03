@@ -56,6 +56,16 @@ resource "google_cloud_run_v2_service" "api" {
       }
     }
   }
+
+  traffic {
+    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
+    percent = 100
+  }
+
+  # CI (deploy-cloudrun) owns the running image; tofu owns the service shape.
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
+  }
 }
 
 # Auth is enforced in-app via Clerk JWTs; Cloud Run itself is public.

@@ -6,9 +6,6 @@ on:
       environment:
         required: true
         type: string
-      image:
-        required: true
-        type: string
 
 concurrency:
   group: tofu-${{ inputs.environment }}
@@ -44,4 +41,4 @@ jobs:
         uses: extractions/setup-just@v4
 
       - name: OpenTofu apply
-        run: just tofu-apply '${{ inputs.environment }}' -auto-approve -var="image=${{ inputs.image }}"
+        run: just tofu-apply '${{ inputs.environment }}' -auto-approve

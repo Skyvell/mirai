@@ -9,15 +9,13 @@ permissions:
   contents: read
 
 jobs:
-  # Image must exist before tofu applies the Cloud Run service that references it.
-  deploy-image:
-    uses: ./.github/workflows/_deploy-image.yml
-    with:
-      environment: dev
-
   deploy-infrastructure:
-    needs: deploy-image
     uses: ./.github/workflows/_deploy-infrastructure.yml
     with:
       environment: dev
-      image: ${{ needs.deploy-image.outputs.image }}
+
+  deploy-app:
+    needs: deploy-infrastructure
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      environment: dev

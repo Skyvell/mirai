@@ -16,7 +16,7 @@ variable "service_name" {
 
 variable "image" {
   type        = string
-  description = "Full container image reference (Artifact Registry URL + tag)."
+  description = "Container image at creation only; the live image is CI-owned (ignore_changes)."
 }
 
 variable "service_account_email" {

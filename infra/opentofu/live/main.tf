@@ -5,6 +5,29 @@ locals {
   }
 }
 
+resource "google_project_service" "required" {
+  for_each = toset([
+    "run.googleapis.com",
+    "artifactregistry.googleapis.com",
+    "sqladmin.googleapis.com",
+    # "secretmanager.googleapis.com", # add when a secret exists
+    # "compute.googleapis.com",       # add for private IP later
+  ])
+
+  project            = var.project_id
+  service            = each.value
+  disable_on_destroy = false
+}
+
+resource "google_artifact_registry_repository" "mirai" {
+  location      = var.region
+  repository_id = "mirai"
+  format        = "DOCKER"
+  labels        = local.labels
+
+  depends_on = [google_project_service.required]
+}
+
 # Runtime identity for the API. Lives at the root because it bridges the two
 # modules: the database grants it IAM login, the api runs as it. Putting it in
 # either module would create a database <-> api cycle.
@@ -33,6 +56,8 @@ module "database" {
   iam_user_email      = google_service_account.api.email
   deletion_protection = var.db_deletion_protection
   labels              = local.labels
+
+  depends_on = [google_project_service.required]
 }
 
 module "api" {
@@ -40,7 +65,7 @@ module "api" {
 
   project_id            = var.project_id
   region                = var.region
-  image                 = var.image
+  image                 = var.initial_image
   service_account_email = google_service_account.api.email
 
   cloudsql_connection_name = module.database.connection_name
@@ -49,4 +74,6 @@ module "api" {
   clerk_jwks_url           = var.clerk_jwks_url
 
   labels = local.labels
+
+  depends_on = [google_project_service.required]
 }
