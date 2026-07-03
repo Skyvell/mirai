@@ -1,5 +1,5 @@
 output "api_url" {
-  value       = module.api.url
+  value       = google_cloud_run_v2_service.api.uri
   description = "Public URL of the Cloud Run API."
 }
 
@@ -9,5 +9,6 @@ output "api_service_account" {
 }
 
 output "database_connection_name" {
-  value = module.database.connection_name
+  value       = google_sql_database_instance.main.connection_name
+  description = "project:region:instance — used by the Cloud SQL connector."
 }

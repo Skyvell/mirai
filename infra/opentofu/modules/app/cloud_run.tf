@@ -3,10 +3,10 @@ resource "google_cloud_run_v2_service" "api" {
   location            = var.region
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
-  labels              = var.labels
+  labels              = local.labels
 
   template {
-    service_account = var.service_account_email
+    service_account = google_service_account.api.email
 
     scaling {
       max_instance_count = var.max_instances
@@ -16,7 +16,7 @@ resource "google_cloud_run_v2_service" "api" {
     volumes {
       name = "cloudsql"
       cloud_sql_instance {
-        instances = [var.cloudsql_connection_name]
+        instances = [google_sql_database_instance.main.connection_name]
       }
     }
 
@@ -34,15 +34,15 @@ resource "google_cloud_run_v2_service" "api" {
 
       env {
         name  = "INSTANCE_CONNECTION_NAME"
-        value = var.cloudsql_connection_name
+        value = google_sql_database_instance.main.connection_name
       }
       env {
         name  = "DB_NAME"
-        value = var.database_name
+        value = google_sql_database.app.name
       }
       env {
         name  = "DB_IAM_USER"
-        value = var.db_iam_user
+        value = google_sql_user.iam_sa.name
       }
       env {
         name  = "CLERK_JWKS_URL"

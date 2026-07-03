@@ -3,13 +3,13 @@ resource "google_sql_database_instance" "main" {
   region           = var.region
   database_version = "POSTGRES_17"
 
-  deletion_protection = var.deletion_protection
+  deletion_protection = var.db_deletion_protection
 
   settings {
-    tier              = var.tier
+    tier              = var.db_tier
     edition           = "ENTERPRISE" # db-f1-micro is shared-core, ENTERPRISE-only
     availability_type = "ZONAL"
-    user_labels       = var.labels
+    user_labels       = local.labels
 
     # Public IP + built-in Cloud SQL connector. No authorized networks: access
     # is IAM-only over Google's network. TODO: swap to private IP (ipv4_enabled
@@ -27,4 +27,11 @@ resource "google_sql_database_instance" "main" {
       enabled = true
     }
   }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_sql_database" "app" {
+  name     = var.database_name
+  instance = google_sql_database_instance.main.name
 }

@@ -14,16 +14,16 @@ bootstrap-trust project github_repo region="europe-north1":
 
 # Initialize OpenTofu for the given environment.
 tofu-init env:
-    tofu -chdir=infra/opentofu/live init -backend-config=../config/{{env}}.gcs.tfbackend
+    tofu -chdir=infra/opentofu/environments/{{env}} init
 
 # Plan changes for the given environment.
 tofu-plan env: (tofu-init env)
-    tofu -chdir=infra/opentofu/live plan -var-file=../config/{{env}}.tfvars
+    tofu -chdir=infra/opentofu/environments/{{env}} plan
 
 # Apply changes for the given environment (CI appends -auto-approve).
 tofu-apply env *args: (tofu-init env)
-    tofu -chdir=infra/opentofu/live apply -var-file=../config/{{env}}.tfvars {{args}}
+    tofu -chdir=infra/opentofu/environments/{{env}} apply {{args}}
 
 # Destroy resources for the given environment.
 tofu-destroy env: (tofu-init env)
-    tofu -chdir=infra/opentofu/live destroy -var-file=../config/{{env}}.tfvars
+    tofu -chdir=infra/opentofu/environments/{{env}} destroy

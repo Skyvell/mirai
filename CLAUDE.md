@@ -61,7 +61,7 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 
 ## Infrastructure
 
-`infra/opentofu/` — OpenTofu on GCP (`live/ + modules/ + config/`; see `infra/opentofu/README.md`). **Two planes.** Bootstrap is two stateless scripts creating only the chicken-and-egg foundation: `scripts/00_bootstrap_state.sh` (`just bootstrap-state <project>`) → state bucket (`tofu-state-<project>`); `scripts/01_bootstrap_github_trust.sh` (`just bootstrap-trust <project> <owner/repo>`) → WIF pool + `ci-deployer` SA. OpenTofu owns everything declarative — APIs (`google_project_service`), Artifact Registry, `database` (Cloud SQL Postgres 17, IAM auth), `api` (Cloud Run v2). `live/` is the only stateful stack, state in GCS. Cloud Run is created with a placeholder image + `ignore_changes` on the image, so CI owns the running revision and tofu owns the shape. The runtime SA lives in `live/main.tf` (bridges both modules — avoids a cycle). Cloud Run→Cloud SQL via built-in connector (public IP); private IP is additive later.
+`infra/opentofu/` — OpenTofu on GCP (`environments/<env>/ + modules/app/`; see `infra/opentofu/README.md`). **Two planes.** Bootstrap is two stateless scripts creating only the chicken-and-egg foundation: `scripts/00_bootstrap_state.sh` (`just bootstrap-state <project>`) → state bucket (`tofu-state-<project>`); `scripts/01_bootstrap_github_trust.sh` (`just bootstrap-trust <project> <owner/repo>`) → WIF pool + `ci-deployer` SA. OpenTofu owns everything declarative, all in a single `modules/app` module — APIs (`google_project_service`), Artifact Registry, runtime SA + IAM, Cloud SQL (Postgres 17, IAM auth), Cloud Run v2. Each `environments/<env>/` is a self-contained root (its own `backend.tf` + inlined values in `main.tf`) that calls `modules/app` — one env per GCP project; state in GCS. `dev` is live, `prod` is a scaffold. Cloud Run is created with a placeholder image + `ignore_changes` on the image, so CI owns the running revision and tofu owns the shape. Cloud Run→Cloud SQL via built-in connector (public IP); private IP is additive later.
 
 **CI/CD** — `.github/workflows/deploy.yml` on push to `main`: `_deploy-infrastructure.yml` (`just tofu-apply dev`) → `_deploy-app.yml` (build/push `mirai-api:<sha>`, then `deploy-cloudrun@v3` updating only the image). Keyless GCP auth via WIF; GitHub Environment `dev` holds `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`, `GCP_REGION`.
 
@@ -70,9 +70,13 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 Not yet wired in `frontend/`: Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema (the backend now exposes one).
 
 ## Commits
-
 - Short and concise.
 - No mention of Claude / AI authorship (no `Co-Authored-By`, no generated-with footer).
 
 ## Writing
 Concise without losing vital context. Scientific report style writing. Zero fluff tolerated.
+
+## Code
+- Best coding practises.
+- Comments start wich capital letter and ends with period.
+- Use the latest versions unless they are unstable.

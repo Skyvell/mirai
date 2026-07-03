@@ -39,7 +39,8 @@ provider "registry.opentofu.org/hashicorp/google" {
 }
 
 provider "registry.opentofu.org/hashicorp/time" {
-  version = "0.14.0"
+  version     = "0.14.0"
+  constraints = "~> 0.14"
   hashes = [
     "h1:7NpGFIxlybShI7Rp75FYsN1y634ERY8k2tWecAd+7E4=",
     "h1:8BLHeBjRS/J2SB2jX/APsNqaCoW957ItWwYHB2tDJxQ=",

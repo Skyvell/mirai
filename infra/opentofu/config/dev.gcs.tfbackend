@@ -1,3 +1,0 @@
-# bucket = tofu-state-<project> (created by `just bootstrap-state`).
-bucket = "tofu-state-mirai-dev-501218"
-prefix = "live"
