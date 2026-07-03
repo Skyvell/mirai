@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Runtime configuration, sourced from environment variables.
 
     Cloud Run injects the DB_* / INSTANCE_CONNECTION_NAME / CLERK_* values (see
-    infra/opentofu/modules/api). Locally, an untracked backend/.env supplies them.
+    infra/opentofu/modules/app). Locally, an untracked backend/.env supplies them.
     """
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
