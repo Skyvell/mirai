@@ -17,7 +17,6 @@ variable "image" {
 variable "clerk_jwks_url" {
   type        = string
   description = "Clerk public JWKS URL for JWT verification."
-  default     = ""
 }
 
 variable "db_tier" {

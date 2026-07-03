@@ -24,19 +24,17 @@ module "app" {
   region                 = "europe-north1"
   db_tier                = "db-f1-micro"
   db_deletion_protection = false
+  clerk_jwks_url         = "" # no Clerk in dev
 }
 
 output "api_url" {
-  value       = module.app.api_url
-  description = "Public URL of the Cloud Run API."
+  value = module.app.api_url
 }
 
 output "api_service_account" {
-  value       = module.app.api_service_account
-  description = "Runtime service account email."
+  value = module.app.api_service_account
 }
 
 output "database_connection_name" {
-  value       = module.app.database_connection_name
-  description = "project:region:instance — used by the Cloud SQL connector."
+  value = module.app.database_connection_name
 }

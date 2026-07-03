@@ -32,16 +32,13 @@ module "app" {
 }
 
 output "api_url" {
-  value       = module.app.api_url
-  description = "Public URL of the Cloud Run API."
+  value = module.app.api_url
 }
 
 output "api_service_account" {
-  value       = module.app.api_service_account
-  description = "Runtime service account email."
+  value = module.app.api_service_account
 }
 
 output "database_connection_name" {
-  value       = module.app.database_connection_name
-  description = "project:region:instance — used by the Cloud SQL connector."
+  value = module.app.database_connection_name
 }
