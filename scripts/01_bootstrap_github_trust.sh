@@ -17,11 +17,9 @@ bucket="tofu-state-${project}"
 project_number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
 pool_resource="projects/${project_number}/locations/global/workloadIdentityPools/${pool}"
 
-# Broad deployer so this script stays generic across projects/stacks. Tighten to
-# a custom, resource-scoped role for prod.
+# Broad, generic deployer — one role covers any stack. Scope down for prod.
 ci_roles=(
-    roles/editor
-    roles/resourcemanager.projectIamAdmin
+    roles/owner
 )
 
 export CLOUDSDK_CORE_PROJECT="$project"
