@@ -7,5 +7,5 @@ module "app" {
   db_deletion_protection = false
   clerk_jwks_url         = "https://promoted-elephant-55.clerk.accounts.dev/.well-known/jwks.json"
   clerk_issuer           = "https://promoted-elephant-55.clerk.accounts.dev"
-  frontend_origins       = "http://localhost:5173" # + deployed Pages origin, added once the project exists
+  frontend_origins       = "http://localhost:5173,https://mirai-web.pages.dev" # local dev + deployed Pages
 }
