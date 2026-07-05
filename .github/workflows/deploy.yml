@@ -20,3 +20,8 @@ jobs:
     uses: ./.github/workflows/_deploy-app.yml
     with:
       environment: dev
+
+  deploy-frontend:
+    uses: ./.github/workflows/_deploy-frontend.yml
+    with:
+      environment: dev
