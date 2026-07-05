@@ -25,3 +25,6 @@ jobs:
     uses: ./.github/workflows/_deploy-frontend.yml
     with:
       environment: dev
+    # Reusable workflows receive no secrets unless the workflow_call boundary is opened;
+    # inherit forwards the dev environment's CLOUDFLARE_* secrets to the frontend job.
+    secrets: inherit
