@@ -67,7 +67,9 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 
 ## Frontend wiring
 
-**Clerk auth — wired.** `@clerk/react` (v6). `ClerkProvider` wraps the router in `main.tsx` (key from `VITE_CLERK_PUBLISHABLE_KEY`); `__root.tsx` gates the whole app — `<Show when="signed-in">` renders nav + `<UserButton/>`, `signed-out` renders `<SignIn/>`. Overview (`routes/index.tsx`) fetches the protected backend `GET /me` via `useAuth().getToken()` (`src/lib/api.ts`) to confirm the token verifies. Env in untracked `.env.local` (see `.env.example`).
+**Clerk auth — wired.** `@clerk/react` (v6). `ClerkProvider` wraps the router in `main.tsx` (key from `VITE_CLERK_PUBLISHABLE_KEY`); `__root.tsx` gates the whole app — `<Show when="signed-in">` renders nav + `<UserButton/>`, `signed-out` renders `<SignIn/>`. Overview (`routes/index.tsx`) fetches the protected backend `GET /me` via `useAuth().getToken()` (`src/lib/api.ts`) to confirm the token verifies. Build config (`VITE_API_URL`, `VITE_CLERK_PUBLISHABLE_KEY`) lives in the committed `frontend/.env` — both values are public, not secrets; a gitignored `.env.local` overrides it for a local backend (`.env.local` > `.env`).
+
+**Frontend hosting — Cloudflare Pages.** The frontend is a static Vite SPA; Cloudflare Pages builds it via git integration (auto-deploy on push to `main`, previews per PR) from the committed `frontend/.env` — no dashboard env vars. `public/_redirects` (`/* /index.html 200`) serves the SPA catch-all so client-side deep links don't 404. Backend CORS is an allow-list (`frontend_origins`, comma-separated) covering both `localhost:5173` and the Pages origin.
 
 **Still deferred:** TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema.
 

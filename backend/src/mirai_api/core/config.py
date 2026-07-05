@@ -21,8 +21,14 @@ class Settings(BaseSettings):
     clerk_jwks_url: str = ""
     clerk_issuer: str = ""  # optional; verified when set
 
-    # CORS — the frontend origin allowed to call the API.
-    frontend_origin: str = "http://localhost:5173"
+    # CORS — comma-separated allow-list of origins permitted to call the API
+    # (local dev origin now; the deployed frontend origin is added per environment).
+    frontend_origins: str = "http://localhost:5173"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Split the comma-separated allow-list into individual origins."""
+        return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
 
 
 @lru_cache

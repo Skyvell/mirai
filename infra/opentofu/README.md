@@ -24,8 +24,10 @@ built-in connector (public IP); Clerk JWTs verified in-app; CI is keyless via
 **Workload Identity Federation**. Run from the repo root.
 
 Clerk + CORS are configured per-env via `modules/app` variables (`clerk_jwks_url`,
-`clerk_issuer`, `frontend_origin`), all set in each `environments/<env>/main.tf`.
-The values are public (JWKS URL, issuer, allowed origin), not secrets.
+`clerk_issuer`, `frontend_origins`), all set in each `environments/<env>/main.tf`.
+`frontend_origins` is a comma-separated CORS allow-list (local dev origin + the
+deployed frontend origin). The values are public (JWKS URL, issuer, allowed
+origins), not secrets.
 
 ## Setup (once per project)
 

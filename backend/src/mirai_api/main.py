@@ -10,7 +10,7 @@ app = FastAPI(title="Mirai API", version=version("mirai-api"))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[get_settings().frontend_origin],
+    allow_origins=get_settings().cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

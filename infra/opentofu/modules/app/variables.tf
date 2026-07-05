@@ -25,9 +25,9 @@ variable "clerk_issuer" {
   description = "Clerk issuer; the backend verifies token iss against it when set."
 }
 
-variable "frontend_origin" {
+variable "frontend_origins" {
   type        = string
-  description = "Origin allowed to call the API (CORS)."
+  description = "Comma-separated allow-list of origins permitted to call the API (CORS)."
 }
 
 variable "db_tier" {

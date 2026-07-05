@@ -12,5 +12,5 @@ module "app" {
   db_deletion_protection = true
   clerk_jwks_url         = "" # prod Clerk JWKS URL
   clerk_issuer           = "" # prod Clerk issuer
-  frontend_origin        = "" # prod frontend origin, e.g. https://app.example.com
+  frontend_origins       = "" # prod frontend origin(s), comma-separated, e.g. https://app.example.com
 }

@@ -53,8 +53,8 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.clerk_issuer
       }
       env {
-        name  = "FRONTEND_ORIGIN"
-        value = var.frontend_origin
+        name  = "FRONTEND_ORIGINS"
+        value = var.frontend_origins
       }
 
       startup_probe {
