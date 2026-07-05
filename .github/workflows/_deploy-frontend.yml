@@ -42,12 +42,15 @@ jobs:
         run: pnpm build
 
       # Cloudflare gets only a Pages-scoped API token — no access to this repo.
+      # packageManager: npm avoids pnpm 11's build-script gate on wrangler's deps.
       # preCommands creates the project on first run; the `|| true` makes reruns idempotent.
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: frontend
+          packageManager: npm
+          wranglerVersion: "4.107.0"
           preCommands: wrangler pages project create mirai-web --production-branch=main || true
           command: pages deploy dist --project-name=mirai-web
