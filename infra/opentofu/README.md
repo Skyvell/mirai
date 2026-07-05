@@ -23,6 +23,10 @@ Auth: **IAM DB auth** (no DB password); Cloud Run reaches Cloud SQL over the
 built-in connector (public IP); Clerk JWTs verified in-app; CI is keyless via
 **Workload Identity Federation**. Run from the repo root.
 
+Clerk + CORS are configured per-env via `modules/app` variables (`clerk_jwks_url`,
+`clerk_issuer`, `frontend_origin`), all set in each `environments/<env>/main.tf`.
+The values are public (JWKS URL, issuer, allowed origin), not secrets.
+
 ## Setup (once per project)
 
 Bootstrap creates the foundation tofu can't manage itself — the state bucket and

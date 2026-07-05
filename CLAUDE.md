@@ -65,9 +65,11 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 
 **CI/CD** — `.github/workflows/deploy.yml` on push to `main`: `_deploy-infrastructure.yml` (`just tofu-apply dev`) → `_deploy-app.yml` (build/push `mirai-api:<sha>`, then `deploy-cloudrun@v3` updating only the image). Keyless GCP auth via WIF; GitHub Environment `dev` holds `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`, `GCP_REGION`.
 
-## Deferred frontend wiring
+## Frontend wiring
 
-Not yet wired in `frontend/`: Clerk auth (`@clerk/clerk-react`), TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema (the backend now exposes one).
+**Clerk auth — wired.** `@clerk/react` (v6). `ClerkProvider` wraps the router in `main.tsx` (key from `VITE_CLERK_PUBLISHABLE_KEY`); `__root.tsx` gates the whole app — `<Show when="signed-in">` renders nav + `<UserButton/>`, `signed-out` renders `<SignIn/>`. Overview (`routes/index.tsx`) fetches the protected backend `GET /me` via `useAuth().getToken()` (`src/lib/api.ts`) to confirm the token verifies. Env in untracked `.env.local` (see `.env.example`).
+
+**Still deferred:** TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema.
 
 ## Commits
 - Short and concise.

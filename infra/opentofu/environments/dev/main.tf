@@ -5,5 +5,7 @@ module "app" {
   region                 = "europe-north1"
   db_tier                = "db-f1-micro"
   db_deletion_protection = false
-  clerk_jwks_url         = "" # no Clerk in dev
+  clerk_jwks_url         = "https://promoted-elephant-55.clerk.accounts.dev/.well-known/jwks.json"
+  clerk_issuer           = "https://promoted-elephant-55.clerk.accounts.dev"
+  frontend_origin        = "http://localhost:5173" # local frontend -> deployed API
 }

@@ -1,4 +1,5 @@
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
+import { ClerkLoaded, ClerkLoading, Show, SignIn, UserButton } from '@clerk/react'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -10,7 +11,29 @@ const navLinkClass =
 function RootComponent() {
   return (
     <div className="min-h-svh bg-background text-foreground">
-      <nav className="flex flex-wrap gap-4 border-b px-6 py-4 text-sm font-medium">
+      <ClerkLoading>
+        <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">
+          Loading…
+        </div>
+      </ClerkLoading>
+      <ClerkLoaded>
+        <Show when="signed-in">
+          <AppShell />
+        </Show>
+        <Show when="signed-out">
+          <div className="grid min-h-svh place-items-center p-6">
+            <SignIn />
+          </div>
+        </Show>
+      </ClerkLoaded>
+    </div>
+  )
+}
+
+function AppShell() {
+  return (
+    <>
+      <nav className="flex flex-wrap items-center gap-4 border-b px-6 py-4 text-sm font-medium">
         <Link to="/" activeOptions={{ exact: true }} className={navLinkClass}>
           Overview
         </Link>
@@ -29,10 +52,13 @@ function RootComponent() {
         <Link to="/interventions" className={navLinkClass}>
           Interventions
         </Link>
+        <div className="ml-auto">
+          <UserButton />
+        </div>
       </nav>
       <main className="p-6">
         <Outlet />
       </main>
-    </div>
+    </>
   )
 }

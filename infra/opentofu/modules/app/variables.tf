@@ -20,6 +20,16 @@ variable "clerk_jwks_url" {
   description = "Clerk public JWKS URL for JWT verification."
 }
 
+variable "clerk_issuer" {
+  type        = string
+  description = "Clerk issuer; the backend verifies token iss against it when set."
+}
+
+variable "frontend_origin" {
+  type        = string
+  description = "Origin allowed to call the API (CORS)."
+}
+
 variable "db_tier" {
   type        = string
   description = "Cloud SQL machine tier."

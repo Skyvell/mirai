@@ -48,6 +48,14 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "CLERK_JWKS_URL"
         value = var.clerk_jwks_url
       }
+      env {
+        name  = "CLERK_ISSUER"
+        value = var.clerk_issuer
+      }
+      env {
+        name  = "FRONTEND_ORIGIN"
+        value = var.frontend_origin
+      }
 
       startup_probe {
         http_get {
