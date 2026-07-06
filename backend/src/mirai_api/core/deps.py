@@ -3,10 +3,13 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token
+from mirai_api.models import User
 
 _bearer = HTTPBearer(auto_error=True)
 
@@ -15,14 +18,17 @@ DbSession = Annotated[Session, Depends(get_session)]
 
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer)],
-) -> dict:
-    """Resolve the caller's Clerk claims from the Bearer token.
+    session: DbSession,
+) -> User:
+    """Resolve the caller to a local User row, creating it just-in-time.
 
-    Local-user upsert (Clerk ``sub`` -> own user table) is deferred until the
-    user model exists; for now this returns the verified claims.
+    The Bearer token is verified against Clerk's JWKS; ``sub`` is the Clerk
+    user id. On the first authenticated request there is no local row yet, so
+    one is inserted — ON CONFLICT DO NOTHING keeps concurrent first requests
+    race-safe, and the re-select returns whichever insert won.
     """
     try:
-        return verify_clerk_token(credentials.credentials)
+        claims = verify_clerk_token(credentials.credentials)
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -30,5 +36,18 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
+    # Token verified; map the Clerk identity to a local row, creating it on first sight.
+    clerk_user_id = claims["sub"]
+    user = session.scalar(select(User).where(User.clerk_user_id == clerk_user_id))
+    if user is None:
+        session.execute(
+            insert(User)
+            .values(clerk_user_id=clerk_user_id)
+            .on_conflict_do_nothing(index_elements=["clerk_user_id"])
+        )
+        session.commit()
+        user = session.scalar(select(User).where(User.clerk_user_id == clerk_user_id))
+    return user
 
-CurrentUser = Annotated[dict, Depends(get_current_user)]
+
+CurrentUser = Annotated[User, Depends(get_current_user)]

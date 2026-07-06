@@ -9,12 +9,13 @@ from mirai_api.core.config import get_settings
 
 
 @lru_cache
-def _engine() -> Engine:
+def get_engine() -> Engine:
     """SQLAlchemy engine backed by the Cloud SQL Python Connector with IAM auth.
 
     The same code path serves the current public-IP built-in connection and a
     future private-IP swap (change ip_type only). The connector also sidesteps
-    the 108-char unix-socket path limit of the raw /cloudsql socket.
+    the 108-char unix-socket path limit of the raw /cloudsql socket. Shared by
+    the app (via sessions) and Alembic migrations (alembic/env.py).
     """
     settings = get_settings()
     connector = Connector(refresh_strategy="lazy")
@@ -39,7 +40,7 @@ def _engine() -> Engine:
 
 @lru_cache
 def _session_factory() -> sessionmaker[Session]:
-    return sessionmaker(bind=_engine(), autoflush=False, expire_on_commit=False)
+    return sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
 
 
 def get_session() -> Iterator[Session]:

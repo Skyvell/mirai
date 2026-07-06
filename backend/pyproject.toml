@@ -11,6 +11,7 @@ dependencies = [
     "cloud-sql-python-connector[pg8000]>=1.18",
     "pydantic-settings>=2.7",
     "pyjwt[crypto]>=2.10",
+    "alembic>=1.18",
 ]
 
 [build-system]
@@ -19,3 +20,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mirai_api"]
+
+# Alembic reads [tool.alembic] natively (1.16+); no alembic.ini.
+[tool.alembic]
+script_location = "%(here)s/alembic"
