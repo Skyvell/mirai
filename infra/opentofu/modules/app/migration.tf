@@ -9,6 +9,8 @@ resource "google_cloud_run_v2_job" "migrate" {
 
   template {
     template {
+      # TODO: run as a dedicated migrator SA (runtime SA drops to DML-only)
+      # when health data lands — see docs/stack.md, Migrations.
       service_account = google_service_account.api.email
 
       # No /cloudsql volume: the backend reaches Cloud SQL via the Python
