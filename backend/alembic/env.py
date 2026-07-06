@@ -1,7 +1,15 @@
+import logging
+
 from alembic import context
 
 from mirai_api.core.db import get_engine
 from mirai_api.models import Base
+
+# Surface Alembic's revision log in the migration job's output (the ini-less
+# [tool.alembic] setup carries no logging config); root stays at WARNING so
+# SQLAlchemy doesn't echo every statement.
+logging.basicConfig(format="%(levelname)s [%(name)s] %(message)s")
+logging.getLogger("alembic").setLevel(logging.INFO)
 
 target_metadata = Base.metadata
 
