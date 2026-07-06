@@ -71,8 +71,15 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   # CI (deploy-cloudrun) owns the running image; tofu owns the service shape.
+  # deploy-cloudrun also stamps client metadata and template labels — ignored
+  # so a plan after a release stays clean.
   lifecycle {
-    ignore_changes = [template[0].containers[0].image]
+    ignore_changes = [
+      template[0].containers[0].image,
+      template[0].labels,
+      client,
+      client_version,
+    ]
   }
 }
 
