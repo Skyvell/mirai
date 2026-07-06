@@ -11,13 +11,8 @@ resource "google_cloud_run_v2_job" "migrate" {
     template {
       service_account = google_service_account.api.email
 
-      volumes {
-        name = "cloudsql"
-        cloud_sql_instance {
-          instances = [google_sql_database_instance.main.connection_name]
-        }
-      }
-
+      # No /cloudsql volume: the backend reaches Cloud SQL via the Python
+      # Connector, not the socket mount.
       containers {
         # Placeholder at creation only (never executed until CI sets a real
         # image); the live image is CI-owned, mirroring the service.
@@ -25,22 +20,12 @@ resource "google_cloud_run_v2_job" "migrate" {
         command = ["alembic"]
         args    = ["upgrade", "head"]
 
-        volume_mounts {
-          name       = "cloudsql"
-          mount_path = "/cloudsql"
-        }
-
-        env {
-          name  = "INSTANCE_CONNECTION_NAME"
-          value = google_sql_database_instance.main.connection_name
-        }
-        env {
-          name  = "DB_NAME"
-          value = google_sql_database.app.name
-        }
-        env {
-          name  = "DB_IAM_USER"
-          value = google_sql_user.iam_sa.name
+        dynamic "env" {
+          for_each = local.db_env
+          content {
+            name  = env.key
+            value = env.value
+          }
         }
       }
     }

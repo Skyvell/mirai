@@ -32,17 +32,12 @@ resource "google_cloud_run_v2_service" "api" {
         mount_path = "/cloudsql"
       }
 
-      env {
-        name  = "INSTANCE_CONNECTION_NAME"
-        value = google_sql_database_instance.main.connection_name
-      }
-      env {
-        name  = "DB_NAME"
-        value = google_sql_database.app.name
-      }
-      env {
-        name  = "DB_IAM_USER"
-        value = google_sql_user.iam_sa.name
+      dynamic "env" {
+        for_each = local.db_env
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
       env {
         name  = "CLERK_JWKS_URL"

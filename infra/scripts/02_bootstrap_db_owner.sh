@@ -11,10 +11,16 @@ instance="${2:-mirai}"
 database="${3:-mirai}"
 port=5433
 
-sa_email="mirai-api-run@${project}.iam.gserviceaccount.com"
-db_user="${sa_email%.gserviceaccount.com}"
-
 export CLOUDSDK_CORE_PROJECT="$project"
+
+# Read the IAM DB user tofu created (users.tf) from the live instance instead
+# of duplicating the SA name and Cloud SQL's username-derivation rule here.
+db_user="$(gcloud sql users list --instance "$instance" \
+    --filter "type=CLOUD_IAM_SERVICE_ACCOUNT" --format "value(name)")"
+if [[ -z "$db_user" || "$db_user" == *$'\n'* ]]; then
+    echo "Expected exactly one IAM service-account DB user on '$instance', got: '${db_user:-none}'" >&2
+    exit 1
+fi
 
 echo ">> Setting a throwaway password on the built-in postgres user..."
 password="$(openssl rand -base64 24)"
