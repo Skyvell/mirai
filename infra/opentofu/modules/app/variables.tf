@@ -59,6 +59,12 @@ variable "service_name" {
   default     = "mirai-api"
 }
 
+variable "migration_job_name" {
+  type        = string
+  description = "Cloud Run job that applies database migrations."
+  default     = "mirai-migrate"
+}
+
 variable "max_instances" {
   type        = number
   description = "Max Cloud Run instances. Min is 0 (scale to zero)."

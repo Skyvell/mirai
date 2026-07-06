@@ -12,6 +12,10 @@ bootstrap-state project region="europe-north1":
 bootstrap-trust project github_repo region="europe-north1":
     ./infra/scripts/01_bootstrap_github_trust.sh {{project}} {{github_repo}} {{region}}
 
+# Grant the runtime SA ownership of the app database (once per environment).
+bootstrap-db project instance="mirai" database="mirai":
+    ./infra/scripts/02_bootstrap_db_owner.sh {{project}} {{instance}} {{database}}
+
 # Initialize OpenTofu for the given environment.
 tofu-init env:
     tofu -chdir=infra/opentofu/environments/{{env}} init

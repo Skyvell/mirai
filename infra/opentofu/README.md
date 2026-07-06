@@ -37,7 +37,13 @@ the keyless GitHub↔GCP trust. Both are idempotent; run once from the repo root
 ```bash
 just bootstrap-state <PROJECT>                 # OpenTofu state bucket
 just bootstrap-trust <PROJECT> <owner/repo>    # WIF pool + ci-deployer SA
+just bootstrap-db <PROJECT>                    # runtime SA owns the app database (after first apply)
 ```
+
+`bootstrap-db` runs after the first `tofu apply` (the instance and IAM DB user
+must exist). It transfers ownership of the app database to the runtime SA's IAM
+DB user — a superuser-only SQL statement tofu can't issue — so Alembic
+migrations can run DDL. Ownership covers all future tables; no per-table grants.
 
 Then set the `project_id`/`region`/backend `bucket` in `environments/<env>/`
 (`main.tf` + `backend.tf`), and set the four `dev` GitHub Environment variables
@@ -57,8 +63,9 @@ Verify: `curl $(tofu -chdir=infra/opentofu/environments/dev output -raw api_url)
 
 ## Notes
 
-- **IAM DB grants:** table-level `GRANT`s to the IAM DB role aren't
-  Terraform-manageable — run once as SQL (or fold into the first Alembic migration).
+- **Migrations:** the `mirai-migrate` Cloud Run job (`modules/app/migration.tf`)
+  applies Alembic migrations; CI updates its image and executes it before each
+  service deploy. Like the service, tofu owns its shape and CI owns its image.
 - **Release drift:** after the first release, `just tofu-plan dev` should be clean.
   If it churns a `run.googleapis.com/client-name` annotation, add that path to the
   Cloud Run `ignore_changes`.

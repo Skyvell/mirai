@@ -42,6 +42,15 @@ jobs:
           docker build -t "$IMAGE" backend
           docker push "$IMAGE"
 
+      - uses: google-github-actions/setup-gcloud@v3
+
+      # Migrations run before the service sees the new image; a failure here
+      # aborts the release.
+      - name: Run database migrations
+        run: |
+          gcloud run jobs update mirai-migrate --region "${{ vars.GCP_REGION }}" --image "$IMAGE" --quiet
+          gcloud run jobs execute mirai-migrate --region "${{ vars.GCP_REGION }}" --wait --quiet
+
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v3
         with:
