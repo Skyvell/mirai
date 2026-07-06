@@ -8,10 +8,12 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# alembic/ rides along so the same image serves the API and the migration job.
 COPY src/ ./src/
-COPY alembic/ ./alembic/
 RUN uv sync --frozen --no-dev
+
+# alembic/ rides along (after the install layers — it is not part of the
+# package) so the same image serves the API and the migration job.
+COPY alembic/ ./alembic/
 
 # Run as non-root.
 RUN useradd --create-home --uid 10001 runner && chown -R runner:runner /app

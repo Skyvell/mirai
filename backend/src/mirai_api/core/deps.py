@@ -38,7 +38,8 @@ def get_current_user(
 
     # Token verified; map the Clerk identity to a local row, creating it on first sight.
     clerk_user_id = claims["sub"]
-    user = session.scalar(select(User).where(User.clerk_user_id == clerk_user_id))
+    lookup = select(User).where(User.clerk_user_id == clerk_user_id)
+    user = session.scalar(lookup)
     if user is None:
         session.execute(
             insert(User)
@@ -46,7 +47,7 @@ def get_current_user(
             .on_conflict_do_nothing(index_elements=["clerk_user_id"])
         )
         session.commit()
-        user = session.scalar(select(User).where(User.clerk_user_id == clerk_user_id))
+        user = session.scalar(lookup)
     return user
 
 
