@@ -8,8 +8,11 @@ from pydantic import BaseModel
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from mirai_api.core.config import get_settings
+from mirai_api.core.db import get_engine
 from mirai_api.models import Biomarker
 
 _SYSTEM_PROMPT = """\
@@ -29,16 +32,25 @@ present in the document — never invent values.
 
 class ExtractedMeasurement(BaseModel):
     biomarker_slug: str
-    value: float
+    value: Decimal
     unit: str
-    reference_low: float | None
-    reference_high: float | None
+    reference_low: Decimal | None
+    reference_high: Decimal | None
 
 
 class UnmatchedMarker(BaseModel):
     name: str
     value: str
     unit: str | None
+
+
+class SkippedMarker(BaseModel):
+    """A marker that did not become a measurement, with why."""
+
+    name: str
+    value: str
+    unit: str | None
+    reason: str
 
 
 class LabExtraction(BaseModel):
@@ -49,29 +61,14 @@ class LabExtraction(BaseModel):
 
 @dataclass
 class MappedMeasurement:
-    """A measurement resolved to a catalogue biomarker, ready to persist."""
+    """An extracted measurement resolved to its catalogue biomarker."""
 
     biomarker: Biomarker
-    value: Decimal
-    unit: str
-    reference_low: Decimal | None
-    reference_high: Decimal | None
-
-
-@dataclass
-class SkippedMarker:
-    name: str
-    value: str
-    unit: str | None
-    reason: str
-
-
-def _decimal(value: float | None) -> Decimal | None:
-    return None if value is None else Decimal(str(value))
+    measurement: ExtractedMeasurement
 
 
 def map_extraction(
-    extraction: LabExtraction, catalogue_by_slug: dict[str, Biomarker]
+    extraction: LabExtraction, catalogue: list[Biomarker]
 ) -> tuple[list[MappedMeasurement], list[SkippedMarker]]:
     """Resolve extracted measurements against the catalogue.
 
@@ -79,6 +76,7 @@ def map_extraction(
     hallucination) is demoted to skipped rather than raising; skipped also
     carries the model's own unmatched markers.
     """
+    by_slug = {b.slug: b for b in catalogue}
     mapped: list[MappedMeasurement] = []
     skipped: list[SkippedMarker] = [
         SkippedMarker(name=u.name, value=u.value, unit=u.unit, reason="unmatched")
@@ -86,7 +84,7 @@ def map_extraction(
     ]
 
     for m in extraction.measurements:
-        biomarker = catalogue_by_slug.get(m.biomarker_slug)
+        biomarker = by_slug.get(m.biomarker_slug)
         if biomarker is None:
             skipped.append(
                 SkippedMarker(
@@ -97,26 +95,17 @@ def map_extraction(
                 )
             )
             continue
-        mapped.append(
-            MappedMeasurement(
-                biomarker=biomarker,
-                value=Decimal(str(m.value)),
-                unit=m.unit,
-                reference_low=_decimal(m.reference_low),
-                reference_high=_decimal(m.reference_high),
-            )
-        )
+        mapped.append(MappedMeasurement(biomarker=biomarker, measurement=m))
     return mapped, skipped
 
 
 @lru_cache
 def _agent() -> Agent[None, LabExtraction]:
     """Cached Pydantic AI agent over Claude on Vertex (built lazily so import
-    doesn't require ADC). The model id is the bare first-party string; confirm
-    it matches the id published in Vertex Model Garden for the region."""
+    doesn't require ADC)."""
     settings = get_settings()
     model = AnthropicModel(
-        "claude-opus-4-8",
+        settings.vertex_model,
         provider=AnthropicProvider(
             anthropic_client=AsyncAnthropicVertex(
                 project_id=settings.gcp_project_id, region=settings.vertex_region
@@ -133,11 +122,27 @@ def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
     return f"Catalogue of known biomarkers:\n{lines}"
 
 
-async def parse_lab_pdf(pdf_bytes: bytes, catalogue: list[Biomarker]) -> LabExtraction:
+@lru_cache
+def cached_catalogue() -> tuple[list[Biomarker], str]:
+    """The seeded, read-only biomarker catalogue and its prompt, loaded once.
+
+    Detached instances are safe to reuse across requests: only column values are
+    read, never relationships. Catalogue changes ship as migrations, which
+    redeploy the process and reset this cache.
+    """
+    with Session(get_engine()) as session:
+        catalogue = list(session.scalars(select(Biomarker)))
+        session.expunge_all()
+    return catalogue, _catalogue_prompt(catalogue)
+
+
+async def parse_lab_pdf(
+    pdf_bytes: bytes, catalogue_prompt_text: str
+) -> LabExtraction:
     """Run the LLM over a lab PDF and return the structured extraction."""
     result = await _agent().run(
         [
-            _catalogue_prompt(catalogue),
+            catalogue_prompt_text,
             BinaryContent(data=pdf_bytes, media_type="application/pdf"),
         ]
     )

@@ -10,15 +10,16 @@ from mirai_api.services.lab_parsing import (
 )
 
 
-def _catalogue() -> dict[str, Biomarker]:
-    ldl = Biomarker(
-        slug="ldl_cholesterol",
-        display_name="LDL Cholesterol",
-        loinc_code="18262-6",
-        canonical_unit="mmol/L",
-        category="lipids",
-    )
-    return {ldl.slug: ldl}
+def _catalogue() -> list[Biomarker]:
+    return [
+        Biomarker(
+            slug="ldl_cholesterol",
+            display_name="LDL Cholesterol",
+            loinc_code="18262-6",
+            canonical_unit="mmol/L",
+            category="lipids",
+        )
+    ]
 
 
 def test_known_slug_maps_to_row() -> None:
@@ -27,10 +28,10 @@ def test_known_slug_maps_to_row() -> None:
         measurements=[
             ExtractedMeasurement(
                 biomarker_slug="ldl_cholesterol",
-                value=3.1,
+                value=Decimal("3.1"),
                 unit="mmol/L",
                 reference_low=None,
-                reference_high=3.0,
+                reference_high=Decimal("3.0"),
             )
         ],
         unmatched=[],
@@ -40,9 +41,9 @@ def test_known_slug_maps_to_row() -> None:
     assert not skipped
     row = mapped[0]
     assert row.biomarker.slug == "ldl_cholesterol"
-    assert row.value == Decimal("3.1")
-    assert row.reference_low is None
-    assert row.reference_high == Decimal("3.0")
+    assert row.measurement.value == Decimal("3.1")
+    assert row.measurement.reference_low is None
+    assert row.measurement.reference_high == Decimal("3.0")
 
 
 def test_unknown_slug_is_demoted_to_skipped() -> None:
@@ -51,7 +52,7 @@ def test_unknown_slug_is_demoted_to_skipped() -> None:
         measurements=[
             ExtractedMeasurement(
                 biomarker_slug="not_a_real_slug",
-                value=1.0,
+                value=Decimal("1.0"),
                 unit="mmol/L",
                 reference_low=None,
                 reference_high=None,

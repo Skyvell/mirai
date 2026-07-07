@@ -63,6 +63,10 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "VERTEX_REGION"
         value = var.vertex_region
       }
+      env {
+        name  = "VERTEX_MODEL"
+        value = var.vertex_model
+      }
 
       startup_probe {
         http_get {

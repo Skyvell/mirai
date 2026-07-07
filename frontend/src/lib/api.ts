@@ -1,13 +1,21 @@
 const API_URL = import.meta.env.VITE_API_URL
 
-/** Fetch the authenticated caller's identity from the backend, proving JWT verification. */
-export async function getMe(token: string): Promise<{ user_id: string }> {
-  const res = await fetch(`${API_URL}/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+/** Fetch a backend endpoint with the Clerk bearer token, surfacing FastAPI's `detail` on error. */
+async function authedFetch(path: string, token: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: { ...init?.headers, Authorization: `Bearer ${token}` },
   })
   if (!res.ok) {
-    throw new Error(`GET /me failed: ${res.status}`)
+    const body = await res.json().catch(() => null)
+    throw new Error(body?.detail ?? `${path} failed: ${res.status}`)
   }
+  return res
+}
+
+/** Fetch the authenticated caller's identity from the backend, proving JWT verification. */
+export async function getMe(token: string): Promise<{ user_id: string }> {
+  const res = await authedFetch('/me', token)
   return res.json()
 }
 
@@ -18,7 +26,6 @@ export interface Measurement {
   unit: string
   reference_low: string | null
   reference_high: string | null
-  measured_at: string | null
 }
 
 export interface SkippedMarker {
@@ -30,25 +37,15 @@ export interface SkippedMarker {
 
 export interface LabUploadResult {
   upload_id: string
-  filename: string
-  status: string
   measured_at: string | null
   measurements: Measurement[]
   skipped: SkippedMarker[]
 }
 
-/** Upload a lab PDF for parsing. Sets no Content-Type so the browser adds the multipart boundary. */
+/** Upload a lab PDF for parsing. FormData sets its own multipart Content-Type. */
 export async function uploadLabPdf(token: string, file: File): Promise<LabUploadResult> {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${API_URL}/lab-uploads`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  })
-  if (!res.ok) {
-    const detail = await res.json().catch(() => null)
-    throw new Error(detail?.detail ?? `Upload failed: ${res.status}`)
-  }
+  const res = await authedFetch('/lab-uploads', token, { method: 'POST', body: form })
   return res.json()
 }

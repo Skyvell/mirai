@@ -11,7 +11,7 @@ def _client() -> storage.Client:
     return storage.Client(project=get_settings().gcp_project_id)
 
 
-def upload_pdf(object_name: str, data: bytes) -> None:
-    """Store a PDF at object_name in the uploads bucket. Blocking; call via threadpool."""
+def upload(object_name: str, data: bytes, content_type: str) -> None:
+    """Store bytes at object_name in the uploads bucket. Blocking; call via threadpool."""
     bucket = _client().bucket(get_settings().gcs_bucket)
-    bucket.blob(object_name).upload_from_string(data, content_type="application/pdf")
+    bucket.blob(object_name).upload_from_string(data, content_type=content_type)

@@ -88,3 +88,9 @@ variable "vertex_region" {
   description = "Vertex AI region for the Claude client the backend's Pydantic AI agent uses to parse lab PDFs (a multi-region like eu/global, distinct from the compute region)."
   default     = "eu"
 }
+
+variable "vertex_model" {
+  type        = string
+  description = "Claude model id the backend's Pydantic AI agent uses on Vertex AI."
+  default     = "claude-opus-4-8"
+}

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     gcs_bucket: str = ""
     gcp_project_id: str = ""
     vertex_region: str = "eu"
+    vertex_model: str = "claude-opus-4-8"
 
     @property
     def cors_origins(self) -> list[str]:
