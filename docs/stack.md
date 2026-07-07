@@ -25,7 +25,13 @@ FastAPI on Cloud Run.
 Cloud SQL for Postgres. Contains operational data for the app.
 
 ### Storage — [MVP]
-Cloud Storage (GCS). Holds user-uploaded lab files. Parsed biomarkers land in Cloud SQL.
+Cloud Storage (GCS). One bucket per environment, `<project_id>-user-uploads`, holding all user-uploaded files. Objects are namespaced per user and domain, e.g. `users/{user_id}/labs/{upload_id}.pdf`, so account deletion is one prefix delete and future domains (wearables, omics) get sibling prefixes. Uniform bucket-level access, public access prevented; the runtime SA has `roles/storage.objectUser`. Parsed biomarkers land in Cloud SQL; the original PDF is retained.
+
+### LLM lab parsing — [MVP]
+Lab PDFs are parsed by **Claude (`claude-opus-4-8`) on Vertex AI** via **Pydantic AI** (`pydantic-ai-slim[anthropic]` wrapping `AsyncAnthropicVertex`). Keyless — the runtime SA authenticates through ADC (`roles/aiplatform.user`), no API key or Secret Manager. Pydantic AI was adopted early (a general agent framework fitting the FastAPI/Pydantic stack) as the foundation for the later agentic product loop. Parsing is synchronous in the upload request (~10-30 s). The model maps each result to a seeded catalogue `slug`; unmatched markers are skipped and reported. **First-party Anthropic API** is the alternative if a Vertex-unsupported feature is ever needed (Message Batches, Files API) — it would add Secret Manager. Unit conversion to canonical (UCUM) units is **[LATER]** — trigger: a second unit system appears for one marker; it adds a nullable `canonical_value` column populated from a deterministic per-analyte factor table, leaving stored raw values untouched.
+
+### Biomarker standards coding — [MVP schema, backfill LATER]
+The `biomarkers` catalogue carries a **LOINC** code (`loinc_code`, nullable, indexed) and a **UCUM** `canonical_unit` — the coding systems HL7 FHIR `Observation` resources use — so a future direct lab/FHIR integration joins incoming `Observation.code` on `loinc_code` without touching the LLM flow. Seeded LOINC values are best-effort and must be verified against the official LOINC release before any real lab integration relies on them (the column is nullable for exactly that backfill). The direct lab integration itself is **[LATER]**.
 
 ### Lakehouse — [LATER]
 DuckLake. Metadata in Cloud SQL and file storage in GCS. Add when omics or dense wearable data create analytical scale. Will contain all biological data in the future. Even biomarkers. Medallion architecture.
