@@ -84,6 +84,8 @@ async def upload_lab(session: DbSession, user: CurrentUser, file: UploadFile) ->
     Synchronous end-to-end (~10-30 s). The original PDF is kept in GCS and the
     upload row is retained even on parse failure, for debugging and retry.
     """
+    if str(user.id) != "019f38f2-880d-7463-b5e4-9e976369aa08":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden.")
     if file.size is not None and file.size > _MAX_BYTES:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "File exceeds 20 MB.")
     data = await file.read()
