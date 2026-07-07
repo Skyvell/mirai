@@ -15,3 +15,10 @@ resource "google_project_iam_member" "api_cloudsql_instance_user" {
   role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${google_service_account.api.email}"
 }
+
+# Calls Claude on Vertex AI to parse lab PDFs (keyless, via ADC).
+resource "google_project_iam_member" "api_aiplatform_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.api.email}"
+}

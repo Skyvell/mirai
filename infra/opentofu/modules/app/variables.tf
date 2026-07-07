@@ -76,3 +76,21 @@ variable "public_ingress" {
   description = "Grant run.invoker to allUsers. Auth is enforced in-app via Clerk JWTs, not by Cloud Run."
   default     = true
 }
+
+variable "bucket_force_destroy" {
+  type        = bool
+  description = "Allow destroying the lab-uploads bucket even when it holds objects."
+  default     = false
+}
+
+variable "vertex_region" {
+  type        = string
+  description = "Vertex AI region for the Claude client the backend's Pydantic AI agent uses to parse lab PDFs (a multi-region like eu/global, distinct from the compute region)."
+  default     = "eu"
+}
+
+variable "vertex_model" {
+  type        = string
+  description = "Claude model id the backend's Pydantic AI agent uses on Vertex AI."
+  default     = "claude-opus-4-8"
+}

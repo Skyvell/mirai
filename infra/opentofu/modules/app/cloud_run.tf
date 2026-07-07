@@ -51,6 +51,22 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "FRONTEND_ORIGINS"
         value = var.frontend_origins
       }
+      env {
+        name  = "GCS_BUCKET"
+        value = google_storage_bucket.user_uploads.name
+      }
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "VERTEX_REGION"
+        value = var.vertex_region
+      }
+      env {
+        name  = "VERTEX_MODEL"
+        value = var.vertex_model
+      }
 
       startup_probe {
         http_get {

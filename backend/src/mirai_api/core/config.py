@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # (local dev origin now; the deployed frontend origin is added per environment).
     frontend_origins: str = "http://localhost:5173"
 
+    # User-uploaded files (lab PDFs today) and the Vertex AI Claude client that
+    # parses them. All keyless via ADC — no secrets. vertex_region is a Vertex
+    # multi-region (eu/global), distinct from the GCP compute region.
+    gcs_bucket: str = ""
+    gcp_project_id: str = ""
+    vertex_region: str = "eu"
+    vertex_model: str = "claude-opus-4-8"
+
     @property
     def cors_origins(self) -> list[str]:
         """Split the comma-separated allow-list into individual origins."""

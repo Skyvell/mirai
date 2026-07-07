@@ -3,6 +3,8 @@ resource "google_project_service" "required" {
     "run.googleapis.com",
     "artifactregistry.googleapis.com",
     "sqladmin.googleapis.com",
+    "storage.googleapis.com",
+    "aiplatform.googleapis.com",
     # "secretmanager.googleapis.com", # add when a secret exists
     # "compute.googleapis.com",       # add for private IP later
   ])
