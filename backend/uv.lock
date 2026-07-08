@@ -141,11 +141,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/dd/2a1e81cf1b163acc340afc4ec74ed1d86f5eed1a809fabdeed3e0997b346/anthropic-0.116.0-py3-none-any.whl", hash = "sha256:6c0a7698e8d652455da3499978279bb2588c7264d0a35be3666009a4258c8256", size = 956896, upload-time = "2026-07-02T19:08:08.756Z" },
 ]
 
-[package.optional-dependencies]
-vertex = [
-    { name = "google-auth", extra = ["requests"] },
-]
-
 [[package]]
 name = "anyio"
 version = "4.14.1"
@@ -478,11 +473,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/1d/f6d3ca1ad0725f2e08a1c6915640748a52de2e66596160a4d53b010cccf0/google_auth-2.55.1-py3-none-any.whl", hash = "sha256:eada68dfd52b3b81191827601e2a0c3fa12540c818534b630ddc5355769c3995", size = 252349, upload-time = "2026-06-25T23:38:52.946Z" },
 ]
 
-[package.optional-dependencies]
-requests = [
-    { name = "requests" },
-]
-
 [[package]]
 name = "google-cloud-core"
 version = "2.6.0"
@@ -796,7 +786,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "anthropic", extra = ["vertex"] },
+    { name = "anthropic" },
     { name = "cloud-sql-python-connector", extra = ["pg8000"] },
     { name = "fastapi" },
     { name = "google-cloud-storage" },
@@ -817,7 +807,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18" },
-    { name = "anthropic", extras = ["vertex"], specifier = ">=0.116.0" },
+    { name = "anthropic", specifier = ">=0.116.0" },
     { name = "cloud-sql-python-connector", extras = ["pg8000"], specifier = ">=1.18" },
     { name = "fastapi", specifier = ">=0.138" },
     { name = "google-cloud-storage", specifier = ">=3.12.0" },

@@ -25,13 +25,14 @@ class Settings(BaseSettings):
     # (local dev origin now; the deployed frontend origin is added per environment).
     frontend_origins: str = "http://localhost:5173"
 
-    # User-uploaded files (lab PDFs today) and the Vertex AI Claude client that
-    # parses them. All keyless via ADC — no secrets. vertex_region is a Vertex
-    # multi-region (eu/global), distinct from the GCP compute region.
+    # User-uploaded files (lab PDFs today), stored in GCS — keyless via ADC.
     gcs_bucket: str = ""
     gcp_project_id: str = ""
-    vertex_region: str = "eu"
-    vertex_model: str = "claude-opus-4-8"
+
+    # Claude via the Anthropic API parses lab PDFs. Key-based auth: Secret
+    # Manager injects it on Cloud Run; backend/.env supplies it locally.
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
 
     @property
     def cors_origins(self) -> list[str]:

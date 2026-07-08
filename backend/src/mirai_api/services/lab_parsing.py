@@ -3,7 +3,6 @@ from datetime import date
 from decimal import Decimal
 from functools import lru_cache
 
-from anthropic import AsyncAnthropicVertex
 from pydantic import BaseModel
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.anthropic import AnthropicModel
@@ -101,16 +100,12 @@ def map_extraction(
 
 @lru_cache
 def _agent() -> Agent[None, LabExtraction]:
-    """Cached Pydantic AI agent over Claude on Vertex (built lazily so import
-    doesn't require ADC)."""
+    """Cached Pydantic AI agent over Claude (built lazily so import doesn't
+    require credentials)."""
     settings = get_settings()
     model = AnthropicModel(
-        settings.vertex_model,
-        provider=AnthropicProvider(
-            anthropic_client=AsyncAnthropicVertex(
-                project_id=settings.gcp_project_id, region=settings.vertex_region
-            )
-        ),
+        settings.anthropic_model,
+        provider=AnthropicProvider(api_key=settings.anthropic_api_key),
     )
     return Agent(model, output_type=LabExtraction, system_prompt=_SYSTEM_PROMPT)
 

@@ -60,12 +60,13 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.project_id
       }
       env {
-        name  = "VERTEX_REGION"
-        value = var.vertex_region
-      }
-      env {
-        name  = "VERTEX_MODEL"
-        value = var.vertex_model
+        name = "ANTHROPIC_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.anthropic_api_key.secret_id
+            version = "latest"
+          }
+        }
       }
 
       startup_probe {

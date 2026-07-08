@@ -29,6 +29,11 @@ Clerk + CORS are configured per-env via `modules/app` variables (`clerk_jwks_url
 deployed frontend origin). The values are public (JWKS URL, issuer, allowed
 origins), not secrets.
 
+The one real secret — the Anthropic API key for lab-PDF parsing — lives in
+**Secret Manager** (`modules/app/secrets.tf`): tofu owns the secret shape and
+the runtime SA's per-secret accessor grant; the value is seeded manually once
+per project (see Setup) and never enters code or state.
+
 ## Setup (once per project)
 
 Bootstrap creates the foundation tofu can't manage itself — the state bucket and
@@ -38,6 +43,13 @@ the keyless GitHub↔GCP trust. Both are idempotent; run once from the repo root
 just bootstrap-state <PROJECT>                 # OpenTofu state bucket
 just bootstrap-trust <PROJECT> <owner/repo>    # WIF pool + ci-deployer SA
 just bootstrap-db <PROJECT>                    # runtime SA owns the app database (after first apply)
+```
+
+After the first `tofu apply`, seed the Anthropic API key (the Cloud Run
+revision won't start until a secret version exists):
+
+```bash
+echo -n "sk-ant-..." | gcloud secrets versions add anthropic-api-key --data-file=- --project <PROJECT>
 ```
 
 `bootstrap-db` runs after the first `tofu apply` (the instance and IAM DB user
