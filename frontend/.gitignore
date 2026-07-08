@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .tanstack
 
+# Intermediate OpenAPI schema; src/client/ (generated from it) is committed.
+openapi.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

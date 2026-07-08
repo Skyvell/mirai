@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useAuth } from '@clerk/react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
-  getBiomarkers,
-  uploadLabPdf,
-  type BiomarkerSeries,
-  type LabUploadResult,
-} from '@/lib/api'
+  listBiomarkersOptions,
+  listBiomarkersQueryKey,
+  uploadLabMutation,
+} from '@/client/@tanstack/react-query.gen'
+import type { BiomarkerSeries } from '@/client'
+import { apiErrorMessage } from '@/lib/api'
 
 export const Route = createFileRoute('/biomarkers')({
   component: BiomarkersComponent,
@@ -27,44 +28,23 @@ function history(series: BiomarkerSeries): string {
 }
 
 function BiomarkersComponent() {
-  const { getToken } = useAuth()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
-  const [result, setResult] = useState<LabUploadResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [biomarkers, setBiomarkers] = useState<BiomarkerSeries[] | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const biomarkers = useQuery(listBiomarkersOptions())
+  const upload = useMutation({
+    ...uploadLabMutation(),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() }),
+  })
 
-  const loadBiomarkers = useCallback(async () => {
-    const token = await getToken()
-    if (!token) throw new Error('Not authenticated.')
-    setBiomarkers(await getBiomarkers(token))
-  }, [getToken])
-
-  useEffect(() => {
-    loadBiomarkers().catch((err) => setLoadError(String(err)))
-  }, [loadBiomarkers])
-
-  async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     // Reset so re-selecting the same file fires onChange again.
     event.target.value = ''
-    if (!file) return
-
-    setUploading(true)
-    setError(null)
-    setResult(null)
-    try {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated.')
-      setResult(await uploadLabPdf(token, file))
-      await loadBiomarkers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setUploading(false)
-    }
+    if (file) upload.mutate({ body: { file } })
   }
+
+  const result = upload.data
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -81,12 +61,14 @@ function BiomarkersComponent() {
         onChange={onFileChange}
       />
       <div>
-        <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
-          {uploading ? 'Parsing report… (takes up to 30 s)' : 'Upload lab PDF'}
+        <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
+          {upload.isPending ? 'Parsing report… (takes up to 30 s)' : 'Upload lab PDF'}
         </Button>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {upload.isError && (
+        <p className="text-sm text-destructive">{apiErrorMessage(upload.error)}</p>
+      )}
 
       {result && (result.measured_at !== null || result.skipped.length > 0) && (
         <div className="text-sm text-muted-foreground">
@@ -106,11 +88,11 @@ function BiomarkersComponent() {
         </div>
       )}
 
-      {loadError ? (
-        <p className="text-sm text-destructive">{loadError}</p>
-      ) : biomarkers === null ? (
+      {biomarkers.isError ? (
+        <p className="text-sm text-destructive">{apiErrorMessage(biomarkers.error)}</p>
+      ) : biomarkers.data === undefined ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : biomarkers.length === 0 ? (
+      ) : biomarkers.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">No biomarkers yet.</p>
       ) : (
         <table className="w-full text-sm">
@@ -123,7 +105,7 @@ function BiomarkersComponent() {
             </tr>
           </thead>
           <tbody>
-            {biomarkers.map((b) => {
+            {biomarkers.data.map((b) => {
               const latest = b.measurements[b.measurements.length - 1]
               return (
                 <tr key={b.slug} className="border-b">

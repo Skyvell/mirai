@@ -34,7 +34,7 @@ pnpm build    # tsc -b (typecheck) then vite build
 pnpm lint     # oxlint
 ```
 
-Stack: Vite 8 + React 19 + TypeScript, TanStack Router, Tailwind v4, shadcn/ui (Radix + lucide-react, Geist font).
+Stack: Vite 8 + React 19 + TypeScript, TanStack Router, TanStack Query, Tailwind v4, shadcn/ui (Radix + lucide-react, Geist font), generated API client (`@hey-api/openapi-ts`).
 
 **Current state.** Six routes scaffolded as placeholder pages: `/` (Overview), `/biomarkers`, `/physiology`, `/omics`, `/insights`, `/interventions`. Nav lives in `__root.tsx`. Routes cover the full product vision; only biomarkers is in MVP scope.
 
@@ -73,11 +73,11 @@ src-layout single package `mirai_api` (`src/mirai_api/`): `main.py` (app + CORS)
 
 ## Frontend wiring
 
-**Clerk auth — wired.** `@clerk/react` (v6). `ClerkProvider` wraps the router in `main.tsx` (key from `VITE_CLERK_PUBLISHABLE_KEY`); `__root.tsx` gates the whole app — `<Show when="signed-in">` renders nav + `<UserButton/>`, `signed-out` renders `<SignIn/>`. Overview (`routes/index.tsx`) fetches the protected backend `GET /me` via `useAuth().getToken()` (`src/lib/api.ts`) to confirm the token verifies. Build config (`VITE_API_URL`, `VITE_CLERK_PUBLISHABLE_KEY`) lives in the committed `frontend/.env` — both values are public, not secrets; a gitignored `.env.local` overrides it for a local backend (`.env.local` > `.env`).
+**Clerk auth — wired.** `@clerk/react` (v6). `ClerkProvider` wraps the router in `main.tsx` (key from `VITE_CLERK_PUBLISHABLE_KEY`); `__root.tsx` gates the whole app — `<Show when="signed-in">` renders nav + `<UserButton/>`, `signed-out` renders `<SignIn/>`. Overview (`routes/index.tsx`) fetches the protected backend `GET /me` via the generated client to confirm the token verifies. Build config (`VITE_API_URL`, `VITE_CLERK_PUBLISHABLE_KEY`) lives in the committed `frontend/.env` — both values are public, not secrets; a gitignored `.env.local` overrides it for a local backend (`.env.local` > `.env`).
 
 **Frontend hosting — Cloudflare Pages (Direct Upload).** The frontend is a static Vite SPA, deployed from CI via `_deploy-frontend.yml` (build with pnpm, upload `dist/` with `npx wrangler pages deploy`). Deliberately **not** the Cloudflare GitHub App: that would grant a third party write access to this auto-deploying repo. Instead CI holds a Cloudflare API token scoped to Pages (`CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` in the `dev` Environment) — Cloudflare gets no repo access. Build config comes from the committed `frontend/.env`. `public/_redirects` (`/* /index.html 200`) serves the SPA catch-all so client-side deep links don't 404. Backend CORS is an allow-list (`frontend_origins`, comma-separated) covering both `localhost:5173` and the Pages origin.
 
-**Still deferred:** TanStack Query, and the `@hey-api/openapi-ts` API client generated from the backend's OpenAPI schema.
+**API client — generated (`@hey-api/openapi-ts` + TanStack Query).** `pnpm generate:api` dumps the backend's OpenAPI schema (`backend/scripts/export_openapi.py` — importing the app has no side effects, no env needed) and regenerates `src/client/` (fetch client, typed SDK, `*Options()`/`*Mutation()` TanStack Query helpers keyed on the backend's `operation_id`s). Run it whenever the backend contract changes; `src/client/` is committed (CI's frontend job is pnpm-only), the intermediate `openapi.json` is gitignored. Wiring in `main.tsx`: `ApiProvider` (inside `ClerkProvider`) calls `configureApiClient` (`src/lib/api.ts`) during render, setting `baseUrl` (`VITE_API_URL`) and the Clerk token via hey-api's `auth` — the token is attached only to operations the spec marks Bearer-secured (`HTTPBearer` in `core/deps.py`); `QueryClientProvider` wraps the router. Routes consume `currentUserOptions`, `listBiomarkersOptions`, `uploadLabMutation` (upload invalidates `listBiomarkersQueryKey` on success); `apiErrorMessage` surfaces FastAPI's `detail` from thrown error bodies.
 
 ## Commits
 - Short and concise.
