@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from itertools import groupby
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -35,36 +36,50 @@ def list_biomarkers(session: DbSession, user: CurrentUser) -> list[BiomarkerSeri
     canonical_unit is catalogue context. Series are sorted by measurement date
     ascending, so the latest value is the last element.
     """
+    # The ORDER BY is the response contract: the first three keys set the list
+    # order and make each biomarker's rows contiguous for groupby; the last two
+    # set the within-series order.
     rows = session.execute(
-        select(BiomarkerMeasurement, Biomarker)
+        select(
+            Biomarker.slug,
+            Biomarker.display_name,
+            Biomarker.category,
+            Biomarker.canonical_unit,
+            BiomarkerMeasurement.measured_at,
+            BiomarkerMeasurement.value,
+            BiomarkerMeasurement.unit,
+            BiomarkerMeasurement.reference_low,
+            BiomarkerMeasurement.reference_high,
+        )
         .join(Biomarker, BiomarkerMeasurement.biomarker_id == Biomarker.id)
         .where(BiomarkerMeasurement.user_id == user.id)
         .order_by(
             Biomarker.category,
             Biomarker.display_name,
-            BiomarkerMeasurement.measured_at.asc().nulls_last(),
+            Biomarker.slug,
+            BiomarkerMeasurement.measured_at.nulls_last(),
             BiomarkerMeasurement.created_at,
         )
     ).all()
 
-    series: dict[str, BiomarkerSeries] = {}
-    for measurement, biomarker in rows:
-        entry = series.get(biomarker.slug)
-        if entry is None:
-            entry = series[biomarker.slug] = BiomarkerSeries(
-                slug=biomarker.slug,
-                display_name=biomarker.display_name,
-                category=biomarker.category,
-                canonical_unit=biomarker.canonical_unit,
-                measurements=[],
-            )
-        entry.measurements.append(
-            MeasurementPoint(
-                measured_at=measurement.measured_at,
-                value=measurement.value,
-                unit=measurement.unit,
-                reference_low=measurement.reference_low,
-                reference_high=measurement.reference_high,
-            )
+    return [
+        BiomarkerSeries(
+            slug=slug,
+            display_name=display_name,
+            category=category,
+            canonical_unit=canonical_unit,
+            measurements=[
+                MeasurementPoint(
+                    measured_at=r.measured_at,
+                    value=r.value,
+                    unit=r.unit,
+                    reference_low=r.reference_low,
+                    reference_high=r.reference_high,
+                )
+                for r in points
+            ],
         )
-    return list(series.values())
+        for (slug, display_name, category, canonical_unit), points in groupby(
+            rows, key=lambda r: (r.slug, r.display_name, r.category, r.canonical_unit)
+        )
+    ]
