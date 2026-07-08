@@ -45,11 +45,12 @@ just bootstrap-trust <PROJECT> <owner/repo>    # WIF pool + ci-deployer SA
 just bootstrap-db <PROJECT>                    # runtime SA owns the app database (after first apply)
 ```
 
-After the first `tofu apply`, seed the Anthropic API key (the Cloud Run
-revision won't start until a secret version exists):
+After the first `tofu apply`, seed the real Anthropic API key (tofu creates the
+secret with a placeholder version so Cloud Run starts; lab parsing fails until
+the real key is added — new instances pick up `latest` on start):
 
 ```bash
-echo -n "sk-ant-..." | gcloud secrets versions add anthropic-api-key --data-file=- --project <PROJECT>
+printf '%s' 'sk-ant-...' | gcloud secrets versions add anthropic-api-key --data-file=- --project <PROJECT>
 ```
 
 `bootstrap-db` runs after the first `tofu apply` (the instance and IAM DB user

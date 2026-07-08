@@ -6,8 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Runtime configuration, sourced from environment variables.
 
-    Cloud Run injects the DB_* / INSTANCE_CONNECTION_NAME / CLERK_* values (see
-    infra/opentofu/modules/app). Locally, an untracked backend/.env supplies them.
+    Cloud Run injects these (see infra/opentofu/modules/app); locally an
+    untracked backend/.env supplies them.
     """
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

@@ -5,6 +5,10 @@ resource "google_cloud_run_v2_service" "api" {
   deletion_protection = false
   labels              = local.labels
 
+  # The env block references the secret by id only, so tofu can't see that the
+  # revision needs a version of it to start — order explicitly.
+  depends_on = [google_secret_manager_secret_version.anthropic_api_key_placeholder]
+
   template {
     service_account = google_service_account.api.email
 

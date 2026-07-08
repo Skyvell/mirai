@@ -1,6 +1,6 @@
-# Anthropic API key for lab-PDF parsing. Tofu owns the secret shape only; the
-# value is seeded manually once per project (never in code or state):
-#   echo -n "sk-ant-..." | gcloud secrets versions add anthropic-api-key --data-file=-
+# Anthropic API key for lab-PDF parsing. Tofu owns the secret shape and a
+# placeholder version; the real value is seeded manually once per project and
+# never enters code or state (see infra/opentofu/README.md, Setup).
 resource "google_secret_manager_secret" "anthropic_api_key" {
   secret_id = "anthropic-api-key"
   labels    = local.labels
@@ -10,6 +10,14 @@ resource "google_secret_manager_secret" "anthropic_api_key" {
   }
 
   depends_on = [google_project_service.required]
+}
+
+# Placeholder first version so the Cloud Run revision (which references
+# "latest") can start before the real key exists. Seeding adds version 2 and
+# "latest" resolves to it on the next instance start.
+resource "google_secret_manager_secret_version" "anthropic_api_key_placeholder" {
+  secret      = google_secret_manager_secret.anthropic_api_key.id
+  secret_data = "placeholder-seed-real-key"
 }
 
 # Read access scoped to this secret only, not project-wide.

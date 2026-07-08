@@ -786,7 +786,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
-    { name = "anthropic" },
     { name = "cloud-sql-python-connector", extra = ["pg8000"] },
     { name = "fastapi" },
     { name = "google-cloud-storage" },
@@ -807,7 +806,6 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18" },
-    { name = "anthropic", specifier = ">=0.116.0" },
     { name = "cloud-sql-python-connector", extras = ["pg8000"], specifier = ">=1.18" },
     { name = "fastapi", specifier = ">=0.138" },
     { name = "google-cloud-storage", specifier = ">=3.12.0" },
