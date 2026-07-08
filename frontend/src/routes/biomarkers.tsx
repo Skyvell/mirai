@@ -1,14 +1,17 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@clerk/react'
 import { Button } from '@/components/ui/button'
-import { uploadLabPdf, type LabUploadResult } from '@/lib/api'
+import {
+  getBiomarkers,
+  uploadLabPdf,
+  type BiomarkerSeries,
+  type LabUploadResult,
+} from '@/lib/api'
 
 export const Route = createFileRoute('/biomarkers')({
   component: BiomarkersComponent,
 })
-
-type Status = 'idle' | 'uploading' | 'success' | 'error'
 
 function referenceRange(low: string | null, high: string | null): string {
   if (low !== null && high !== null) return `${low}–${high}`
@@ -17,12 +20,30 @@ function referenceRange(low: string | null, high: string | null): string {
   return '—'
 }
 
+function history(series: BiomarkerSeries): string {
+  return series.measurements
+    .map((m) => (m.measured_at ? `${m.value} (${m.measured_at})` : m.value))
+    .join(' → ')
+}
+
 function BiomarkersComponent() {
   const { getToken } = useAuth()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [status, setStatus] = useState<Status>('idle')
+  const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<LabUploadResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [biomarkers, setBiomarkers] = useState<BiomarkerSeries[] | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const loadBiomarkers = useCallback(async () => {
+    const token = await getToken()
+    if (!token) throw new Error('Not authenticated.')
+    setBiomarkers(await getBiomarkers(token))
+  }, [getToken])
+
+  useEffect(() => {
+    loadBiomarkers().catch((err) => setLoadError(String(err)))
+  }, [loadBiomarkers])
 
   async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -30,18 +51,18 @@ function BiomarkersComponent() {
     event.target.value = ''
     if (!file) return
 
-    setStatus('uploading')
+    setUploading(true)
     setError(null)
     setResult(null)
     try {
       const token = await getToken()
       if (!token) throw new Error('Not authenticated.')
-      const res = await uploadLabPdf(token, file)
-      setResult(res)
-      setStatus('success')
+      setResult(await uploadLabPdf(token, file))
+      await loadBiomarkers()
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
-      setStatus('error')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -60,49 +81,18 @@ function BiomarkersComponent() {
         onChange={onFileChange}
       />
       <div>
-        <Button
-          onClick={() => inputRef.current?.click()}
-          disabled={status === 'uploading'}
-        >
-          {status === 'uploading' ? 'Parsing report… (takes up to 30 s)' : 'Upload lab PDF'}
+        <Button onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading ? 'Parsing report… (takes up to 30 s)' : 'Upload lab PDF'}
         </Button>
       </div>
 
-      {status === 'error' && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-      {status === 'success' && result && (
-        <div className="flex flex-col gap-4">
-          {result.measured_at && (
-            <p className="text-sm text-muted-foreground">
-              Collected {result.measured_at}
-            </p>
-          )}
-          {result.measurements.length > 0 && (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 font-medium">Biomarker</th>
-                  <th className="py-2 font-medium">Value</th>
-                  <th className="py-2 font-medium">Unit</th>
-                  <th className="py-2 font-medium">Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.measurements.map((m) => (
-                  <tr key={m.biomarker_slug} className="border-b">
-                    <td className="py-2">{m.display_name}</td>
-                    <td className="py-2 font-mono">{m.value}</td>
-                    <td className="py-2">{m.unit}</td>
-                    <td className="py-2 text-muted-foreground">
-                      {referenceRange(m.reference_low, m.reference_high)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {result && (result.measured_at !== null || result.skipped.length > 0) && (
+        <div className="text-sm text-muted-foreground">
+          {result.measured_at && <p>Parsed report collected {result.measured_at}.</p>}
           {result.skipped.length > 0 && (
-            <div className="text-sm text-muted-foreground">
+            <>
               <p className="font-medium">Skipped</p>
               <ul className="list-inside list-disc">
                 {result.skipped.map((s, i) => (
@@ -111,9 +101,45 @@ function BiomarkersComponent() {
                   </li>
                 ))}
               </ul>
-            </div>
+            </>
           )}
         </div>
+      )}
+
+      {loadError ? (
+        <p className="text-sm text-destructive">{loadError}</p>
+      ) : biomarkers === null ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : biomarkers.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No biomarkers yet.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="py-2 font-medium">Biomarker</th>
+              <th className="py-2 font-medium">Latest</th>
+              <th className="py-2 font-medium">Reference</th>
+              <th className="py-2 font-medium">History</th>
+            </tr>
+          </thead>
+          <tbody>
+            {biomarkers.map((b) => {
+              const latest = b.measurements[b.measurements.length - 1]
+              return (
+                <tr key={b.slug} className="border-b">
+                  <td className="py-2">{b.display_name}</td>
+                  <td className="py-2 whitespace-nowrap">
+                    <span className="font-mono">{latest.value}</span> {latest.unit}
+                  </td>
+                  <td className="py-2 text-muted-foreground">
+                    {referenceRange(latest.reference_low, latest.reference_high)}
+                  </td>
+                  <td className="py-2 text-xs text-muted-foreground">{history(b)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       )}
     </div>
   )

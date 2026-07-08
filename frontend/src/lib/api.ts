@@ -49,3 +49,25 @@ export async function uploadLabPdf(token: string, file: File): Promise<LabUpload
   const res = await authedFetch('/lab-uploads', token, { method: 'POST', body: form })
   return res.json()
 }
+
+export interface MeasurementPoint {
+  measured_at: string | null
+  value: string
+  unit: string
+  reference_low: string | null
+  reference_high: string | null
+}
+
+export interface BiomarkerSeries {
+  slug: string
+  display_name: string
+  category: string
+  canonical_unit: string
+  measurements: MeasurementPoint[]
+}
+
+/** Fetch the caller's biomarkers, each with its measurement series sorted by date ascending. */
+export async function getBiomarkers(token: string): Promise<BiomarkerSeries[]> {
+  const res = await authedFetch('/biomarkers', token)
+  return res.json()
+}
