@@ -16,6 +16,10 @@ bootstrap-trust project github_repo region="europe-north1":
 bootstrap-db project instance="mirai" database="mirai":
     ./infra/scripts/02_bootstrap_db_owner.sh {{project}} {{instance}} {{database}}
 
+# Seed a Secret Manager secret with its real value (prompts; once per environment).
+seed-secret project secret="anthropic-api-key":
+    ./infra/scripts/03_seed_secret.sh {{project}} {{secret}}
+
 # Initialize OpenTofu for the given environment.
 tofu-init env:
     tofu -chdir=infra/opentofu/environments/{{env}} init

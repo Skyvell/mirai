@@ -50,7 +50,7 @@ secret with a placeholder version so Cloud Run starts; lab parsing fails until
 the real key is added — new instances pick up `latest` on start):
 
 ```bash
-printf '%s' 'sk-ant-...' | gcloud secrets versions add anthropic-api-key --data-file=- --project <PROJECT>
+just seed-secret <PROJECT>    # prompts for the key (anthropic-api-key by default)
 ```
 
 `bootstrap-db` runs after the first `tofu apply` (the instance and IAM DB user

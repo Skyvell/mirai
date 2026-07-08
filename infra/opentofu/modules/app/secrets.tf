@@ -1,6 +1,6 @@
 # Anthropic API key for lab-PDF parsing. Tofu owns the secret shape and a
-# placeholder version; the real value is seeded manually once per project and
-# never enters code or state (see infra/opentofu/README.md, Setup).
+# placeholder version; the real value is seeded once per project via
+# `just seed-secret <project>` and never enters code or state.
 resource "google_secret_manager_secret" "anthropic_api_key" {
   secret_id = "anthropic-api-key"
   labels    = local.labels
