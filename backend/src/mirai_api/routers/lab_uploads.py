@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -17,6 +18,8 @@ from mirai_api.services.lab_parsing import (
     map_extraction,
     parse_lab_pdf,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["lab-uploads"])
 
@@ -104,6 +107,7 @@ async def upload_lab(session: DbSession, user: CurrentUser, file: UploadFile) ->
     try:
         extraction = await parse_lab_pdf(data, prompt)
     except Exception as exc:
+        logger.exception("Lab parse failed for upload %s", upload.id)
         upload.status = "failed"
         await run_in_threadpool(session.commit)
         raise HTTPException(
