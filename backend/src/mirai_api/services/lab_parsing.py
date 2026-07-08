@@ -19,11 +19,15 @@ You extract blood biomarker results from a lab report PDF.
 
 You are given a catalogue of known biomarkers, one per line, formatted as
 `slug — display name — canonical unit`. For every result in the report:
-- Map it to exactly one catalogue slug. Emit that slug verbatim.
+- Map it to exactly one catalogue slug based on the analyte identity alone.
+  Emit that slug verbatim.
+- The canonical unit is context, NOT a matching criterion. A result reported in
+  a different unit than the catalogue's (e.g. HbA1c in mmol/mol vs %, glucose in
+  mg/dL vs mmol/L) is still the same analyte — map it to the slug anyway.
 - Copy the value, unit, and reference range exactly as printed. Do NOT convert
   units or values.
-- If a result cannot be confidently mapped to a catalogue slug, put it in
-  `unmatched` instead of guessing.
+- Use `unmatched` only when no catalogue slug names the analyte — never because
+  of a unit mismatch.
 Extract the sample collection date if present. Only report results actually
 present in the document — never invent values.
 """
