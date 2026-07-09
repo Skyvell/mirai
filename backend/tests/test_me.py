@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from mirai_api.users.models import User
+from mirai_api.models import User
 
 
 def test_me_returns_identity(client: TestClient, fake_user: User) -> None:

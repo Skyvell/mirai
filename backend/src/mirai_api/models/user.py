@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from mirai_api.core.db import Base
+from mirai_api.models.base import Base
 
 
 class User(Base):

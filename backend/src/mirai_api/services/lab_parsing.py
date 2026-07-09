@@ -10,9 +10,9 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from mirai_api.biomarkers.models import Biomarker
 from mirai_api.core.config import get_settings
 from mirai_api.core.db import get_engine
+from mirai_api.models import Biomarker
 
 _SYSTEM_PROMPT = """\
 You extract blood biomarker results from a lab report PDF.

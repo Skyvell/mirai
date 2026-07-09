@@ -35,7 +35,7 @@ def test_user_outside_allowlist_is_rejected(
 ) -> None:
     someone_else = str(uuid.uuid4())
     monkeypatch.setattr(
-        "mirai_api.lab_uploads.router.get_settings",
+        "mirai_api.routers.lab_uploads.get_settings",
         lambda: Settings(
             upload_allowlist=someone_else,
             _env_file=None,

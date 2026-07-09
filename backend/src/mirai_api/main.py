@@ -6,12 +6,9 @@ from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
-from mirai_api import health
-from mirai_api.biomarkers.router import router as biomarkers_router
 from mirai_api.core.config import get_settings
 from mirai_api.core.db import warm_engine
-from mirai_api.lab_uploads.router import router as lab_uploads_router
-from mirai_api.users.router import router as users_router
+from mirai_api.routers import biomarkers, health, lab_uploads, me
 
 
 @asynccontextmanager
@@ -40,6 +37,6 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
-app.include_router(users_router)
-app.include_router(lab_uploads_router)
-app.include_router(biomarkers_router)
+app.include_router(me.router)
+app.include_router(lab_uploads.router)
+app.include_router(biomarkers.router)

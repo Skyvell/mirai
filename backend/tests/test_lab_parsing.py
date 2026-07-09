@@ -1,8 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
-from mirai_api.biomarkers.models import Biomarker
-from mirai_api.lab_uploads.parsing import (
+from mirai_api.models import Biomarker
+from mirai_api.services.lab_parsing import (
     ExtractedMeasurement,
     LabExtraction,
     UnmatchedMarker,

@@ -6,9 +6,9 @@ from fastapi.concurrency import run_in_threadpool
 from mirai_api.core.config import get_settings
 from mirai_api.core.deps import CurrentUser, DbSession
 from mirai_api.core.enums import UploadStatus
-from mirai_api.lab_uploads.parsing import cached_catalogue, map_extraction, parse_lab_pdf
-from mirai_api.lab_uploads.schemas import LabUploadResponse, MeasurementOut
-from mirai_api.lab_uploads.service import persist_results, store_upload
+from mirai_api.schemas.lab_uploads import LabUploadResponse, MeasurementOut
+from mirai_api.services.lab_parsing import cached_catalogue, map_extraction, parse_lab_pdf
+from mirai_api.services.lab_uploads import persist_results, store_upload
 
 logger = logging.getLogger(__name__)
 

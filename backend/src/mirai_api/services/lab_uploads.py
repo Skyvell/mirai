@@ -3,11 +3,10 @@ from datetime import UTC, date, datetime
 
 from sqlalchemy.orm import Session
 
-from mirai_api.biomarkers.models import BiomarkerMeasurement
 from mirai_api.core.enums import UploadStatus
-from mirai_api.integrations import gcs
-from mirai_api.lab_uploads.models import LabUpload
-from mirai_api.lab_uploads.parsing import MappedMeasurement
+from mirai_api.models import BiomarkerMeasurement, LabUpload
+from mirai_api.services import storage
+from mirai_api.services.lab_parsing import MappedMeasurement
 
 
 def store_upload(session: Session, user_id: uuid.UUID, filename: str, data: bytes) -> LabUpload:
@@ -18,7 +17,7 @@ def store_upload(session: Session, user_id: uuid.UUID, filename: str, data: byte
         filename=filename,
         status=UploadStatus.UPLOADED,
     )
-    gcs.upload(
+    storage.upload(
         upload.gcs_object_name,
         data,
         "application/pdf",

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
-from mirai_api.lab_uploads.parsing import SkippedMarker
+from mirai_api.services.lab_parsing import SkippedMarker
 
 
 class MeasurementOut(BaseModel):

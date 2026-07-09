@@ -4,8 +4,8 @@ from datetime import datetime
 from sqlalchemy import DateTime, Enum, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from mirai_api.core.db import Base
 from mirai_api.core.enums import UploadStatus
+from mirai_api.models.base import Base
 
 
 class LabUpload(Base):

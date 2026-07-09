@@ -3,9 +3,9 @@ from itertools import groupby
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from mirai_api.biomarkers.models import Biomarker, BiomarkerMeasurement
-from mirai_api.biomarkers.schemas import BiomarkerSeries, MeasurementPoint
 from mirai_api.core.deps import CurrentUser, DbSession
+from mirai_api.models import Biomarker, BiomarkerMeasurement
+from mirai_api.schemas.biomarkers import BiomarkerSeries, MeasurementPoint
 
 router = APIRouter(tags=["biomarkers"])
 

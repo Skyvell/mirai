@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from mirai_api.core.deps import CurrentUser
-from mirai_api.users.schemas import MeResponse
+from mirai_api.schemas.me import MeResponse
 
 router = APIRouter(tags=["me"])
 

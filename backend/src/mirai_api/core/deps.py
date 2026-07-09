@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token
-from mirai_api.users.models import User
+from mirai_api.models import User
 
 _bearer = HTTPBearer(auto_error=True)
 
