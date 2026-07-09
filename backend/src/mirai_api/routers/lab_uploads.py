@@ -42,13 +42,9 @@ class LabUploadResponse(BaseModel):
     skipped: list[SkippedMarker]
 
 
-def _store_upload(
-    session: Session, user_id: uuid.UUID, filename: str, data: bytes
-) -> LabUpload:
+def _store_upload(session: Session, user_id: uuid.UUID, filename: str, data: bytes) -> LabUpload:
     """Write the PDF to GCS, then record the upload row. Blocking."""
-    upload = LabUpload(
-        id=uuid.uuid7(), user_id=user_id, filename=filename, status="uploaded"
-    )
+    upload = LabUpload(id=uuid.uuid7(), user_id=user_id, filename=filename, status="uploaded")
     storage.upload(upload.gcs_object_name, data, "application/pdf")
     session.add(upload)
     session.commit()
@@ -110,14 +106,10 @@ async def upload_lab(session: DbSession, user: CurrentUser, file: UploadFile) ->
         logger.exception("Lab parse failed for upload %s", upload.id)
         upload.status = "failed"
         await run_in_threadpool(session.commit)
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, "Failed to parse the lab report."
-        ) from exc
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Failed to parse the lab report.") from exc
 
     mapped, skipped = map_extraction(extraction, catalogue)
-    await run_in_threadpool(
-        _persist_results, session, upload, mapped, extraction.measured_at
-    )
+    await run_in_threadpool(_persist_results, session, upload, mapped, extraction.measured_at)
 
     return LabUploadResponse(
         upload_id=upload.id,

@@ -5,12 +5,12 @@ Revises: 0001
 Create Date: 2026-07-07 15:10:00.000000
 
 """
+
 import uuid
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-
 
 revision: str = "0002"
 down_revision: str | None = "0001"
@@ -149,12 +149,8 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["biomarker_id"], ["biomarkers.id"], ondelete="RESTRICT"
-        ),
-        sa.ForeignKeyConstraint(
-            ["lab_upload_id"], ["lab_uploads.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["biomarker_id"], ["biomarkers.id"], ondelete="RESTRICT"),
+        sa.ForeignKeyConstraint(["lab_upload_id"], ["lab_uploads.id"], ondelete="CASCADE"),
     )
     op.create_index(
         "ix_biomarker_measurements_lab_upload_id",

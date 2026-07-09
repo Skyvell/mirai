@@ -21,6 +21,4 @@ class User(Base):
     # uuidv7(), and v4 fragments the primary-key index.
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
     clerk_user_id: Mapped[str] = mapped_column(Text, unique=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

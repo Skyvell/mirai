@@ -31,4 +31,32 @@ script_location = "%(here)s/alembic"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.14",
+    "httpx>=0.28",
 ]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors.
+    "W",   # pycodestyle warnings.
+    "F",   # Pyflakes.
+    "I",   # isort.
+    "UP",  # pyupgrade.
+    "B",   # flake8-bugbear.
+    "C4",  # flake8-comprehensions.
+    "SIM", # flake8-simplify.
+    "DTZ", # flake8-datetimez — naive-datetime guard.
+    "RUF", # Ruff-native rules.
+    "PT",  # flake8-pytest-style.
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mirai_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

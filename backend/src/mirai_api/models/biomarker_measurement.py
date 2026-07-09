@@ -20,9 +20,7 @@ class BiomarkerMeasurement(Base):
     __tablename__ = "biomarker_measurements"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE")
-    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     biomarker_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("biomarkers.id", ondelete="RESTRICT")
     )
@@ -34,9 +32,7 @@ class BiomarkerMeasurement(Base):
     reference_low: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
     reference_high: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
     measured_at: Mapped[date | None] = mapped_column(Date)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index(

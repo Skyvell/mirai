@@ -26,9 +26,7 @@ class LabUpload(Base):
         Enum("uploaded", "parsed", "failed", name="lab_upload_status", native_enum=False)
     )
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     @property
     def gcs_object_name(self) -> str:

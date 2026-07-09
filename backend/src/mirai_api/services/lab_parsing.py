@@ -115,9 +115,7 @@ def _agent() -> Agent[None, LabExtraction]:
 
 
 def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
-    lines = "\n".join(
-        f"{b.slug} — {b.display_name} — {b.canonical_unit}" for b in catalogue
-    )
+    lines = "\n".join(f"{b.slug} — {b.display_name} — {b.canonical_unit}" for b in catalogue)
     return f"Catalogue of known biomarkers:\n{lines}"
 
 
@@ -135,9 +133,7 @@ def cached_catalogue() -> tuple[list[Biomarker], str]:
     return catalogue, _catalogue_prompt(catalogue)
 
 
-async def parse_lab_pdf(
-    pdf_bytes: bytes, catalogue_prompt_text: str
-) -> LabExtraction:
+async def parse_lab_pdf(pdf_bytes: bytes, catalogue_prompt_text: str) -> LabExtraction:
     """Run the LLM over a lab PDF and return the structured extraction."""
     result = await _agent().run(
         [
