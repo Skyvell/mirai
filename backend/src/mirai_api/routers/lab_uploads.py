@@ -3,8 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 
-from mirai_api.core.config import get_settings
-from mirai_api.core.deps import CurrentUser, DbSession
+from mirai_api.core.deps import AppSettings, CurrentUser, DbSession
 from mirai_api.core.enums import UploadStatus
 from mirai_api.schemas.lab_uploads import LabUploadResponse, MeasurementOut
 from mirai_api.services.lab_parsing import cached_catalogue, map_extraction, parse_lab_pdf
@@ -18,13 +17,18 @@ _MAX_BYTES = 20 * 1024 * 1024
 
 
 @router.post("/lab-uploads", operation_id="upload_lab")
-async def upload_lab(session: DbSession, user: CurrentUser, file: UploadFile) -> LabUploadResponse:
+async def upload_lab(
+    session: DbSession,
+    user: CurrentUser,
+    settings: AppSettings,
+    file: UploadFile,
+) -> LabUploadResponse:
     """Upload a lab PDF, parse it into biomarker measurements, and store both.
 
     Synchronous end-to-end (~10-30 s). The original PDF is kept in GCS and the
     upload row is retained even on parse failure, for debugging and retry.
     """
-    allowlist = get_settings().upload_allowlist_ids
+    allowlist = settings.upload_allowlist_ids
     if allowlist and str(user.id) not in allowlist:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from mirai_api.core.config import Settings, get_settings
 from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token
 from mirai_api.models import User
@@ -14,6 +15,7 @@ from mirai_api.models import User
 _bearer = HTTPBearer(auto_error=True)
 
 DbSession = Annotated[Session, Depends(get_session)]
+AppSettings = Annotated[Settings, Depends(get_settings)]
 
 
 def get_current_user(

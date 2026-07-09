@@ -1,9 +1,9 @@
 import uuid
 
-import pytest
 from fastapi.testclient import TestClient
 
-from mirai_api.core.config import Settings
+from mirai_api.core.config import Settings, get_settings
+from mirai_api.main import app
 
 
 def _upload(client: TestClient, content: bytes) -> object:
@@ -29,17 +29,11 @@ def test_oversize_file_is_rejected(client: TestClient) -> None:
     assert response.status_code == 413
 
 
-def test_user_outside_allowlist_is_rejected(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_user_outside_allowlist_is_rejected(client: TestClient) -> None:
     someone_else = str(uuid.uuid4())
-    monkeypatch.setattr(
-        "mirai_api.routers.lab_uploads.get_settings",
-        lambda: Settings(
-            upload_allowlist=someone_else,
-            _env_file=None,
-        ),
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        upload_allowlist=someone_else,
+        _env_file=None,
     )
     response = _upload(client, b"%PDF fake")
     assert response.status_code == 403
