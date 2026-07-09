@@ -71,6 +71,12 @@ variable "max_instances" {
   default     = 2
 }
 
+variable "upload_allowlist" {
+  type        = string
+  description = "Comma-separated user UUIDs allowed to upload lab PDFs (LLM cost gate). Empty allows all."
+  default     = ""
+}
+
 variable "public_ingress" {
   type        = bool
   description = "Grant run.invoker to allUsers. Auth is enforced in-app via Clerk JWTs, not by Cloud Run."

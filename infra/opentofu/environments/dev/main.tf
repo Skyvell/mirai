@@ -8,5 +8,6 @@ module "app" {
   clerk_jwks_url         = "https://promoted-elephant-55.clerk.accounts.dev/.well-known/jwks.json"
   clerk_issuer           = "https://promoted-elephant-55.clerk.accounts.dev"
   frontend_origins       = "http://localhost:5173,https://mirai-web.pages.dev" # local dev + deployed Pages
+  upload_allowlist       = "019f38f2-880d-7463-b5e4-9e976369aa08"              # ted; keeps the pre-settings gate
   bucket_force_destroy   = true
 }

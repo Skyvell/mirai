@@ -56,6 +56,10 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.frontend_origins
       }
       env {
+        name  = "UPLOAD_ALLOWLIST"
+        value = var.upload_allowlist
+      }
+      env {
         name  = "GCS_BUCKET"
         value = google_storage_bucket.user_uploads.name
       }
