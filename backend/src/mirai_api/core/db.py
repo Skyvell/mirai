@@ -2,7 +2,7 @@ from collections.abc import Iterator
 from functools import lru_cache
 
 from google.cloud.sql.connector import Connector, IPTypes
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from mirai_api.core.config import get_settings
@@ -46,3 +46,12 @@ def _session_factory() -> sessionmaker[Session]:
 def get_session() -> Iterator[Session]:
     with _session_factory()() as session:
         yield session
+
+
+def warm_engine() -> None:
+    """Open one connection at boot so the Cloud SQL connector's first-time
+    setup (IAM token, ephemeral cert, TLS handshake) is already done when
+    requests arrive.
+    """
+    with get_engine().connect() as conn:
+        conn.execute(text("SELECT 1"))
