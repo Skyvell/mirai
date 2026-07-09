@@ -1,16 +1,9 @@
-import uuid
-
 from fastapi import APIRouter
-from pydantic import BaseModel
 
 from mirai_api.core.deps import CurrentUser
+from mirai_api.users.schemas import MeResponse
 
 router = APIRouter(tags=["me"])
-
-
-class MeResponse(BaseModel):
-    user_id: uuid.UUID
-    clerk_user_id: str
 
 
 @router.get("/me", operation_id="current_user")

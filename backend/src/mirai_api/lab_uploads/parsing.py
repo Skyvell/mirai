@@ -10,9 +10,9 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from mirai_api.biomarkers.models import Biomarker
 from mirai_api.core.config import get_settings
 from mirai_api.core.db import get_engine
-from mirai_api.models import Biomarker
 
 _SYSTEM_PROMPT = """\
 You extract blood biomarker results from a lab report PDF.
@@ -71,7 +71,8 @@ class MappedMeasurement:
 
 
 def map_extraction(
-    extraction: LabExtraction, catalogue: list[Biomarker]
+    extraction: LabExtraction,
+    catalogue: list[Biomarker],
 ) -> tuple[list[MappedMeasurement], list[SkippedMarker]]:
     """Resolve extracted measurements against the catalogue.
 
@@ -82,7 +83,12 @@ def map_extraction(
     by_slug = {b.slug: b for b in catalogue}
     mapped: list[MappedMeasurement] = []
     skipped: list[SkippedMarker] = [
-        SkippedMarker(name=u.name, value=u.value, unit=u.unit, reason="unmatched")
+        SkippedMarker(
+            name=u.name,
+            value=u.value,
+            unit=u.unit,
+            reason="unmatched",
+        )
         for u in extraction.unmatched
     ]
 
@@ -98,20 +104,28 @@ def map_extraction(
                 )
             )
             continue
-        mapped.append(MappedMeasurement(biomarker=biomarker, measurement=m))
+        mapped.append(
+            MappedMeasurement(
+                biomarker=biomarker,
+                measurement=m,
+            )
+        )
     return mapped, skipped
 
 
 @lru_cache
 def _agent() -> Agent[None, LabExtraction]:
-    """Cached Pydantic AI agent over Claude (built lazily so import doesn't
-    require credentials)."""
+    """Cached Pydantic AI agent over Claude, built lazily so import needs no key."""
     settings = get_settings()
     model = AnthropicModel(
         settings.anthropic_model,
         provider=AnthropicProvider(api_key=settings.anthropic_api_key),
     )
-    return Agent(model, output_type=LabExtraction, system_prompt=_SYSTEM_PROMPT)
+    return Agent(
+        model,
+        output_type=LabExtraction,
+        system_prompt=_SYSTEM_PROMPT,
+    )
 
 
 def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
@@ -123,9 +137,8 @@ def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
 def cached_catalogue() -> tuple[list[Biomarker], str]:
     """The seeded, read-only biomarker catalogue and its prompt, loaded once.
 
-    Detached instances are safe to reuse across requests: only column values are
-    read, never relationships. Catalogue changes ship as migrations, which
-    redeploy the process and reset this cache.
+    Detached instances are safe to reuse: only column values are read. Catalogue
+    changes ship as migrations, which redeploy the process and reset this cache.
     """
     with Session(get_engine()) as session:
         catalogue = list(session.scalars(select(Biomarker)))

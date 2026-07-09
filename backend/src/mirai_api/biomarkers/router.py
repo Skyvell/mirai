@@ -1,31 +1,13 @@
-from datetime import date
-from decimal import Decimal
 from itertools import groupby
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 from sqlalchemy import select
 
+from mirai_api.biomarkers.models import Biomarker, BiomarkerMeasurement
+from mirai_api.biomarkers.schemas import BiomarkerSeries, MeasurementPoint
 from mirai_api.core.deps import CurrentUser, DbSession
-from mirai_api.models import Biomarker, BiomarkerMeasurement
 
 router = APIRouter(tags=["biomarkers"])
-
-
-class MeasurementPoint(BaseModel):
-    measured_at: date | None
-    value: Decimal
-    unit: str
-    reference_low: Decimal | None
-    reference_high: Decimal | None
-
-
-class BiomarkerSeries(BaseModel):
-    slug: str
-    display_name: str
-    category: str
-    canonical_unit: str
-    measurements: list[MeasurementPoint]
 
 
 @router.get("/biomarkers", operation_id="list_biomarkers")

@@ -2,8 +2,11 @@ import logging
 
 from alembic import context
 
-from mirai_api.core.db import get_engine
-from mirai_api.models import Base
+# Domain models must be imported so their tables register on Base.metadata.
+import mirai_api.biomarkers.models
+import mirai_api.lab_uploads.models
+import mirai_api.users.models  # noqa: F401
+from mirai_api.core.db import Base, get_engine
 
 # Surface Alembic's revision log in the migration job's output (the ini-less
 # [tool.alembic] setup carries no logging config); root stays at WARNING so

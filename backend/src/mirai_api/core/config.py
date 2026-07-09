@@ -34,10 +34,19 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
 
+    # LLM cost-control gate: comma-separated user UUIDs allowed to upload.
+    # Empty = allow all; auth stays Clerk's job.
+    upload_allowlist: str = ""
+
     @property
     def cors_origins(self) -> list[str]:
         """Split the comma-separated allow-list into individual origins."""
         return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
+
+    @property
+    def upload_allowlist_ids(self) -> frozenset[str]:
+        """Split the comma-separated allowlist; empty means allow everyone."""
+        return frozenset(u.strip() for u in self.upload_allowlist.split(",") if u.strip())
 
 
 @lru_cache
