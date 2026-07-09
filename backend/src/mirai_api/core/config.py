@@ -3,6 +3,11 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _split_csv(value: str) -> list[str]:
+    """Split a comma-separated env value into stripped, non-empty items."""
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 class Settings(BaseSettings):
     """Runtime configuration, sourced from environment variables.
 
@@ -40,13 +45,13 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        """Split the comma-separated allow-list into individual origins."""
-        return [o.strip() for o in self.frontend_origins.split(",") if o.strip()]
+        """Origins permitted to call the API."""
+        return _split_csv(self.frontend_origins)
 
     @property
     def upload_allowlist_ids(self) -> frozenset[str]:
-        """Split the comma-separated allowlist; empty means allow everyone."""
-        return frozenset(u.strip() for u in self.upload_allowlist.split(",") if u.strip())
+        """User UUIDs allowed to upload; empty means allow everyone."""
+        return frozenset(_split_csv(self.upload_allowlist))
 
 
 @lru_cache
