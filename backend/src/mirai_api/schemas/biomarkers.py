@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class MeasurementPoint(BaseModel):
@@ -12,19 +12,17 @@ class MeasurementPoint(BaseModel):
     reference_high: Decimal | None
 
 
-class BiomarkerSeries(BaseModel):
-    slug: str
-    display_name: str
-    category: str
-    canonical_unit: str
-    measurements: list[MeasurementPoint]
-
-
 class CatalogBiomarker(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     slug: str
     display_name: str
     category: str
     canonical_unit: str
+
+
+class BiomarkerSeries(CatalogBiomarker):
+    measurements: list[MeasurementPoint]
 
 
 class MeasurementCreate(BaseModel):

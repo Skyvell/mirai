@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from mirai_api.core.enums import UploadStatus
 from mirai_api.services.lab_parsing import SkippedMarker
@@ -25,6 +25,8 @@ class LabUploadResponse(BaseModel):
 
 
 class LabUploadSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     filename: str
     status: UploadStatus

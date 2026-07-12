@@ -33,16 +33,29 @@ import {
 import type { CatalogBiomarker } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 
+// Owned by the dialog (not the tab) so tab switches neither reset the
+// pending state guarding close nor drop the result summary.
+function useUploadLab() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    ...uploadLabMutation(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+      queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
+    },
+  })
+}
+
 export function AddDataDialog() {
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const upload = useUploadLab()
 
   return (
     <Dialog
       open={open}
       // Ignore close requests while an upload is parsing (~30 s).
       onOpenChange={(next) => {
-        if (!next && busy) return
+        if (!next && upload.isPending) return
         setOpen(next)
       }}
     >
@@ -62,7 +75,7 @@ export function AddDataDialog() {
             <TabsTrigger value="manual">Manual entry</TabsTrigger>
           </TabsList>
           <TabsContent value="upload" className="pt-2">
-            <UploadTab onBusyChange={setBusy} />
+            <UploadTab upload={upload} />
           </TabsContent>
           <TabsContent value="manual" className="pt-2">
             <ManualEntryTab />
@@ -81,18 +94,8 @@ export function AddDataDialog() {
   )
 }
 
-function UploadTab({ onBusyChange }: { onBusyChange: (busy: boolean) => void }) {
+function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const queryClient = useQueryClient()
-  const upload = useMutation({
-    ...uploadLabMutation(),
-    onMutate: () => onBusyChange(true),
-    onSettled: () => onBusyChange(false),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
-      queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
-    },
-  })
 
   function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -170,7 +173,8 @@ function ManualEntryTab() {
     return groups
   }, [catalog.data])
 
-  const selected = catalog.data?.find((b) => b.slug === slug)
+  const findBiomarker = (s: string) => catalog.data?.find((b) => b.slug === s)
+  const selected = findBiomarker(slug)
 
   const create = useMutation({
     ...createMeasurementMutation(),
@@ -203,7 +207,7 @@ function ManualEntryTab() {
           value={slug}
           onValueChange={(next) => {
             setSlug(next)
-            const picked = catalog.data?.find((b) => b.slug === next)
+            const picked = findBiomarker(next)
             if (picked) setUnit(picked.canonical_unit)
           }}
         >

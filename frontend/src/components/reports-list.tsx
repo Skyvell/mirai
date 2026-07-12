@@ -64,9 +64,12 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
   const [deleteMeasurements, setDeleteMeasurements] = useState(false)
   const remove = useMutation({
     ...deleteLabUploadMutation(),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
-      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+      // Orphaning keeps the measurements, so the biomarkers payload is unchanged.
+      if (variables.query?.delete_measurements) {
+        queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+      }
     },
   })
 

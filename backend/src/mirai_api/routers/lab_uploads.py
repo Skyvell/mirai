@@ -43,17 +43,7 @@ def list_lab_uploads(
         .where(LabUpload.user_id == user.id)
         .order_by(LabUpload.created_at.desc())
     ).all()
-    return [
-        LabUploadSummary(
-            id=r.id,
-            filename=r.filename,
-            status=r.status,
-            parsed_at=r.parsed_at,
-            created_at=r.created_at,
-            measurement_count=r.measurement_count,
-        )
-        for r in rows
-    ]
+    return [LabUploadSummary.model_validate(r) for r in rows]
 
 
 @router.delete(

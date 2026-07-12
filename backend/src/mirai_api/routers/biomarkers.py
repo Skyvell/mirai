@@ -33,15 +33,7 @@ def list_biomarker_catalog(
             Biomarker.display_name,
         )
     ).all()
-    return [
-        CatalogBiomarker(
-            slug=r.slug,
-            display_name=r.display_name,
-            category=r.category,
-            canonical_unit=r.canonical_unit,
-        )
-        for r in rows
-    ]
+    return [CatalogBiomarker.model_validate(r) for r in rows]
 
 
 @router.post(
