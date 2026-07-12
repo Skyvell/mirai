@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SourcesRouteImport } from './routes/sources'
 import { Route as PhysiologyRouteImport } from './routes/physiology'
 import { Route as OmicsRouteImport } from './routes/omics'
 import { Route as InterventionsRouteImport } from './routes/interventions'
@@ -16,6 +17,11 @@ import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as BiomarkersRouteImport } from './routes/biomarkers'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SourcesRoute = SourcesRouteImport.update({
+  id: '/sources',
+  path: '/sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PhysiologyRoute = PhysiologyRouteImport.update({
   id: '/physiology',
   path: '/physiology',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
+  '/sources': typeof SourcesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
+  '/sources': typeof SourcesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +79,7 @@ export interface FileRoutesById {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
+  '/sources': typeof SourcesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +90,7 @@ export interface FileRouteTypes {
     | '/interventions'
     | '/omics'
     | '/physiology'
+    | '/sources'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +99,7 @@ export interface FileRouteTypes {
     | '/interventions'
     | '/omics'
     | '/physiology'
+    | '/sources'
   id:
     | '__root__'
     | '/'
@@ -97,6 +108,7 @@ export interface FileRouteTypes {
     | '/interventions'
     | '/omics'
     | '/physiology'
+    | '/sources'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,10 +118,18 @@ export interface RootRouteChildren {
   InterventionsRoute: typeof InterventionsRoute
   OmicsRoute: typeof OmicsRoute
   PhysiologyRoute: typeof PhysiologyRoute
+  SourcesRoute: typeof SourcesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sources': {
+      id: '/sources'
+      path: '/sources'
+      fullPath: '/sources'
+      preLoaderRoute: typeof SourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/physiology': {
       id: '/physiology'
       path: '/physiology'
@@ -162,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   InterventionsRoute: InterventionsRoute,
   OmicsRoute: OmicsRoute,
   PhysiologyRoute: PhysiologyRoute,
+  SourcesRoute: SourcesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

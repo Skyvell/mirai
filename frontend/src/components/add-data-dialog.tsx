@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -66,6 +68,14 @@ export function AddDataDialog() {
             <ManualEntryTab />
           </TabsContent>
         </Tabs>
+        <DialogClose asChild>
+          <Link
+            to="/sources"
+            className="text-sm text-muted-foreground underline underline-offset-3 hover:text-foreground"
+          >
+            Manage your sources →
+          </Link>
+        </DialogClose>
       </DialogContent>
     </Dialog>
   )
