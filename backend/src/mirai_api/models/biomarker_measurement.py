@@ -9,7 +9,11 @@ from mirai_api.models.base import Base
 
 
 class BiomarkerMeasurement(Base):
-    """A single biomarker value parsed from a lab report, stored verbatim."""
+    """A single biomarker value, stored verbatim.
+
+    Sourced from a parsed lab report or entered manually; lab_upload_id is
+    null for manual entries and for measurements whose report was deleted.
+    """
 
     __tablename__ = "biomarker_measurements"
 
@@ -24,7 +28,7 @@ class BiomarkerMeasurement(Base):
     biomarker_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("biomarkers.id", ondelete="RESTRICT"),
     )
-    lab_upload_id: Mapped[uuid.UUID] = mapped_column(
+    lab_upload_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("lab_uploads.id", ondelete="CASCADE"),
         index=True,
     )
