@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { listBiomarkersOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerSeries } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import { ReportsList } from '@/components/reports-list'
 
 export const Route = createFileRoute('/biomarkers')({
   component: BiomarkersComponent,
@@ -67,6 +68,8 @@ function BiomarkersComponent() {
           </tbody>
         </table>
       )}
+
+      <ReportsList />
     </div>
   )
 }
