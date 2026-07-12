@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +61,7 @@ export function ReportsList() {
 
 function ReportRow({ upload }: { upload: LabUploadSummary }) {
   const queryClient = useQueryClient()
+  const [deleteMeasurements, setDeleteMeasurements] = useState(false)
   const remove = useMutation({
     ...deleteLabUploadMutation(),
     onSuccess: () => {
@@ -85,7 +89,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
             {apiErrorMessage(remove.error)}
           </span>
         )}
-        <AlertDialog>
+        <AlertDialog onOpenChange={(open) => open && setDeleteMeasurements(false)}>
           <AlertDialogTrigger asChild>
             <Button
               variant="ghost"
@@ -100,33 +104,30 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {upload.filename}?</AlertDialogTitle>
               <AlertDialogDescription>
-                The PDF is removed either way. Its {upload.measurement_count}{' '}
-                measurement{upload.measurement_count === 1 ? '' : 's'} can be kept
-                (no longer linked to a report) or deleted with it.
+                The report is deleted; its {upload.measurement_count}{' '}
+                measurement{upload.measurement_count === 1 ? '' : 's'} stay unless
+                you delete them too.
               </AlertDialogDescription>
             </AlertDialogHeader>
+            <Label className="flex items-center gap-2 font-normal">
+              <Checkbox
+                checked={deleteMeasurements}
+                onCheckedChange={(checked) => setDeleteMeasurements(checked === true)}
+              />
+              Also delete its measurements
+            </Label>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
+                variant="destructive"
                 onClick={() =>
                   remove.mutate({
                     path: { upload_id: upload.id },
-                    query: { delete_measurements: false },
+                    query: { delete_measurements: deleteMeasurements },
                   })
                 }
               >
-                Delete report only
-              </AlertDialogAction>
-              <AlertDialogAction
-                className="bg-destructive text-white hover:bg-destructive/90"
-                onClick={() =>
-                  remove.mutate({
-                    path: { upload_id: upload.id },
-                    query: { delete_measurements: true },
-                  })
-                }
-              >
-                Delete report and measurements
+                Delete report
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
