@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { CurrentUserData, CurrentUserResponses, ListBiomarkersData, ListBiomarkersResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
+import type { CreateMeasurementData, CreateMeasurementErrors, CreateMeasurementResponses, CurrentUserData, CurrentUserResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, ListBiomarkerCatalogData, ListBiomarkerCatalogResponses, ListBiomarkersData, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -47,6 +47,17 @@ export const currentUser = <ThrowOnError extends boolean = false>(options?: Opti
 });
 
 /**
+ * List Lab Uploads
+ *
+ * Return the caller's uploaded lab reports, newest first.
+ */
+export const listLabUploads = <ThrowOnError extends boolean = false>(options?: Options<ListLabUploadsData, ThrowOnError>): RequestResult<ListLabUploadsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListLabUploadsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/lab-uploads',
+    ...options
+});
+
+/**
  * Upload Lab
  *
  * Upload a lab PDF, parse it into biomarker measurements, and store both.
@@ -61,6 +72,43 @@ export const uploadLab = <ThrowOnError extends boolean = false>(options: Options
     ...options,
     headers: {
         'Content-Type': null,
+        ...options.headers
+    }
+});
+
+/**
+ * Delete Lab Upload
+ *
+ * Delete an uploaded report; optionally its measurements, else orphan them.
+ */
+export const deleteLabUpload = <ThrowOnError extends boolean = false>(options: Options<DeleteLabUploadData, ThrowOnError>): RequestResult<DeleteLabUploadResponses, DeleteLabUploadErrors, ThrowOnError> => (options.client ?? client).delete<DeleteLabUploadResponses, DeleteLabUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/lab-uploads/{upload_id}',
+    ...options
+});
+
+/**
+ * List Biomarker Catalog
+ *
+ * Return the full seeded biomarker catalogue, for manual-entry pickers.
+ */
+export const listBiomarkerCatalog = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerCatalogData, ThrowOnError>): RequestResult<ListBiomarkerCatalogResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerCatalogResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarkers/catalog',
+    ...options
+});
+
+/**
+ * Create Measurement
+ *
+ * Record a manually entered measurement against a catalogue biomarker.
+ */
+export const createMeasurement = <ThrowOnError extends boolean = false>(options: Options<CreateMeasurementData, ThrowOnError>): RequestResult<CreateMeasurementResponses, CreateMeasurementErrors, ThrowOnError> => (options.client ?? client).post<CreateMeasurementResponses, CreateMeasurementErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarkers/{slug}/measurements',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
         ...options.headers
     }
 });

@@ -41,6 +41,28 @@ export type BodyUploadLab = {
 };
 
 /**
+ * CatalogBiomarker
+ */
+export type CatalogBiomarker = {
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Canonical Unit
+     */
+    canonical_unit: string;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -73,6 +95,33 @@ export type LabUploadResponse = {
 };
 
 /**
+ * LabUploadSummary
+ */
+export type LabUploadSummary = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    status: UploadStatus;
+    /**
+     * Parsed At
+     */
+    parsed_at: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Measurement Count
+     */
+    measurement_count: number;
+};
+
+/**
  * MeResponse
  */
 export type MeResponse = {
@@ -84,6 +133,50 @@ export type MeResponse = {
      * Clerk User Id
      */
     clerk_user_id: string;
+};
+
+/**
+ * MeasurementCreate
+ */
+export type MeasurementCreate = {
+    /**
+     * Value
+     */
+    value: number | string;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Measured At
+     */
+    measured_at: string;
+};
+
+/**
+ * MeasurementCreated
+ */
+export type MeasurementCreated = {
+    /**
+     * Biomarker Slug
+     */
+    biomarker_slug: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Measured At
+     */
+    measured_at: string;
 };
 
 /**
@@ -165,6 +258,13 @@ export type SkippedMarker = {
      */
     reason: string;
 };
+
+/**
+ * UploadStatus
+ *
+ * Parse lifecycle of a user-uploaded file, shared by all upload types.
+ */
+export type UploadStatus = 'uploaded' | 'parsed' | 'failed';
 
 /**
  * ValidationError
@@ -250,6 +350,24 @@ export type CurrentUserResponses = {
 
 export type CurrentUserResponse = CurrentUserResponses[keyof CurrentUserResponses];
 
+export type ListLabUploadsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/lab-uploads';
+};
+
+export type ListLabUploadsResponses = {
+    /**
+     * Response List Lab Uploads
+     *
+     * Successful Response
+     */
+    200: Array<LabUploadSummary>;
+};
+
+export type ListLabUploadsResponse = ListLabUploadsResponses[keyof ListLabUploadsResponses];
+
 export type UploadLabData = {
     body: BodyUploadLab;
     path?: never;
@@ -274,6 +392,89 @@ export type UploadLabResponses = {
 };
 
 export type UploadLabResponse = UploadLabResponses[keyof UploadLabResponses];
+
+export type DeleteLabUploadData = {
+    body?: never;
+    path: {
+        /**
+         * Upload Id
+         */
+        upload_id: string;
+    };
+    query?: {
+        /**
+         * Delete Measurements
+         */
+        delete_measurements?: boolean;
+    };
+    url: '/lab-uploads/{upload_id}';
+};
+
+export type DeleteLabUploadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteLabUploadError = DeleteLabUploadErrors[keyof DeleteLabUploadErrors];
+
+export type DeleteLabUploadResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteLabUploadResponse = DeleteLabUploadResponses[keyof DeleteLabUploadResponses];
+
+export type ListBiomarkerCatalogData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/biomarkers/catalog';
+};
+
+export type ListBiomarkerCatalogResponses = {
+    /**
+     * Response List Biomarker Catalog
+     *
+     * Successful Response
+     */
+    200: Array<CatalogBiomarker>;
+};
+
+export type ListBiomarkerCatalogResponse = ListBiomarkerCatalogResponses[keyof ListBiomarkerCatalogResponses];
+
+export type CreateMeasurementData = {
+    body: MeasurementCreate;
+    path: {
+        /**
+         * Slug
+         */
+        slug: string;
+    };
+    query?: never;
+    url: '/biomarkers/{slug}/measurements';
+};
+
+export type CreateMeasurementErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateMeasurementError = CreateMeasurementErrors[keyof CreateMeasurementErrors];
+
+export type CreateMeasurementResponses = {
+    /**
+     * Successful Response
+     */
+    201: MeasurementCreated;
+};
+
+export type CreateMeasurementResponse = CreateMeasurementResponses[keyof CreateMeasurementResponses];
 
 export type ListBiomarkersData = {
     body?: never;
