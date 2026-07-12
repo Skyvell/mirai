@@ -1,9 +1,15 @@
 import uuid
+from datetime import UTC, datetime
+from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
+from conftest import TEST_USER_ID, FakeSession
 from mirai_api.core.config import Settings, get_settings
 from mirai_api.main import app
+from mirai_api.models import LabUpload
+from mirai_api.services import storage
 
 
 def _upload(client: TestClient, content: bytes) -> object:
@@ -37,3 +43,85 @@ def test_user_outside_allowlist_is_rejected(client: TestClient) -> None:
     )
     response = _upload(client, b"%PDF fake")
     assert response.status_code == 403
+
+
+def test_list_uploads_returns_summaries(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
+    upload_id = uuid.UUID("00000000-0000-7000-8000-000000000010")
+    fake_session.rows = [
+        SimpleNamespace(
+            id=upload_id,
+            filename="report.pdf",
+            status="parsed",
+            parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
+            created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
+            measurement_count=12,
+        ),
+    ]
+    response = client.get("/lab-uploads")
+    assert response.status_code == 200
+    (summary,) = response.json()
+    assert summary["id"] == str(upload_id)
+    assert summary["status"] == "parsed"
+    assert summary["measurement_count"] == 12
+
+
+def _stored_upload() -> LabUpload:
+    return LabUpload(
+        id=uuid.UUID("00000000-0000-7000-8000-000000000010"),
+        user_id=TEST_USER_ID,
+        filename="report.pdf",
+    )
+
+
+@pytest.fixture
+def deleted_blobs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    calls: list[str] = []
+    monkeypatch.setattr(
+        storage,
+        "delete_blob",
+        calls.append,
+    )
+    return calls
+
+
+def test_delete_missing_upload_gives_404(
+    client: TestClient,
+    deleted_blobs: list[str],
+) -> None:
+    response = client.delete(f"/lab-uploads/{uuid.uuid4()}")
+    assert response.status_code == 404
+    assert deleted_blobs == []
+
+
+def test_delete_upload_orphans_measurements_by_default(
+    client: TestClient,
+    fake_session: FakeSession,
+    deleted_blobs: list[str],
+) -> None:
+    upload = _stored_upload()
+    fake_session.scalar_value = upload
+    response = client.delete(f"/lab-uploads/{upload.id}")
+    assert response.status_code == 204
+    assert deleted_blobs == [upload.gcs_object_name]
+    # The orphaning UPDATE ran before the row delete.
+    assert len(fake_session.executed) == 1
+    assert fake_session.deleted == [upload]
+    assert fake_session.commits == 1
+
+
+def test_delete_upload_with_measurements_skips_orphaning(
+    client: TestClient,
+    fake_session: FakeSession,
+    deleted_blobs: list[str],
+) -> None:
+    upload = _stored_upload()
+    fake_session.scalar_value = upload
+    response = client.delete(f"/lab-uploads/{upload.id}?delete_measurements=true")
+    assert response.status_code == 204
+    assert deleted_blobs == [upload.gcs_object_name]
+    # No UPDATE: the FK cascade removes still-linked measurements.
+    assert fake_session.executed == []
+    assert fake_session.deleted == [upload]
