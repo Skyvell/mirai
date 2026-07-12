@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
@@ -5,6 +6,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from conftest import FakeSession
+from mirai_api.models import Biomarker
 
 
 def _row(**overrides: object) -> SimpleNamespace:
@@ -70,3 +72,87 @@ def test_decimal_values_serialize_as_json_strings(
     assert point["value"] == "3.1"
     assert point["reference_high"] == "3.0"
     assert point["reference_low"] is None
+
+
+def _catalogue_biomarker() -> Biomarker:
+    return Biomarker(
+        id=uuid.UUID("00000000-0000-7000-8000-000000000002"),
+        slug="glucose",
+        display_name="Glucose",
+        category="metabolic",
+        canonical_unit="mmol/L",
+    )
+
+
+def test_catalog_returns_all_biomarkers(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
+    fake_session.rows = [
+        SimpleNamespace(
+            slug="glucose",
+            display_name="Glucose",
+            category="metabolic",
+            canonical_unit="mmol/L",
+        ),
+    ]
+    response = client.get("/biomarkers/catalog")
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "slug": "glucose",
+            "display_name": "Glucose",
+            "category": "metabolic",
+            "canonical_unit": "mmol/L",
+        }
+    ]
+
+
+def test_create_measurement_unknown_slug_gives_404(client: TestClient) -> None:
+    response = client.post(
+        "/biomarkers/nope/measurements",
+        json={
+            "value": "5.4",
+            "measured_at": "2026-07-12",
+        },
+    )
+    assert response.status_code == 404
+
+
+def test_create_measurement_defaults_unit_to_canonical(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
+    fake_session.scalar_value = _catalogue_biomarker()
+    response = client.post(
+        "/biomarkers/glucose/measurements",
+        json={
+            "value": "5.4",
+            "measured_at": "2026-07-12",
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["unit"] == "mmol/L"
+    assert body["value"] == "5.4"
+    (measurement,) = fake_session.added
+    assert measurement.lab_upload_id is None
+    assert measurement.unit == "mmol/L"
+    assert fake_session.commits == 1
+
+
+def test_create_measurement_keeps_explicit_unit(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
+    fake_session.scalar_value = _catalogue_biomarker()
+    response = client.post(
+        "/biomarkers/glucose/measurements",
+        json={
+            "value": "97",
+            "unit": "mg/dL",
+            "measured_at": "2026-07-12",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["unit"] == "mg/dL"
