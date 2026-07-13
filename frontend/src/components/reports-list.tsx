@@ -62,6 +62,10 @@ export function ReportsList() {
 function ReportRow({ upload }: { upload: LabUploadSummary }) {
   const queryClient = useQueryClient()
   const [deleteMeasurements, setDeleteMeasurements] = useState(false)
+  const measurements =
+    upload.measurement_count === 0
+      ? ''
+      : `${upload.measurement_count} measurement${upload.measurement_count === 1 ? '' : 's'}`
   const remove = useMutation({
     ...deleteLabUploadMutation(),
     onSuccess: (_, variables) => {
@@ -107,20 +111,32 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete {upload.filename}?</AlertDialogTitle>
+              <AlertDialogTitle className="break-all">
+                Delete {upload.filename}?
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                The report is deleted; its {upload.measurement_count}{' '}
-                measurement{upload.measurement_count === 1 ? '' : 's'} stay unless
-                you delete them too.
+                {measurements === '' ? (
+                  <>This report will be permanently deleted.</>
+                ) : (
+                  <>
+                    This permanently deletes the report PDF. Its {measurements}{' '}
+                    {upload.measurement_count === 1 ? 'stays' : 'stay'} in your
+                    history.
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <Label className="flex items-center gap-2 font-normal">
-              <Checkbox
-                checked={deleteMeasurements}
-                onCheckedChange={(checked) => setDeleteMeasurements(checked === true)}
-              />
-              Also delete its measurements
-            </Label>
+            {measurements !== '' && (
+              <Label className="flex items-center gap-2 font-normal">
+                <Checkbox
+                  checked={deleteMeasurements}
+                  onCheckedChange={(checked) =>
+                    setDeleteMeasurements(checked === true)
+                  }
+                />
+                Also delete its {measurements}
+              </Label>
+            )}
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
@@ -132,7 +148,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
                   })
                 }
               >
-                Delete report
+                {deleteMeasurements
+                  ? `Delete report & ${measurements}`
+                  : 'Delete report'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
