@@ -115,13 +115,12 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
                 Delete {upload.filename}?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {measurements === '' ? (
-                  <>This report will be permanently deleted.</>
-                ) : (
+                This action will permanently delete the report.
+                {measurements !== '' && (
                   <>
-                    This permanently deletes the report PDF. Its {measurements}{' '}
-                    {upload.measurement_count === 1 ? 'stays' : 'stay'} in your
-                    history.
+                    {' '}
+                    To also delete the {measurements} associated with this
+                    report, use the checkbox.
                   </>
                 )}
               </AlertDialogDescription>
