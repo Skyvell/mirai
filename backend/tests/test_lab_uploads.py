@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from conftest import TEST_USER_ID, FakeSession
 from mirai_api.core.config import Settings, get_settings
+from mirai_api.core.enums import UploadStatus
 from mirai_api.main import app
 from mirai_api.models import LabUpload
 from mirai_api.services import storage
@@ -68,11 +69,12 @@ def test_list_uploads_returns_summaries(
     assert summary["measurement_count"] == 12
 
 
-def _stored_upload() -> LabUpload:
+def _stored_upload(status: UploadStatus = UploadStatus.PARSED) -> LabUpload:
     return LabUpload(
         id=uuid.UUID("00000000-0000-7000-8000-000000000010"),
         user_id=TEST_USER_ID,
         filename="report.pdf",
+        status=status,
     )
 
 
@@ -96,7 +98,7 @@ def test_delete_missing_upload_gives_404(
     assert deleted_blobs == []
 
 
-def test_delete_upload_orphans_measurements_by_default(
+def test_delete_upload_keeps_measurements_by_default(
     client: TestClient,
     fake_session: FakeSession,
     deleted_blobs: list[str],
@@ -106,13 +108,13 @@ def test_delete_upload_orphans_measurements_by_default(
     response = client.delete(f"/lab-uploads/{upload.id}")
     assert response.status_code == 204
     assert deleted_blobs == [upload.gcs_object_name]
-    # The orphaning UPDATE ran before the row delete.
-    assert len(fake_session.executed) == 1
+    # No measurement DELETE: the FK's ON DELETE SET NULL detaches them.
+    assert fake_session.executed == []
     assert fake_session.deleted == [upload]
     assert fake_session.commits == 1
 
 
-def test_delete_upload_with_measurements_skips_orphaning(
+def test_delete_upload_with_measurements_deletes_them(
     client: TestClient,
     fake_session: FakeSession,
     deleted_blobs: list[str],
@@ -122,6 +124,19 @@ def test_delete_upload_with_measurements_skips_orphaning(
     response = client.delete(f"/lab-uploads/{upload.id}?delete_measurements=true")
     assert response.status_code == 204
     assert deleted_blobs == [upload.gcs_object_name]
-    # No UPDATE: the FK cascade removes still-linked measurements.
-    assert fake_session.executed == []
+    # The measurement DELETE ran before the row delete.
+    assert len(fake_session.executed) == 1
     assert fake_session.deleted == [upload]
+
+
+def test_delete_upload_mid_parse_is_rejected(
+    client: TestClient,
+    fake_session: FakeSession,
+    deleted_blobs: list[str],
+) -> None:
+    upload = _stored_upload(status=UploadStatus.UPLOADED)
+    fake_session.scalar_value = upload
+    response = client.delete(f"/lab-uploads/{upload.id}")
+    assert response.status_code == 409
+    assert deleted_blobs == []
+    assert fake_session.deleted == []

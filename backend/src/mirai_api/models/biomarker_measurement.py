@@ -28,8 +28,10 @@ class BiomarkerMeasurement(Base):
     biomarker_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("biomarkers.id", ondelete="RESTRICT"),
     )
+    # SET NULL keeps measurements when their report is deleted; deleting them
+    # too is an explicit choice made in the service layer.
     lab_upload_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("lab_uploads.id", ondelete="CASCADE"),
+        ForeignKey("lab_uploads.id", ondelete="SET NULL"),
         index=True,
     )
     value: Mapped[Decimal] = mapped_column(Numeric(12, 4))

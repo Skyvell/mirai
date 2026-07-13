@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import update
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
@@ -58,19 +58,17 @@ def delete_upload(
     upload: LabUpload,
     delete_measurements: bool,
 ) -> None:
-    """Delete the PDF blob and the upload row; orphan or cascade its measurements.
+    """Delete the PDF blob and the upload row; optionally also its measurements.
 
     Blob first: if that fails the row survives and the delete can be retried,
     and delete_blob tolerates an already-missing blob. Deleting the row first
-    would risk unrecorded orphan blobs. Blocking.
+    would risk unrecorded orphan blobs. Kept measurements are detached by the
+    FK's ON DELETE SET NULL. Blocking.
     """
     storage.delete_blob(upload.gcs_object_name)
-    if not delete_measurements:
+    if delete_measurements:
         session.execute(
-            update(BiomarkerMeasurement)
-            .where(BiomarkerMeasurement.lab_upload_id == upload.id)
-            .values(lab_upload_id=None)
+            delete(BiomarkerMeasurement).where(BiomarkerMeasurement.lab_upload_id == upload.id)
         )
-    # Measurements still linked are removed by the FK's ON DELETE CASCADE.
     session.delete(upload)
     session.commit()

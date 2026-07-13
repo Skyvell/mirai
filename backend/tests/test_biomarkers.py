@@ -141,6 +141,23 @@ def test_create_measurement_defaults_unit_to_canonical(
     assert fake_session.commits == 1
 
 
+def test_create_measurement_value_overflow_gives_422(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
+    # Numeric(12, 4) bounds are enforced at validation, not at commit.
+    fake_session.scalar_value = _catalogue_biomarker()
+    response = client.post(
+        "/biomarkers/glucose/measurements",
+        json={
+            "value": "1e10",
+            "measured_at": "2026-07-12",
+        },
+    )
+    assert response.status_code == 422
+    assert fake_session.added == []
+
+
 def test_create_measurement_keeps_explicit_unit(
     client: TestClient,
     fake_session: FakeSession,

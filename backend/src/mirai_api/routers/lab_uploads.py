@@ -69,6 +69,13 @@ def delete_lab_upload(
             status.HTTP_404_NOT_FOUND,
             "Upload not found.",
         )
+    # Deleting mid-parse would make the parse's inserts hit a dead FK; parse
+    # failure sets FAILED, so only a crashed process strands a row here.
+    if upload.status == UploadStatus.UPLOADED:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Upload is still being processed.",
+        )
     delete_upload(
         session,
         upload,

@@ -67,11 +67,9 @@ def create_measurement(
     )
     session.commit()
     return MeasurementCreated(
-        biomarker_slug=biomarker.slug,
         display_name=biomarker.display_name,
         value=payload.value,
         unit=unit,
-        measured_at=payload.measured_at,
     )
 
 
