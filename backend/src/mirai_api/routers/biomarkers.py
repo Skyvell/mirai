@@ -1,130 +1,108 @@
-from itertools import groupby
+import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Body, Query, Request, status
+from fastapi.responses import JSONResponse
 
-from mirai_api.core.deps import CurrentUser, DbSession
-from mirai_api.models import Biomarker, BiomarkerMeasurement
+from mirai_api.core.deps import BiomarkerServiceDep, CurrentUser
 from mirai_api.schemas.biomarkers import (
+    BiomarkerMeasurementCreate,
+    BiomarkerMeasurementRead,
+    BiomarkerMeasurementUpdates,
+    BiomarkerRead,
     BiomarkerSeries,
-    CatalogBiomarker,
-    MeasurementCreate,
-    MeasurementCreated,
-    MeasurementPoint,
+)
+from mirai_api.services.biomarkers import (
+    BiomarkerServiceError,
+    MeasurementsNotFoundError,
+    UnknownBiomarkersError,
 )
 
 router = APIRouter(tags=["biomarkers"])
 
-
-@router.get("/biomarkers/catalog", operation_id="list_biomarker_catalog")
-def list_biomarker_catalog(
-    session: DbSession,
-    user: CurrentUser,
-) -> list[CatalogBiomarker]:
-    """Return the full seeded biomarker catalogue, for manual-entry pickers."""
-    rows = session.execute(
-        select(
-            Biomarker.slug,
-            Biomarker.display_name,
-            Biomarker.category,
-            Biomarker.canonical_unit,
-        ).order_by(
-            Biomarker.category,
-            Biomarker.display_name,
-        )
-    ).all()
-    return [CatalogBiomarker.model_validate(r) for r in rows]
+_ERROR_STATUS = {
+    UnknownBiomarkersError: status.HTTP_404_NOT_FOUND,
+    MeasurementsNotFoundError: status.HTTP_404_NOT_FOUND,
+}
 
 
-@router.post(
-    "/biomarkers/{slug}/measurements",
-    operation_id="create_measurement",
-    status_code=status.HTTP_201_CREATED,
-)
-def create_measurement(
-    session: DbSession,
-    user: CurrentUser,
-    slug: str,
-    payload: MeasurementCreate,
-) -> MeasurementCreated:
-    """Record a manually entered measurement against a catalogue biomarker."""
-    biomarker = session.scalar(select(Biomarker).where(Biomarker.slug == slug))
-    if biomarker is None:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND,
-            "Unknown biomarker.",
-        )
-    unit = payload.unit or biomarker.canonical_unit
-    session.add(
-        BiomarkerMeasurement(
-            user_id=user.id,
-            biomarker_id=biomarker.id,
-            lab_upload_id=None,
-            value=payload.value,
-            unit=unit,
-            measured_at=payload.measured_at,
-        )
-    )
-    session.commit()
-    return MeasurementCreated(
-        display_name=biomarker.display_name,
-        value=payload.value,
-        unit=unit,
+def biomarker_error_handler(request: Request, exc: BiomarkerServiceError) -> JSONResponse:
+    """Map domain errors to HTTP once; registered on the app in main.py."""
+    return JSONResponse(
+        status_code=_ERROR_STATUS[type(exc)],
+        content={"detail": str(exc)},
     )
 
 
 @router.get("/biomarkers", operation_id="list_biomarkers")
-def list_biomarkers(session: DbSession, user: CurrentUser) -> list[BiomarkerSeries]:
+def list_biomarkers(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+) -> list[BiomarkerRead]:
+    """Return the full seeded biomarker catalogue, for manual-entry pickers."""
+    return service.list_biomarkers()
+
+
+@router.get("/biomarker-series", operation_id="list_biomarker_series")
+def list_biomarker_series(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+) -> list[BiomarkerSeries]:
     """Return each biomarker the caller has measurements for, with its time series.
 
     Values, units, and reference ranges are verbatim from the lab report;
     canonical_unit is catalogue context. Series are sorted by measurement date
     ascending, so the latest value is the last element.
     """
-    # The ORDER BY is the response contract: the first three keys set the list
-    # order and make each biomarker's rows contiguous for groupby; the last two
-    # set the within-series order.
-    rows = session.execute(
-        select(
-            Biomarker.slug,
-            Biomarker.display_name,
-            Biomarker.category,
-            Biomarker.canonical_unit,
-            BiomarkerMeasurement.measured_at,
-            BiomarkerMeasurement.value,
-            BiomarkerMeasurement.unit,
-            BiomarkerMeasurement.reference_low,
-            BiomarkerMeasurement.reference_high,
-        )
-        .join(Biomarker, BiomarkerMeasurement.biomarker_id == Biomarker.id)
-        .where(BiomarkerMeasurement.user_id == user.id)
-        .order_by(
-            Biomarker.category,
-            Biomarker.display_name,
-            Biomarker.slug,
-            BiomarkerMeasurement.measured_at.nulls_last(),
-            BiomarkerMeasurement.created_at,
-        )
-    ).all()
+    return service.list_series(user.id)
 
-    return [
-        BiomarkerSeries(
-            slug=slug,
-            display_name=display_name,
-            category=category,
-            canonical_unit=canonical_unit,
-            measurements=[
-                MeasurementPoint(
-                    measured_at=r.measured_at,
-                    value=r.value,
-                    unit=r.unit,
-                    reference_low=r.reference_low,
-                    reference_high=r.reference_high,
-                )
-                for r in points
-            ],
-        )
-        for (slug, display_name, category, canonical_unit), points in groupby(
-            rows, key=lambda r: (r.slug, r.display_name, r.category, r.canonical_unit)
-        )
-    ]
+
+@router.get("/biomarker-series/{slug}", operation_id="get_biomarker_series")
+def get_biomarker_series(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+    slug: str,
+) -> BiomarkerSeries:
+    """Return one biomarker's time series; empty for a known slug with no data."""
+    return service.get_series(user.id, slug)
+
+
+@router.post(
+    "/biomarker-measurements",
+    operation_id="create_biomarker_measurements",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_biomarker_measurements(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+    payload: Annotated[list[BiomarkerMeasurementCreate], Body(min_length=1)],
+) -> list[BiomarkerMeasurementRead]:
+    """Record measurements against catalogue biomarkers; all-or-nothing."""
+    return service.create_measurements(user.id, payload)
+
+
+@router.patch(
+    "/biomarker-measurements",
+    operation_id="update_biomarker_measurements",
+)
+def update_biomarker_measurements(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+    payload: Annotated[BiomarkerMeasurementUpdates, Body(min_length=1)],
+) -> list[BiomarkerMeasurementRead]:
+    """Update the caller's measurements; omitted fields are left untouched."""
+    return service.update_measurements(user.id, payload)
+
+
+@router.delete(
+    "/biomarker-measurements",
+    operation_id="delete_biomarker_measurements",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_biomarker_measurements(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+    ids: Annotated[list[uuid.UUID], Query(min_length=1)],
+) -> None:
+    """Delete the caller's measurements; all-or-nothing."""
+    service.delete_measurements(user.id, ids)

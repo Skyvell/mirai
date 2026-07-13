@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createMeasurement, currentUser, deleteLabUpload, listBiomarkerCatalog, listBiomarkers, listLabUploads, liveness, type Options, readiness, uploadLab } from '../sdk.gen';
-import type { CreateMeasurementData, CreateMeasurementError, CreateMeasurementResponse, CurrentUserData, CurrentUserResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, ListBiomarkerCatalogData, ListBiomarkerCatalogResponse, ListBiomarkersData, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
+import { createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, uploadLab } from '../sdk.gen';
+import type { CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -163,55 +163,12 @@ export const deleteLabUploadMutation = (options?: Partial<Options<DeleteLabUploa
     return mutationOptions;
 };
 
-export const listBiomarkerCatalogQueryKey = (options?: Options<ListBiomarkerCatalogData>) => createQueryKey('listBiomarkerCatalog', options);
-
-/**
- * List Biomarker Catalog
- *
- * Return the full seeded biomarker catalogue, for manual-entry pickers.
- */
-export const listBiomarkerCatalogOptions = (options?: Options<ListBiomarkerCatalogData>) => queryOptions<ListBiomarkerCatalogResponse, DefaultError, ListBiomarkerCatalogResponse, ReturnType<typeof listBiomarkerCatalogQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await listBiomarkerCatalog({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: listBiomarkerCatalogQueryKey(options)
-});
-
-/**
- * Create Measurement
- *
- * Record a manually entered measurement against a catalogue biomarker.
- */
-export const createMeasurementMutation = (options?: Partial<Options<CreateMeasurementData>>): UseMutationOptions<CreateMeasurementResponse, CreateMeasurementError, Options<CreateMeasurementData>> => {
-    const mutationOptions: UseMutationOptions<CreateMeasurementResponse, CreateMeasurementError, Options<CreateMeasurementData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await createMeasurement({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
 export const listBiomarkersQueryKey = (options?: Options<ListBiomarkersData>) => createQueryKey('listBiomarkers', options);
 
 /**
  * List Biomarkers
  *
- * Return each biomarker the caller has measurements for, with its time series.
- *
- * Values, units, and reference ranges are verbatim from the lab report;
- * canonical_unit is catalogue context. Series are sorted by measurement date
- * ascending, so the latest value is the last element.
+ * Return the full seeded biomarker catalogue, for manual-entry pickers.
  */
 export const listBiomarkersOptions = (options?: Options<ListBiomarkersData>) => queryOptions<ListBiomarkersResponse, DefaultError, ListBiomarkersResponse, ReturnType<typeof listBiomarkersQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -225,3 +182,104 @@ export const listBiomarkersOptions = (options?: Options<ListBiomarkersData>) => 
     },
     queryKey: listBiomarkersQueryKey(options)
 });
+
+export const listBiomarkerSeriesQueryKey = (options?: Options<ListBiomarkerSeriesData>) => createQueryKey('listBiomarkerSeries', options);
+
+/**
+ * List Biomarker Series
+ *
+ * Return each biomarker the caller has measurements for, with its time series.
+ *
+ * Values, units, and reference ranges are verbatim from the lab report;
+ * canonical_unit is catalogue context. Series are sorted by measurement date
+ * ascending, so the latest value is the last element.
+ */
+export const listBiomarkerSeriesOptions = (options?: Options<ListBiomarkerSeriesData>) => queryOptions<ListBiomarkerSeriesResponse, DefaultError, ListBiomarkerSeriesResponse, ReturnType<typeof listBiomarkerSeriesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listBiomarkerSeries({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listBiomarkerSeriesQueryKey(options)
+});
+
+export const getBiomarkerSeriesQueryKey = (options: Options<GetBiomarkerSeriesData>) => createQueryKey('getBiomarkerSeries', options);
+
+/**
+ * Get Biomarker Series
+ *
+ * Return one biomarker's time series; empty for a known slug with no data.
+ */
+export const getBiomarkerSeriesOptions = (options: Options<GetBiomarkerSeriesData>) => queryOptions<GetBiomarkerSeriesResponse, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, ReturnType<typeof getBiomarkerSeriesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getBiomarkerSeries({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getBiomarkerSeriesQueryKey(options)
+});
+
+/**
+ * Delete Biomarker Measurements
+ *
+ * Delete the caller's measurements; all-or-nothing.
+ */
+export const deleteBiomarkerMeasurementsMutation = (options?: Partial<Options<DeleteBiomarkerMeasurementsData>>): UseMutationOptions<DeleteBiomarkerMeasurementsResponse, DeleteBiomarkerMeasurementsError, Options<DeleteBiomarkerMeasurementsData>> => {
+    const mutationOptions: UseMutationOptions<DeleteBiomarkerMeasurementsResponse, DeleteBiomarkerMeasurementsError, Options<DeleteBiomarkerMeasurementsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteBiomarkerMeasurements({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Update Biomarker Measurements
+ *
+ * Update the caller's measurements; omitted fields are left untouched.
+ */
+export const updateBiomarkerMeasurementsMutation = (options?: Partial<Options<UpdateBiomarkerMeasurementsData>>): UseMutationOptions<UpdateBiomarkerMeasurementsResponse, UpdateBiomarkerMeasurementsError, Options<UpdateBiomarkerMeasurementsData>> => {
+    const mutationOptions: UseMutationOptions<UpdateBiomarkerMeasurementsResponse, UpdateBiomarkerMeasurementsError, Options<UpdateBiomarkerMeasurementsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateBiomarkerMeasurements({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Create Biomarker Measurements
+ *
+ * Record measurements against catalogue biomarkers; all-or-nothing.
+ */
+export const createBiomarkerMeasurementsMutation = (options?: Partial<Options<CreateBiomarkerMeasurementsData>>): UseMutationOptions<CreateBiomarkerMeasurementsResponse, CreateBiomarkerMeasurementsError, Options<CreateBiomarkerMeasurementsData>> => {
+    const mutationOptions: UseMutationOptions<CreateBiomarkerMeasurementsResponse, CreateBiomarkerMeasurementsError, Options<CreateBiomarkerMeasurementsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createBiomarkerMeasurements({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};

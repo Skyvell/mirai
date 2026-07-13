@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
 from mirai_api.models import BiomarkerMeasurement, LabUpload
+from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.services import storage
 from mirai_api.services.lab_parsing import MappedMeasurement
 
@@ -35,18 +36,20 @@ def persist_results(
     measured_at: date | None,
 ) -> None:
     """Insert measurements and mark the upload parsed. Blocking."""
-    session.add_all(
-        BiomarkerMeasurement(
-            user_id=upload.user_id,
-            biomarker_id=m.biomarker.id,
-            lab_upload_id=upload.id,
-            value=m.measurement.value,
-            unit=m.measurement.unit,
-            reference_low=m.measurement.reference_low,
-            reference_high=m.measurement.reference_high,
-            measured_at=measured_at,
-        )
-        for m in mapped
+    BiomarkerRepository(session).add_measurements(
+        [
+            BiomarkerMeasurement(
+                user_id=upload.user_id,
+                biomarker_id=m.biomarker.id,
+                lab_upload_id=upload.id,
+                value=m.measurement.value,
+                unit=m.measurement.unit,
+                reference_low=m.measurement.reference_low,
+                reference_high=m.measurement.reference_high,
+                measured_at=measured_at,
+            )
+            for m in mapped
+        ]
     )
     upload.status = UploadStatus.PARSED
     upload.parsed_at = datetime.now(UTC)

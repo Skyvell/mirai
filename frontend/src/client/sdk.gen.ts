@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateMeasurementData, CreateMeasurementErrors, CreateMeasurementResponses, CurrentUserData, CurrentUserResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, ListBiomarkerCatalogData, ListBiomarkerCatalogResponses, ListBiomarkersData, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
+import type { CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -88,24 +88,61 @@ export const deleteLabUpload = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * List Biomarker Catalog
+ * List Biomarkers
  *
  * Return the full seeded biomarker catalogue, for manual-entry pickers.
  */
-export const listBiomarkerCatalog = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerCatalogData, ThrowOnError>): RequestResult<ListBiomarkerCatalogResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerCatalogResponses, unknown, ThrowOnError>({
+export const listBiomarkers = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkersData, ThrowOnError>): RequestResult<ListBiomarkersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkersResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/biomarkers/catalog',
+    url: '/biomarkers',
     ...options
 });
 
 /**
- * Create Measurement
+ * List Biomarker Series
  *
- * Record a manually entered measurement against a catalogue biomarker.
+ * Return each biomarker the caller has measurements for, with its time series.
+ *
+ * Values, units, and reference ranges are verbatim from the lab report;
+ * canonical_unit is catalogue context. Series are sorted by measurement date
+ * ascending, so the latest value is the last element.
  */
-export const createMeasurement = <ThrowOnError extends boolean = false>(options: Options<CreateMeasurementData, ThrowOnError>): RequestResult<CreateMeasurementResponses, CreateMeasurementErrors, ThrowOnError> => (options.client ?? client).post<CreateMeasurementResponses, CreateMeasurementErrors, ThrowOnError>({
+export const listBiomarkerSeries = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerSeriesData, ThrowOnError>): RequestResult<ListBiomarkerSeriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerSeriesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/biomarkers/{slug}/measurements',
+    url: '/biomarker-series',
+    ...options
+});
+
+/**
+ * Get Biomarker Series
+ *
+ * Return one biomarker's time series; empty for a known slug with no data.
+ */
+export const getBiomarkerSeries = <ThrowOnError extends boolean = false>(options: Options<GetBiomarkerSeriesData, ThrowOnError>): RequestResult<GetBiomarkerSeriesResponses, GetBiomarkerSeriesErrors, ThrowOnError> => (options.client ?? client).get<GetBiomarkerSeriesResponses, GetBiomarkerSeriesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarker-series/{slug}',
+    ...options
+});
+
+/**
+ * Delete Biomarker Measurements
+ *
+ * Delete the caller's measurements; all-or-nothing.
+ */
+export const deleteBiomarkerMeasurements = <ThrowOnError extends boolean = false>(options: Options<DeleteBiomarkerMeasurementsData, ThrowOnError>): RequestResult<DeleteBiomarkerMeasurementsResponses, DeleteBiomarkerMeasurementsErrors, ThrowOnError> => (options.client ?? client).delete<DeleteBiomarkerMeasurementsResponses, DeleteBiomarkerMeasurementsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarker-measurements',
+    ...options
+});
+
+/**
+ * Update Biomarker Measurements
+ *
+ * Update the caller's measurements; omitted fields are left untouched.
+ */
+export const updateBiomarkerMeasurements = <ThrowOnError extends boolean = false>(options: Options<UpdateBiomarkerMeasurementsData, ThrowOnError>): RequestResult<UpdateBiomarkerMeasurementsResponses, UpdateBiomarkerMeasurementsErrors, ThrowOnError> => (options.client ?? client).patch<UpdateBiomarkerMeasurementsResponses, UpdateBiomarkerMeasurementsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarker-measurements',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -114,16 +151,16 @@ export const createMeasurement = <ThrowOnError extends boolean = false>(options:
 });
 
 /**
- * List Biomarkers
+ * Create Biomarker Measurements
  *
- * Return each biomarker the caller has measurements for, with its time series.
- *
- * Values, units, and reference ranges are verbatim from the lab report;
- * canonical_unit is catalogue context. Series are sorted by measurement date
- * ascending, so the latest value is the last element.
+ * Record measurements against catalogue biomarkers; all-or-nothing.
  */
-export const listBiomarkers = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkersData, ThrowOnError>): RequestResult<ListBiomarkersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkersResponses, unknown, ThrowOnError>({
+export const createBiomarkerMeasurements = <ThrowOnError extends boolean = false>(options: Options<CreateBiomarkerMeasurementsData, ThrowOnError>): RequestResult<CreateBiomarkerMeasurementsResponses, CreateBiomarkerMeasurementsErrors, ThrowOnError> => (options.client ?? client).post<CreateBiomarkerMeasurementsResponses, CreateBiomarkerMeasurementsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/biomarkers',
-    ...options
+    url: '/biomarker-measurements',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

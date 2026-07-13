@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from mirai_api.core.config import get_settings
 from mirai_api.core.db import warm_engine
 from mirai_api.routers import biomarkers, health, lab_uploads, me
+from mirai_api.services.biomarkers import BiomarkerServiceError
 
 
 @asynccontextmanager
@@ -35,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_exception_handler(BiomarkerServiceError, biomarkers.biomarker_error_handler)
 
 app.include_router(health.router)
 app.include_router(me.router)

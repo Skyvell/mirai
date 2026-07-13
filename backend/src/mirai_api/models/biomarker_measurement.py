@@ -3,9 +3,10 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from mirai_api.models.base import Base
+from mirai_api.models.biomarker import Biomarker
 
 
 class BiomarkerMeasurement(Base):
@@ -34,6 +35,8 @@ class BiomarkerMeasurement(Base):
         ForeignKey("lab_uploads.id", ondelete="SET NULL"),
         index=True,
     )
+    # lazy="raise" forbids accidental lazy loads; repository queries eager-load it.
+    biomarker: Mapped[Biomarker] = relationship(lazy="raise")
     value: Mapped[Decimal] = mapped_column(Numeric(12, 4))
     unit: Mapped[str] = mapped_column(Text)
     reference_low: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))

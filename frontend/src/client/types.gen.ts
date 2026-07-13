@@ -5,6 +5,164 @@ export type ClientOptions = {
 };
 
 /**
+ * BiomarkerMeasurementCreate
+ */
+export type BiomarkerMeasurementCreate = {
+    /**
+     * Biomarker Slug
+     */
+    biomarker_slug: string;
+    /**
+     * Value
+     */
+    value: number | string;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Measured At
+     */
+    measured_at: string;
+    /**
+     * Reference Low
+     */
+    reference_low?: number | string | null;
+    /**
+     * Reference High
+     */
+    reference_high?: number | string | null;
+};
+
+/**
+ * BiomarkerMeasurementPoint
+ */
+export type BiomarkerMeasurementPoint = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Measured At
+     */
+    measured_at: string | null;
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Reference Low
+     */
+    reference_low: string | null;
+    /**
+     * Reference High
+     */
+    reference_high: string | null;
+    /**
+     * Lab Upload Id
+     */
+    lab_upload_id: string | null;
+};
+
+/**
+ * BiomarkerMeasurementRead
+ */
+export type BiomarkerMeasurementRead = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Measured At
+     */
+    measured_at: string | null;
+    /**
+     * Value
+     */
+    value: string;
+    /**
+     * Unit
+     */
+    unit: string;
+    /**
+     * Reference Low
+     */
+    reference_low: string | null;
+    /**
+     * Reference High
+     */
+    reference_high: string | null;
+    /**
+     * Lab Upload Id
+     */
+    lab_upload_id: string | null;
+    /**
+     * Biomarker Slug
+     */
+    biomarker_slug: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+};
+
+/**
+ * BiomarkerMeasurementUpdate
+ */
+export type BiomarkerMeasurementUpdate = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Value
+     */
+    value?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Measured At
+     */
+    measured_at?: string | null;
+    /**
+     * Reference Low
+     */
+    reference_low?: number | string | null;
+    /**
+     * Reference High
+     */
+    reference_high?: number | string | null;
+};
+
+/**
+ * BiomarkerRead
+ */
+export type BiomarkerRead = {
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Canonical Unit
+     */
+    canonical_unit: string;
+};
+
+/**
  * BiomarkerSeries
  */
 export type BiomarkerSeries = {
@@ -27,7 +185,7 @@ export type BiomarkerSeries = {
     /**
      * Measurements
      */
-    measurements: Array<MeasurementPoint>;
+    measurements: Array<BiomarkerMeasurementPoint>;
 };
 
 /**
@@ -38,28 +196,6 @@ export type BodyUploadLab = {
      * File
      */
     file: Blob | File;
-};
-
-/**
- * CatalogBiomarker
- */
-export type CatalogBiomarker = {
-    /**
-     * Slug
-     */
-    slug: string;
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Category
-     */
-    category: string;
-    /**
-     * Canonical Unit
-     */
-    canonical_unit: string;
 };
 
 /**
@@ -136,42 +272,6 @@ export type MeResponse = {
 };
 
 /**
- * MeasurementCreate
- */
-export type MeasurementCreate = {
-    /**
-     * Value
-     */
-    value: number | string;
-    /**
-     * Unit
-     */
-    unit?: string | null;
-    /**
-     * Measured At
-     */
-    measured_at: string;
-};
-
-/**
- * MeasurementCreated
- */
-export type MeasurementCreated = {
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Value
-     */
-    value: string;
-    /**
-     * Unit
-     */
-    unit: string;
-};
-
-/**
  * MeasurementOut
  */
 export type MeasurementOut = {
@@ -183,32 +283,6 @@ export type MeasurementOut = {
      * Display Name
      */
     display_name: string;
-    /**
-     * Value
-     */
-    value: string;
-    /**
-     * Unit
-     */
-    unit: string;
-    /**
-     * Reference Low
-     */
-    reference_low: string | null;
-    /**
-     * Reference High
-     */
-    reference_high: string | null;
-};
-
-/**
- * MeasurementPoint
- */
-export type MeasurementPoint = {
-    /**
-     * Measured At
-     */
-    measured_at: string | null;
     /**
      * Value
      */
@@ -420,54 +494,6 @@ export type DeleteLabUploadResponses = {
 
 export type DeleteLabUploadResponse = DeleteLabUploadResponses[keyof DeleteLabUploadResponses];
 
-export type ListBiomarkerCatalogData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/biomarkers/catalog';
-};
-
-export type ListBiomarkerCatalogResponses = {
-    /**
-     * Response List Biomarker Catalog
-     *
-     * Successful Response
-     */
-    200: Array<CatalogBiomarker>;
-};
-
-export type ListBiomarkerCatalogResponse = ListBiomarkerCatalogResponses[keyof ListBiomarkerCatalogResponses];
-
-export type CreateMeasurementData = {
-    body: MeasurementCreate;
-    path: {
-        /**
-         * Slug
-         */
-        slug: string;
-    };
-    query?: never;
-    url: '/biomarkers/{slug}/measurements';
-};
-
-export type CreateMeasurementErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateMeasurementError = CreateMeasurementErrors[keyof CreateMeasurementErrors];
-
-export type CreateMeasurementResponses = {
-    /**
-     * Successful Response
-     */
-    201: MeasurementCreated;
-};
-
-export type CreateMeasurementResponse = CreateMeasurementResponses[keyof CreateMeasurementResponses];
-
 export type ListBiomarkersData = {
     body?: never;
     path?: never;
@@ -481,7 +507,145 @@ export type ListBiomarkersResponses = {
      *
      * Successful Response
      */
-    200: Array<BiomarkerSeries>;
+    200: Array<BiomarkerRead>;
 };
 
 export type ListBiomarkersResponse = ListBiomarkersResponses[keyof ListBiomarkersResponses];
+
+export type ListBiomarkerSeriesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/biomarker-series';
+};
+
+export type ListBiomarkerSeriesResponses = {
+    /**
+     * Response List Biomarker Series
+     *
+     * Successful Response
+     */
+    200: Array<BiomarkerSeries>;
+};
+
+export type ListBiomarkerSeriesResponse = ListBiomarkerSeriesResponses[keyof ListBiomarkerSeriesResponses];
+
+export type GetBiomarkerSeriesData = {
+    body?: never;
+    path: {
+        /**
+         * Slug
+         */
+        slug: string;
+    };
+    query?: never;
+    url: '/biomarker-series/{slug}';
+};
+
+export type GetBiomarkerSeriesErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetBiomarkerSeriesError = GetBiomarkerSeriesErrors[keyof GetBiomarkerSeriesErrors];
+
+export type GetBiomarkerSeriesResponses = {
+    /**
+     * Successful Response
+     */
+    200: BiomarkerSeries;
+};
+
+export type GetBiomarkerSeriesResponse = GetBiomarkerSeriesResponses[keyof GetBiomarkerSeriesResponses];
+
+export type DeleteBiomarkerMeasurementsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Ids
+         */
+        ids: Array<string>;
+    };
+    url: '/biomarker-measurements';
+};
+
+export type DeleteBiomarkerMeasurementsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteBiomarkerMeasurementsError = DeleteBiomarkerMeasurementsErrors[keyof DeleteBiomarkerMeasurementsErrors];
+
+export type DeleteBiomarkerMeasurementsResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DeleteBiomarkerMeasurementsResponse = DeleteBiomarkerMeasurementsResponses[keyof DeleteBiomarkerMeasurementsResponses];
+
+export type UpdateBiomarkerMeasurementsData = {
+    /**
+     * Payload
+     */
+    body: Array<BiomarkerMeasurementUpdate>;
+    path?: never;
+    query?: never;
+    url: '/biomarker-measurements';
+};
+
+export type UpdateBiomarkerMeasurementsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateBiomarkerMeasurementsError = UpdateBiomarkerMeasurementsErrors[keyof UpdateBiomarkerMeasurementsErrors];
+
+export type UpdateBiomarkerMeasurementsResponses = {
+    /**
+     * Response Update Biomarker Measurements
+     *
+     * Successful Response
+     */
+    200: Array<BiomarkerMeasurementRead>;
+};
+
+export type UpdateBiomarkerMeasurementsResponse = UpdateBiomarkerMeasurementsResponses[keyof UpdateBiomarkerMeasurementsResponses];
+
+export type CreateBiomarkerMeasurementsData = {
+    /**
+     * Payload
+     */
+    body: Array<BiomarkerMeasurementCreate>;
+    path?: never;
+    query?: never;
+    url: '/biomarker-measurements';
+};
+
+export type CreateBiomarkerMeasurementsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateBiomarkerMeasurementsError = CreateBiomarkerMeasurementsErrors[keyof CreateBiomarkerMeasurementsErrors];
+
+export type CreateBiomarkerMeasurementsResponses = {
+    /**
+     * Response Create Biomarker Measurements
+     *
+     * Successful Response
+     */
+    201: Array<BiomarkerMeasurementRead>;
+};
+
+export type CreateBiomarkerMeasurementsResponse = CreateBiomarkerMeasurementsResponses[keyof CreateBiomarkerMeasurementsResponses];

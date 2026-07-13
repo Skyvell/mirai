@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import {
   deleteLabUploadMutation,
-  listBiomarkersQueryKey,
+  listBiomarkerSeriesQueryKey,
   listLabUploadsOptions,
   listLabUploadsQueryKey,
 } from '@/client/@tanstack/react-query.gen'
@@ -68,12 +68,11 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
       : `${upload.measurement_count} measurement${upload.measurement_count === 1 ? '' : 's'}`
   const remove = useMutation({
     ...deleteLabUploadMutation(),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
-      // Orphaning keeps the measurements, so the biomarkers payload is unchanged.
-      if (variables.query?.delete_measurements) {
-        queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
-      }
+      // Deletion removes points or nulls their lab_upload_id; either way the
+      // series payload changed.
+      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
     },
   })
 

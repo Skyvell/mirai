@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { listBiomarkersOptions } from '@/client/@tanstack/react-query.gen'
+import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerSeries } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 
@@ -22,7 +22,7 @@ function history(series: BiomarkerSeries): string {
 }
 
 function BiomarkersComponent() {
-  const biomarkers = useQuery(listBiomarkersOptions())
+  const biomarkers = useQuery(listBiomarkerSeriesOptions())
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">

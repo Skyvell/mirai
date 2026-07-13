@@ -23,13 +23,13 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  createMeasurementMutation,
-  listBiomarkerCatalogOptions,
-  listBiomarkersQueryKey,
+  createBiomarkerMeasurementsMutation,
+  listBiomarkerSeriesQueryKey,
+  listBiomarkersOptions,
   listLabUploadsQueryKey,
   uploadLabMutation,
 } from '@/client/@tanstack/react-query.gen'
-import type { CatalogBiomarker } from '@/client'
+import type { BiomarkerRead } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { localIsoDate } from '@/lib/utils'
 
@@ -40,7 +40,7 @@ function useUploadLab() {
   return useMutation({
     ...uploadLabMutation(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
     },
     // Settled, not success: a failed parse still persists a report row.
     onSettled: () => {
@@ -163,7 +163,7 @@ function today(): string {
 
 function ManualEntryTab() {
   const queryClient = useQueryClient()
-  const catalog = useQuery(listBiomarkerCatalogOptions())
+  const catalog = useQuery(listBiomarkersOptions())
   const [slug, setSlug] = useState('')
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('')
@@ -171,7 +171,7 @@ function ManualEntryTab() {
   const [lastAdded, setLastAdded] = useState<string | null>(null)
 
   const byCategory = useMemo(() => {
-    const groups = new Map<string, CatalogBiomarker[]>()
+    const groups = new Map<string, BiomarkerRead[]>()
     for (const b of catalog.data ?? []) {
       const group = groups.get(b.category)
       if (group) group.push(b)
@@ -184,9 +184,9 @@ function ManualEntryTab() {
   const selected = findBiomarker(slug)
 
   const create = useMutation({
-    ...createMeasurementMutation(),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+    ...createBiomarkerMeasurementsMutation(),
+    onSuccess: ([created]) => {
+      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
       setValue('')
       setLastAdded(`${created.display_name} — ${created.value} ${created.unit}`)
     },
@@ -197,12 +197,14 @@ function ManualEntryTab() {
     if (!slug || !value || !measuredAt) return
     setLastAdded(null)
     create.mutate({
-      path: { slug },
-      body: {
-        value,
-        unit: unit || undefined,
-        measured_at: measuredAt,
-      },
+      body: [
+        {
+          biomarker_slug: slug,
+          value,
+          unit: unit || undefined,
+          measured_at: measuredAt,
+        },
+      ],
     })
   }
 
