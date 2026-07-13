@@ -94,3 +94,4 @@ Concise without losing vital context. Scientific report style writing. Zero fluf
 - Best coding practises.
 - Comments start wich capital letter and ends with period.
 - Use the latest versions unless they are unstable.
+- Multi-step function bodies: blank line between logical steps, one intent comment leading each step. No comments on trivial one-expression bodies; no trailing per-line comments.
