@@ -167,6 +167,8 @@ function ManualEntryTab() {
   const [slug, setSlug] = useState('')
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('')
+  const [referenceLow, setReferenceLow] = useState('')
+  const [referenceHigh, setReferenceHigh] = useState('')
   const [measuredAt, setMeasuredAt] = useState(today)
   const [lastAdded, setLastAdded] = useState<string | null>(null)
 
@@ -203,6 +205,8 @@ function ManualEntryTab() {
           value,
           unit: unit || undefined,
           measured_at: measuredAt,
+          reference_low: referenceLow || undefined,
+          reference_high: referenceHigh || undefined,
         },
       ],
     })
@@ -218,6 +222,9 @@ function ManualEntryTab() {
             setSlug(next)
             const picked = findBiomarker(next)
             if (picked) setUnit(picked.canonical_unit)
+            // Ranges are biomarker-specific; don't carry them across a switch.
+            setReferenceLow('')
+            setReferenceHigh('')
           }}
         >
           <SelectTrigger id="biomarker" className="w-full">
@@ -262,6 +269,29 @@ function ManualEntryTab() {
               Catalogue unit is {selected.canonical_unit}.
             </p>
           )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="reference-low">Reference low</Label>
+          <Input
+            id="reference-low"
+            inputMode="decimal"
+            value={referenceLow}
+            onChange={(e) => setReferenceLow(e.target.value)}
+            placeholder="optional"
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="reference-high">Reference high</Label>
+          <Input
+            id="reference-high"
+            inputMode="decimal"
+            value={referenceHigh}
+            onChange={(e) => setReferenceHigh(e.target.value)}
+            placeholder="optional"
+          />
         </div>
       </div>
 
