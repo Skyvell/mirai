@@ -120,7 +120,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
                   <>
                     {' '}
                     To also delete the {measurements} associated with this
-                    report, use the checkbox.
+                    report &ndash; use the checkbox.
                   </>
                 )}
               </AlertDialogDescription>
