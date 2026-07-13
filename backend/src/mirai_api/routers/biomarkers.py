@@ -1,13 +1,76 @@
 from itertools import groupby
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
 from mirai_api.core.deps import CurrentUser, DbSession
 from mirai_api.models import Biomarker, BiomarkerMeasurement
-from mirai_api.schemas.biomarkers import BiomarkerSeries, MeasurementPoint
+from mirai_api.schemas.biomarkers import (
+    BiomarkerSeries,
+    CatalogBiomarker,
+    MeasurementCreate,
+    MeasurementCreated,
+    MeasurementPoint,
+)
 
 router = APIRouter(tags=["biomarkers"])
+
+
+@router.get("/biomarkers/catalog", operation_id="list_biomarker_catalog")
+def list_biomarker_catalog(
+    session: DbSession,
+    user: CurrentUser,
+) -> list[CatalogBiomarker]:
+    """Return the full seeded biomarker catalogue, for manual-entry pickers."""
+    rows = session.execute(
+        select(
+            Biomarker.slug,
+            Biomarker.display_name,
+            Biomarker.category,
+            Biomarker.canonical_unit,
+        ).order_by(
+            Biomarker.category,
+            Biomarker.display_name,
+        )
+    ).all()
+    return [CatalogBiomarker.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/biomarkers/{slug}/measurements",
+    operation_id="create_measurement",
+    status_code=status.HTTP_201_CREATED,
+)
+def create_measurement(
+    session: DbSession,
+    user: CurrentUser,
+    slug: str,
+    payload: MeasurementCreate,
+) -> MeasurementCreated:
+    """Record a manually entered measurement against a catalogue biomarker."""
+    biomarker = session.scalar(select(Biomarker).where(Biomarker.slug == slug))
+    if biomarker is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            "Unknown biomarker.",
+        )
+    unit = payload.unit or biomarker.canonical_unit
+    session.add(
+        BiomarkerMeasurement(
+            user_id=user.id,
+            biomarker_id=biomarker.id,
+            lab_upload_id=None,
+            value=payload.value,
+            unit=unit,
+            measured_at=payload.measured_at,
+        )
+    )
+    session.commit()
+    return MeasurementCreated(
+        display_name=biomarker.display_name,
+        value=payload.value,
+        unit=unit,
+    )
 
 
 @router.get("/biomarkers", operation_id="list_biomarkers")

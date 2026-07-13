@@ -1,12 +1,6 @@
-import { useRef } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import {
-  listBiomarkersOptions,
-  listBiomarkersQueryKey,
-  uploadLabMutation,
-} from '@/client/@tanstack/react-query.gen'
+import { useQuery } from '@tanstack/react-query'
+import { listBiomarkersOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerSeries } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 
@@ -28,65 +22,15 @@ function history(series: BiomarkerSeries): string {
 }
 
 function BiomarkersComponent() {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const queryClient = useQueryClient()
   const biomarkers = useQuery(listBiomarkersOptions())
-  const upload = useMutation({
-    ...uploadLabMutation(),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() }),
-  })
-
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    // Reset so re-selecting the same file fires onChange again.
-    event.target.value = ''
-    if (file) upload.mutate({ body: { file } })
-  }
-
-  const result = upload.data
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <h1 className="text-3xl font-semibold tracking-tight">Biomarkers</h1>
       <p className="text-muted-foreground">
-        Upload a blood-test PDF to track your biomarkers over time.
+        Track your biomarkers over time. Use “Add data” in the top bar to upload
+        a blood-test PDF or enter values manually.
       </p>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf"
-        className="hidden"
-        onChange={onFileChange}
-      />
-      <div>
-        <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-          {upload.isPending ? 'Parsing report… (takes up to 30 s)' : 'Upload lab PDF'}
-        </Button>
-      </div>
-
-      {upload.isError && (
-        <p className="text-sm text-destructive">{apiErrorMessage(upload.error)}</p>
-      )}
-
-      {result && (result.measured_at !== null || result.skipped.length > 0) && (
-        <div className="text-sm text-muted-foreground">
-          {result.measured_at && <p>Parsed report collected {result.measured_at}.</p>}
-          {result.skipped.length > 0 && (
-            <>
-              <p className="font-medium">Skipped</p>
-              <ul className="list-inside list-disc">
-                {result.skipped.map((s, i) => (
-                  <li key={`${s.name}-${i}`}>
-                    {s.name} ({s.reason})
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
 
       {biomarkers.isError ? (
         <p className="text-sm text-destructive">{apiErrorMessage(biomarkers.error)}</p>

@@ -1,5 +1,6 @@
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
 import { ClerkLoaded, ClerkLoading, Show, SignIn, UserButton } from '@clerk/react'
+import { AddDataDialog } from '@/components/add-data-dialog'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -52,7 +53,8 @@ function AppShell() {
         <Link to="/interventions" className={navLinkClass}>
           Interventions
         </Link>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          <AddDataDialog />
           <UserButton />
         </div>
       </nav>

@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { currentUser, listBiomarkers, liveness, type Options, readiness, uploadLab } from '../sdk.gen';
-import type { CurrentUserData, CurrentUserResponse, ListBiomarkersData, ListBiomarkersResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
+import { createMeasurement, currentUser, deleteLabUpload, listBiomarkerCatalog, listBiomarkers, listLabUploads, liveness, type Options, readiness, uploadLab } from '../sdk.gen';
+import type { CreateMeasurementData, CreateMeasurementError, CreateMeasurementResponse, CurrentUserData, CurrentUserResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, ListBiomarkerCatalogData, ListBiomarkerCatalogResponse, ListBiomarkersData, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -102,6 +102,26 @@ export const currentUserOptions = (options?: Options<CurrentUserData>) => queryO
     queryKey: currentUserQueryKey(options)
 });
 
+export const listLabUploadsQueryKey = (options?: Options<ListLabUploadsData>) => createQueryKey('listLabUploads', options);
+
+/**
+ * List Lab Uploads
+ *
+ * Return the caller's uploaded lab reports, newest first.
+ */
+export const listLabUploadsOptions = (options?: Options<ListLabUploadsData>) => queryOptions<ListLabUploadsResponse, DefaultError, ListLabUploadsResponse, ReturnType<typeof listLabUploadsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listLabUploads({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listLabUploadsQueryKey(options)
+});
+
 /**
  * Upload Lab
  *
@@ -114,6 +134,64 @@ export const uploadLabMutation = (options?: Partial<Options<UploadLabData>>): Us
     const mutationOptions: UseMutationOptions<UploadLabResponse, UploadLabError, Options<UploadLabData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await uploadLab({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Delete Lab Upload
+ *
+ * Delete an uploaded report; optionally its measurements, else orphan them.
+ */
+export const deleteLabUploadMutation = (options?: Partial<Options<DeleteLabUploadData>>): UseMutationOptions<DeleteLabUploadResponse, DeleteLabUploadError, Options<DeleteLabUploadData>> => {
+    const mutationOptions: UseMutationOptions<DeleteLabUploadResponse, DeleteLabUploadError, Options<DeleteLabUploadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await deleteLabUpload({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listBiomarkerCatalogQueryKey = (options?: Options<ListBiomarkerCatalogData>) => createQueryKey('listBiomarkerCatalog', options);
+
+/**
+ * List Biomarker Catalog
+ *
+ * Return the full seeded biomarker catalogue, for manual-entry pickers.
+ */
+export const listBiomarkerCatalogOptions = (options?: Options<ListBiomarkerCatalogData>) => queryOptions<ListBiomarkerCatalogResponse, DefaultError, ListBiomarkerCatalogResponse, ReturnType<typeof listBiomarkerCatalogQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listBiomarkerCatalog({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listBiomarkerCatalogQueryKey(options)
+});
+
+/**
+ * Create Measurement
+ *
+ * Record a manually entered measurement against a catalogue biomarker.
+ */
+export const createMeasurementMutation = (options?: Partial<Options<CreateMeasurementData>>): UseMutationOptions<CreateMeasurementResponse, CreateMeasurementError, Options<CreateMeasurementData>> => {
+    const mutationOptions: UseMutationOptions<CreateMeasurementResponse, CreateMeasurementError, Options<CreateMeasurementData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createMeasurement({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
