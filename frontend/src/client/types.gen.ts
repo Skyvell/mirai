@@ -158,10 +158,6 @@ export type MeasurementCreate = {
  */
 export type MeasurementCreated = {
     /**
-     * Biomarker Slug
-     */
-    biomarker_slug: string;
-    /**
      * Display Name
      */
     display_name: string;
@@ -173,10 +169,6 @@ export type MeasurementCreated = {
      * Unit
      */
     unit: string;
-    /**
-     * Measured At
-     */
-    measured_at: string;
 };
 
 /**

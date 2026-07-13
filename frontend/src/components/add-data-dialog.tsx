@@ -4,7 +4,6 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -32,15 +31,19 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { CatalogBiomarker } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import { localIsoDate } from '@/lib/utils'
 
-// Owned by the dialog (not the tab) so tab switches neither reset the
-// pending state guarding close nor drop the result summary.
+// Owned by the dialog (not the tab) so the pending state guarding close
+// survives tab switches; reset on each open so old results don't resurface.
 function useUploadLab() {
   const queryClient = useQueryClient()
   return useMutation({
     ...uploadLabMutation(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listBiomarkersQueryKey() })
+    },
+    // Settled, not success: a failed parse still persists a report row.
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
     },
   })
@@ -56,6 +59,7 @@ export function AddDataDialog() {
       // Ignore close requests while an upload is parsing (~30 s).
       onOpenChange={(next) => {
         if (!next && upload.isPending) return
+        if (next) upload.reset()
         setOpen(next)
       }}
     >
@@ -74,21 +78,24 @@ export function AddDataDialog() {
             <TabsTrigger value="upload">Upload lab PDF</TabsTrigger>
             <TabsTrigger value="manual">Manual entry</TabsTrigger>
           </TabsList>
-          <TabsContent value="upload" className="pt-2">
+          {/* forceMount keeps a half-filled form alive across tab switches;
+              the dialog unmounting on close still resets it per session. */}
+          <TabsContent value="upload" forceMount className="pt-2 data-[state=inactive]:hidden">
             <UploadTab upload={upload} />
           </TabsContent>
-          <TabsContent value="manual" className="pt-2">
+          <TabsContent value="manual" forceMount className="pt-2 data-[state=inactive]:hidden">
             <ManualEntryTab />
           </TabsContent>
         </Tabs>
-        <DialogClose asChild>
-          <Link
-            to="/sources"
-            className="text-sm text-muted-foreground underline underline-offset-3 hover:text-foreground"
-          >
-            Manage your sources →
-          </Link>
-        </DialogClose>
+        {/* Not DialogClose: the Link's preventDefault would swallow Radix's
+            close, leaving the dialog open over the new route. */}
+        <Link
+          to="/sources"
+          onClick={() => setOpen(false)}
+          className="text-sm text-muted-foreground underline underline-offset-3 hover:text-foreground"
+        >
+          Manage your sources →
+        </Link>
       </DialogContent>
     </Dialog>
   )
@@ -151,7 +158,7 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  return localIsoDate(new Date())
 }
 
 function ManualEntryTab() {

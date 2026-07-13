@@ -23,7 +23,7 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { cn, localIsoDate } from '@/lib/utils'
 
 export function ReportsList() {
   const uploads = useQuery(listLabUploadsOptions())
@@ -76,7 +76,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
   return (
     <tr className="border-b">
       <td className="py-2">{upload.filename}</td>
-      <td className="py-2 whitespace-nowrap">{upload.created_at.slice(0, 10)}</td>
+      <td className="py-2 whitespace-nowrap">
+        {localIsoDate(new Date(upload.created_at))}
+      </td>
       <td
         className={cn(
           'py-2',
