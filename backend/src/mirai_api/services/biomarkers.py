@@ -50,13 +50,16 @@ class BiomarkerService:
         ]
 
     def get_series(self, user_id: uuid.UUID, slug: str) -> BiomarkerSeries:
+        # Common case: data exists and already carries its biomarker.
         measurements = self._repo.list_measurements(user_id, slug)
         if measurements:
             return _series(measurements[0].biomarker, measurements)
+
         # No data: distinguish a known slug (empty series) from an unknown one.
         biomarkers = self._repo.get_biomarkers([slug])
         if not biomarkers:
             raise UnknownBiomarkersError([slug])
+
         return _series(biomarkers[0], [])
 
     def create_measurements(
@@ -64,11 +67,14 @@ class BiomarkerService:
         user_id: uuid.UUID,
         items: list[BiomarkerMeasurementCreate],
     ) -> list[BiomarkerMeasurementRead]:
+        # Resolve every referenced biomarker; reject the whole batch on any unknown slug.
         slugs = {item.biomarker_slug for item in items}
         by_slug = {b.slug: b for b in self._repo.get_biomarkers(slugs)}
         missing = sorted(slugs - by_slug.keys())
         if missing:
             raise UnknownBiomarkersError(missing)
+
+        # Build the rows; unit falls back to the biomarker's canonical unit.
         measurements = []
         for item in items:
             biomarker = by_slug[item.biomarker_slug]
@@ -84,6 +90,8 @@ class BiomarkerService:
                     measured_at=item.measured_at,
                 )
             )
+
+        # Persist as one transaction; the flush gives the rows their ids.
         self._repo.add_measurements(measurements)
         self._repo.commit()
         return [_read(m) for m in measurements]
@@ -93,14 +101,19 @@ class BiomarkerService:
         user_id: uuid.UUID,
         items: list[BiomarkerMeasurementUpdate],
     ) -> list[BiomarkerMeasurementRead]:
+        # Fetch the targets scoped to the user; a miss is unknown and not-owned alike.
         ids = [item.id for item in items]
         by_id = {m.id: m for m in self._repo.get_measurements(user_id, ids)}
         missing = sorted(set(ids) - by_id.keys())
         if missing:
             raise MeasurementsNotFoundError(missing)
+
+        # Apply only the fields each item explicitly set.
         for item in items:
             for field, value in item.model_dump(exclude_unset=True, exclude={"id"}).items():
                 setattr(by_id[item.id], field, value)
+
+        # Commit once; return the updated rows in request order.
         self._repo.commit()
         return [_read(by_id[item.id]) for item in items]
 
@@ -109,11 +122,14 @@ class BiomarkerService:
         user_id: uuid.UUID,
         ids: list[uuid.UUID],
     ) -> None:
+        # One DELETE; the returned ids reveal what actually existed for this user.
         requested = set(ids)
         deleted = self._repo.delete_measurements(user_id, requested)
-        # Raising before commit rolls the partial delete back: all-or-nothing.
+
+        # Any miss aborts before commit, rolling the partial delete back.
         if deleted != requested:
             raise MeasurementsNotFoundError(sorted(requested - deleted))
+
         self._repo.commit()
 
 

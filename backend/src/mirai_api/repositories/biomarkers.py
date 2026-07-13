@@ -47,12 +47,9 @@ class BiomarkerRepository:
         user_id: uuid.UUID,
         slug: str | None = None,
     ) -> list[BiomarkerMeasurement]:
-        """Return the user's measurements, ordered for series grouping.
-
-        The ORDER BY is the series contract: the first three keys set the
-        series order and make each biomarker's rows contiguous for grouping;
-        the last two set the within-series order.
-        """
+        """Return the user's measurements, ordered for series grouping."""
+        # The ORDER BY is the series contract: the first three keys make each
+        # biomarker's rows contiguous for grouping, the last two order the series.
         stmt = self._user_measurements(user_id).order_by(
             Biomarker.category,
             Biomarker.display_name,
@@ -60,8 +57,11 @@ class BiomarkerRepository:
             BiomarkerMeasurement.measured_at.nulls_last(),
             BiomarkerMeasurement.created_at,
         )
+
+        # Optional single-series narrowing.
         if slug is not None:
             stmt = stmt.where(Biomarker.slug == slug)
+
         return list(self._session.scalars(stmt))
 
     def get_measurements(
