@@ -45,7 +45,7 @@ class BiomarkerService:
     def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
         measurements = self._repo.list_measurements(user_id)
         return [
-            _series(biomarker, list(points))
+            _to_series(biomarker, list(points))
             for biomarker, points in groupby(measurements, key=lambda m: m.biomarker)
         ]
 
@@ -53,14 +53,14 @@ class BiomarkerService:
         # Common case: data exists and already carries its biomarker.
         measurements = self._repo.list_measurements(user_id, slug)
         if measurements:
-            return _series(measurements[0].biomarker, measurements)
+            return _to_series(measurements[0].biomarker, measurements)
 
         # No data: distinguish a known slug (empty series) from an unknown one.
         biomarkers = self._repo.get_biomarkers([slug])
         if not biomarkers:
             raise UnknownBiomarkersError([slug])
 
-        return _series(biomarkers[0], [])
+        return _to_series(biomarkers[0], [])
 
     def create_measurements(
         self,
@@ -94,7 +94,7 @@ class BiomarkerService:
         # Persist as one transaction; the flush gives the rows their ids.
         self._repo.add_measurements(measurements)
         self._repo.commit()
-        return [_read(m) for m in measurements]
+        return [_to_measurement_read(m) for m in measurements]
 
     def update_measurements(
         self,
@@ -115,7 +115,7 @@ class BiomarkerService:
 
         # Commit once; return the updated rows in request order.
         self._repo.commit()
-        return [_read(by_id[item.id]) for item in items]
+        return [_to_measurement_read(by_id[item.id]) for item in items]
 
     def delete_measurements(
         self,
@@ -133,7 +133,7 @@ class BiomarkerService:
         self._repo.commit()
 
 
-def _series(
+def _to_series(
     biomarker: Biomarker,
     measurements: list[BiomarkerMeasurement],
 ) -> BiomarkerSeries:
@@ -143,7 +143,7 @@ def _series(
     )
 
 
-def _read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:
+def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:
     return BiomarkerMeasurementRead(
         **BiomarkerMeasurementPoint.model_validate(measurement).model_dump(),
         biomarker_slug=measurement.biomarker.slug,
