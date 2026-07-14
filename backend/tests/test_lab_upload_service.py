@@ -89,6 +89,11 @@ class FakeLabUploadRepository:
             return True
         return False
 
+    def reset_to_pending(self, upload_id: uuid.UUID) -> None:
+        upload = self.uploads.get(upload_id)
+        if upload is not None and upload.status == UploadStatus.PROCESSING:
+            upload.status = UploadStatus.PENDING
+
     def add(self, upload: LabUpload) -> None:
         self.uploads[upload.id] = upload
 
@@ -233,6 +238,26 @@ def test_process_reparse_clears_prior_drafts(pipeline: SimpleNamespace) -> None:
 
     assert stale not in draft_repo.drafts
     assert len(draft_repo.drafts) == 2
+
+
+def test_process_infra_failure_resets_to_pending(
+    pipeline: SimpleNamespace,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A GCS/DB failure (not a parse failure) is retryable: release the claim and re-raise.
+    def boom(name: str) -> bytes:
+        raise RuntimeError("gcs unavailable")
+
+    monkeypatch.setattr(storage, "download", boom)
+    upload = _upload()
+    lab_repo = FakeLabUploadRepository([upload])
+    draft_repo = FakeDraftMeasurementRepository()
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+
+    assert upload.status == UploadStatus.PENDING
+    assert draft_repo.drafts == []
 
 
 def test_process_parse_failure_marks_failed(pipeline: SimpleNamespace) -> None:

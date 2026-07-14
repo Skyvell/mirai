@@ -5,6 +5,7 @@ resource "google_project_service" "required" {
     "sqladmin.googleapis.com",
     "storage.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudtasks.googleapis.com",
     # "compute.googleapis.com", # add for private IP later
   ])
 

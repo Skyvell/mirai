@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     # Empty means all authenticated users may upload.
     upload_allowlist: str = ""
 
+    # Async lab parsing via Cloud Tasks. When disabled, parsing runs in-request.
+    tasks_enabled: bool = False
+    tasks_queue: str = ""
+    tasks_location: str = ""
+    # Service account Cloud Tasks mints OIDC tokens as; also the accepted worker caller.
+    task_invoker_sa: str = ""
+    # Base URL of this service, the parse worker's target and OIDC audience.
+    worker_base_url: str = ""
+
     @property
     def cors_origins(self) -> list[str]:
         return _parse_csv_env(self.frontend_origins)

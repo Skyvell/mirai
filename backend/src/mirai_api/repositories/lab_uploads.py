@@ -70,6 +70,17 @@ class LabUploadRepository:
         )
         return claimed.scalar_one_or_none() is not None
 
+    def reset_to_pending(self, upload_id: uuid.UUID) -> None:
+        """Return a processing upload to pending so its parse task can be retried."""
+        self._session.execute(
+            update(LabUpload)
+            .where(
+                LabUpload.id == upload_id,
+                LabUpload.status == UploadStatus.PROCESSING,
+            )
+            .values(status=UploadStatus.PENDING)
+        )
+
     def add(self, upload: LabUpload) -> None:
         """Stage a new upload row; the flush materializes its id."""
         self._session.add(upload)

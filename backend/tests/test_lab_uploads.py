@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from conftest import TEST_USER_ID
 from mirai_api.core.config import Settings, get_settings
-from mirai_api.core.deps import get_lab_upload_service
+from mirai_api.core.deps import get_lab_upload_service, verify_cloud_tasks
 from mirai_api.core.enums import UploadStatus
 from mirai_api.main import app
 from mirai_api.schemas.lab_uploads import (
@@ -90,6 +90,9 @@ class StubLabUploadService:
     async def submit(self, user_id: uuid.UUID, filename: str, data: bytes) -> LabUploadDetail:
         self._record("submit", user_id, filename, data)
         return self.detail
+
+    async def process(self, upload_id: uuid.UUID) -> None:
+        self._record("process", upload_id)
 
     def update_draft(
         self, user_id: uuid.UUID, upload_id: uuid.UUID, payload: object
@@ -318,3 +321,23 @@ def test_confirm_incomplete_draft_gives_422(
     stub_service.error = DraftNotCommittableError([UPLOAD_ID])
     response = client.post(f"/lab-uploads/{UPLOAD_ID}/confirm")
     assert response.status_code == 422
+
+
+def test_worker_parse_delegates_when_authorized(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    app.dependency_overrides[verify_cloud_tasks] = lambda: None
+    response = client.post(f"/internal/lab-uploads/{UPLOAD_ID}/parse")
+    assert response.status_code == 200
+    assert stub_service.calls == [("process", UPLOAD_ID)]
+
+
+def test_worker_parse_rejects_unauthenticated(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    # No OIDC bearer and the real gate in place: the worker is unreachable.
+    response = client.post(f"/internal/lab-uploads/{UPLOAD_ID}/parse")
+    assert response.status_code == 401
+    assert stub_service.calls == []

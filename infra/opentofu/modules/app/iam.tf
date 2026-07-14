@@ -15,3 +15,18 @@ resource "google_project_iam_member" "api_cloudsql_instance_user" {
   role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${google_service_account.api.email}"
 }
+
+# Enqueue parse tasks onto the Cloud Tasks queue.
+resource "google_project_iam_member" "api_cloudtasks_enqueuer" {
+  project = var.project_id
+  role    = "roles/cloudtasks.enqueuer"
+  member  = "serviceAccount:${google_service_account.api.email}"
+}
+
+# Act as itself, so Cloud Tasks can mint worker OIDC tokens under this identity
+# (reuse the runtime SA as the invoker for MVP; a dedicated invoker is [LATER]).
+resource "google_service_account_iam_member" "api_acts_as_self" {
+  service_account_id = google_service_account.api.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.api.email}"
+}
