@@ -1,12 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 
 from mirai_api.core.deps import AppSettings, CurrentUser, LabUploadServiceDep
-from mirai_api.schemas.lab_uploads import LabUploadResponse, LabUploadSummary
+from mirai_api.schemas.lab_uploads import LabUploadDetail, LabUploadSummary
 from mirai_api.services.lab_uploads import (
-    LabParseError,
     LabUploadNotDeletableError,
     LabUploadNotFoundError,
     LabUploadServiceError,
@@ -19,7 +18,6 @@ _MAX_BYTES = 20 * 1024 * 1024
 _ERROR_STATUS = {
     LabUploadNotFoundError: status.HTTP_404_NOT_FOUND,
     LabUploadNotDeletableError: status.HTTP_409_CONFLICT,
-    LabParseError: status.HTTP_502_BAD_GATEWAY,
 }
 
 
@@ -40,6 +38,16 @@ def list_lab_uploads(
     return service.list(user.id)
 
 
+@router.get("/lab-uploads/{upload_id}", operation_id="get_lab_upload")
+def get_lab_upload(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+) -> LabUploadDetail:
+    """Return one upload's status, and its reviewable draft while awaiting review."""
+    return service.get(user.id, upload_id)
+
+
 @router.delete(
     "/lab-uploads/{upload_id}",
     operation_id="delete_lab_upload",
@@ -55,17 +63,22 @@ def delete_lab_upload(
     service.delete(user.id, upload_id, delete_measurements)
 
 
-@router.post("/lab-uploads", operation_id="upload_lab")
+@router.post(
+    "/lab-uploads",
+    operation_id="upload_lab",
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def upload_lab(
     service: LabUploadServiceDep,
     user: CurrentUser,
     settings: AppSettings,
     file: UploadFile,
-) -> LabUploadResponse:
-    """Upload a lab PDF, parse it into biomarker measurements, and store both.
+    response: Response,
+) -> LabUploadDetail:
+    """Accept a lab PDF for parsing into a reviewable draft.
 
-    Synchronous end-to-end (~10-30 s). Validates the request here; the service
-    owns storage, parsing, and persistence.
+    Validates the request here; the service stores the PDF and parses it. The
+    caller polls GET /lab-uploads/{id} until the draft is ready to review.
     """
     allowlist = settings.upload_allowlist_ids
     if allowlist and str(user.id) not in allowlist:
@@ -96,4 +109,6 @@ async def upload_lab(
             "File is not a PDF.",
         )
 
-    return await service.submit(user.id, file.filename or "upload.pdf", data)
+    detail = await service.submit(user.id, file.filename or "upload.pdf", data)
+    response.headers["Location"] = f"/lab-uploads/{detail.id}"
+    return detail

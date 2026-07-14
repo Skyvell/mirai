@@ -1,8 +1,9 @@
 import uuid
 
-from sqlalchemy import Row, delete, func, select
+from sqlalchemy import Row, delete, func, select, update
 from sqlalchemy.orm import Session
 
+from mirai_api.core.enums import UploadStatus
 from mirai_api.models import BiomarkerMeasurement, LabUpload
 
 
@@ -47,6 +48,27 @@ class LabUploadRepository:
                 LabUpload.user_id == user_id,
             )
         )
+
+    def get(self, upload_id: uuid.UUID) -> LabUpload | None:
+        """Return the upload with this id, unscoped; for the parse worker."""
+        return self._session.get(LabUpload, upload_id)
+
+    def claim_for_processing(self, upload_id: uuid.UUID) -> bool:
+        """Atomically move a pending upload to processing; True if this call won it.
+
+        The CAS on status is the idempotency key: a redelivered parse task finds
+        the row already non-pending, claims nothing, and is a safe no-op.
+        """
+        claimed = self._session.execute(
+            update(LabUpload)
+            .where(
+                LabUpload.id == upload_id,
+                LabUpload.status == UploadStatus.PENDING,
+            )
+            .values(status=UploadStatus.PROCESSING)
+            .returning(LabUpload.id)
+        )
+        return claimed.scalar_one_or_none() is not None
 
     def add(self, upload: LabUpload) -> None:
         """Stage a new upload row; the flush materializes its id."""

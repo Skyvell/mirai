@@ -1,42 +1,149 @@
 import uuid
-from datetime import UTC, datetime
-from types import SimpleNamespace
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import TEST_USER_ID, FakeSession
+from conftest import TEST_USER_ID
 from mirai_api.core.config import Settings, get_settings
+from mirai_api.core.deps import get_lab_upload_service
 from mirai_api.core.enums import UploadStatus
 from mirai_api.main import app
-from mirai_api.models import LabUpload
-from mirai_api.services import storage
+from mirai_api.schemas.lab_uploads import (
+    LabDraft,
+    LabDraftItemRead,
+    LabUploadDetail,
+    LabUploadSummary,
+)
+from mirai_api.services.lab_uploads import (
+    LabUploadNotDeletableError,
+    LabUploadNotFoundError,
+)
+
+UPLOAD_ID = uuid.UUID("00000000-0000-7000-8000-000000000010")
+
+SUMMARY = LabUploadSummary(
+    id=UPLOAD_ID,
+    filename="report.pdf",
+    status=UploadStatus.COMMITTED,
+    parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
+    created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
+    measurement_count=12,
+)
+
+DETAIL = LabUploadDetail(
+    id=UPLOAD_ID,
+    filename="report.pdf",
+    status=UploadStatus.AWAITING_REVIEW,
+    measured_at=date(2026, 7, 12),
+    parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
+    committed_at=None,
+    created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
+    error_message=None,
+    draft=LabDraft(
+        measured_at=date(2026, 7, 12),
+        items=[
+            LabDraftItemRead(
+                id=uuid.UUID("00000000-0000-7000-8000-000000000021"),
+                biomarker_slug="glucose",
+                display_name="Glucose",
+                value="5.4",
+                raw_value=None,
+                unit="mmol/L",
+                reference_low=None,
+                reference_high=None,
+                source_name=None,
+                skip_reason=None,
+                included=True,
+            )
+        ],
+        skipped=[],
+    ),
+)
 
 
-def _upload(client: TestClient, content: bytes) -> object:
+class StubLabUploadService:
+    """Service stub: canned returns out, calls recorded, optional error raised."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple] = []
+        self.summaries: list[LabUploadSummary] = []
+        self.detail: LabUploadDetail = DETAIL
+        self.error: Exception | None = None
+
+    def _record(self, *call: object) -> None:
+        self.calls.append(call)
+        if self.error is not None:
+            raise self.error
+
+    def list(self, user_id: uuid.UUID) -> list[LabUploadSummary]:
+        self._record("list", user_id)
+        return self.summaries
+
+    def get(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
+        self._record("get", user_id, upload_id)
+        return self.detail
+
+    async def submit(self, user_id: uuid.UUID, filename: str, data: bytes) -> LabUploadDetail:
+        self._record("submit", user_id, filename, data)
+        return self.detail
+
+    def delete(
+        self,
+        user_id: uuid.UUID,
+        upload_id: uuid.UUID,
+        delete_measurements: bool,
+    ) -> None:
+        self._record("delete", user_id, upload_id, delete_measurements)
+
+
+@pytest.fixture
+def stub_service(client: TestClient) -> StubLabUploadService:
+    # The client fixture clears all dependency overrides at teardown.
+    stub = StubLabUploadService()
+    app.dependency_overrides[get_lab_upload_service] = lambda: stub
+    return stub
+
+
+def _upload(client: TestClient, content: bytes):
     return client.post(
         "/lab-uploads",
         files={"file": ("report.pdf", content, "application/pdf")},
     )
 
 
-def test_empty_file_is_rejected(client: TestClient) -> None:
+def test_empty_file_is_rejected(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
     response = _upload(client, b"")
     assert response.status_code == 422
     assert response.json()["detail"] == "Empty file."
+    assert stub_service.calls == []
 
 
-def test_non_pdf_is_rejected(client: TestClient) -> None:
+def test_non_pdf_is_rejected(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
     response = _upload(client, b"not a pdf")
     assert response.status_code == 415
+    assert stub_service.calls == []
 
 
-def test_oversize_file_is_rejected(client: TestClient) -> None:
+def test_oversize_file_is_rejected(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
     response = _upload(client, b"%PDF" + b"0" * (20 * 1024 * 1024))
     assert response.status_code == 413
+    assert stub_service.calls == []
 
 
-def test_user_outside_allowlist_is_rejected(client: TestClient) -> None:
+def test_user_outside_allowlist_is_rejected(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
     someone_else = str(uuid.uuid4())
     app.dependency_overrides[get_settings] = lambda: Settings(
         upload_allowlist=someone_else,
@@ -44,99 +151,87 @@ def test_user_outside_allowlist_is_rejected(client: TestClient) -> None:
     )
     response = _upload(client, b"%PDF fake")
     assert response.status_code == 403
+    assert stub_service.calls == []
 
 
-def test_list_uploads_returns_summaries(
+def test_upload_accepts_and_delegates(
     client: TestClient,
-    fake_session: FakeSession,
+    stub_service: StubLabUploadService,
 ) -> None:
-    upload_id = uuid.UUID("00000000-0000-7000-8000-000000000010")
-    fake_session.rows = [
-        SimpleNamespace(
-            id=upload_id,
-            filename="report.pdf",
-            status="parsed",
-            parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
-            created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
-            measurement_count=12,
-        ),
-    ]
+    response = _upload(client, b"%PDF real-ish")
+    assert response.status_code == 202
+    assert response.headers["location"] == f"/lab-uploads/{UPLOAD_ID}"
+    body = response.json()
+    assert body["id"] == str(UPLOAD_ID)
+    assert body["status"] == "awaiting_review"
+    (name, user_id, filename, data) = stub_service.calls[0]
+    assert name == "submit"
+    assert user_id == TEST_USER_ID
+    assert filename == "report.pdf"
+    assert data == b"%PDF real-ish"
+
+
+def test_list_uploads_delegates(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.summaries = [SUMMARY]
     response = client.get("/lab-uploads")
     assert response.status_code == 200
     (summary,) = response.json()
-    assert summary["id"] == str(upload_id)
-    assert summary["status"] == "parsed"
+    assert summary["id"] == str(UPLOAD_ID)
+    assert summary["status"] == "committed"
     assert summary["measurement_count"] == 12
+    assert stub_service.calls == [("list", TEST_USER_ID)]
 
 
-def _stored_upload(status: UploadStatus = UploadStatus.PARSED) -> LabUpload:
-    return LabUpload(
-        id=uuid.UUID("00000000-0000-7000-8000-000000000010"),
-        user_id=TEST_USER_ID,
-        filename="report.pdf",
-        status=status,
-    )
+def test_get_upload_returns_detail_with_draft(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    response = client.get(f"/lab-uploads/{UPLOAD_ID}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "awaiting_review"
+    (item,) = body["draft"]["items"]
+    assert item["biomarker_slug"] == "glucose"
+    assert item["value"] == "5.4"
+    assert body["draft"]["skipped"] == []
+    assert stub_service.calls == [("get", TEST_USER_ID, UPLOAD_ID)]
 
 
-@pytest.fixture
-def deleted_blobs(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    calls: list[str] = []
-    monkeypatch.setattr(
-        storage,
-        "delete_blob",
-        calls.append,
-    )
-    return calls
+def test_get_missing_upload_gives_404(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.error = LabUploadNotFoundError(UPLOAD_ID)
+    response = client.get(f"/lab-uploads/{UPLOAD_ID}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Upload not found."
+
+
+def test_delete_delegates_with_flag(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    response = client.delete(f"/lab-uploads/{UPLOAD_ID}?delete_measurements=true")
+    assert response.status_code == 204
+    assert stub_service.calls == [("delete", TEST_USER_ID, UPLOAD_ID, True)]
 
 
 def test_delete_missing_upload_gives_404(
     client: TestClient,
-    deleted_blobs: list[str],
+    stub_service: StubLabUploadService,
 ) -> None:
-    response = client.delete(f"/lab-uploads/{uuid.uuid4()}")
+    stub_service.error = LabUploadNotFoundError(UPLOAD_ID)
+    response = client.delete(f"/lab-uploads/{UPLOAD_ID}")
     assert response.status_code == 404
-    assert deleted_blobs == []
-
-
-def test_delete_upload_keeps_measurements_by_default(
-    client: TestClient,
-    fake_session: FakeSession,
-    deleted_blobs: list[str],
-) -> None:
-    upload = _stored_upload()
-    fake_session.scalar_value = upload
-    response = client.delete(f"/lab-uploads/{upload.id}")
-    assert response.status_code == 204
-    assert deleted_blobs == [upload.gcs_object_name]
-    # No measurement DELETE: the FK's ON DELETE SET NULL detaches them.
-    assert fake_session.executed == []
-    assert fake_session.deleted == [upload]
-    assert fake_session.commits == 1
-
-
-def test_delete_upload_with_measurements_deletes_them(
-    client: TestClient,
-    fake_session: FakeSession,
-    deleted_blobs: list[str],
-) -> None:
-    upload = _stored_upload()
-    fake_session.scalar_value = upload
-    response = client.delete(f"/lab-uploads/{upload.id}?delete_measurements=true")
-    assert response.status_code == 204
-    assert deleted_blobs == [upload.gcs_object_name]
-    # The measurement DELETE ran before the row delete.
-    assert len(fake_session.executed) == 1
-    assert fake_session.deleted == [upload]
 
 
 def test_delete_upload_mid_parse_is_rejected(
     client: TestClient,
-    fake_session: FakeSession,
-    deleted_blobs: list[str],
+    stub_service: StubLabUploadService,
 ) -> None:
-    upload = _stored_upload(status=UploadStatus.UPLOADED)
-    fake_session.scalar_value = upload
-    response = client.delete(f"/lab-uploads/{upload.id}")
+    stub_service.error = LabUploadNotDeletableError(UPLOAD_ID)
+    response = client.delete(f"/lab-uploads/{UPLOAD_ID}")
     assert response.status_code == 409
-    assert deleted_blobs == []
-    assert fake_session.deleted == []
