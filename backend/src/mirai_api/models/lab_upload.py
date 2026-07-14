@@ -27,6 +27,8 @@ class LabUpload(Base):
         index=True,
     )
     filename: Mapped[str] = mapped_column(Text)
+    # SHA-256 of the PDF bytes; blocks re-uploads of the byte-identical file.
+    content_sha256: Mapped[str | None] = mapped_column(Text, index=True)
     # values_callable stores the lowercase values, not the member names.
     status: Mapped[UploadStatus] = mapped_column(
         Enum(

@@ -18,6 +18,7 @@ from mirai_api.schemas.lab_uploads import (
 from mirai_api.services.lab_uploads import (
     DraftItemsNotFoundError,
     DraftNotCommittableError,
+    DuplicateUploadError,
     LabUploadNotDeletableError,
     LabUploadNotFoundError,
     LabUploadNotReviewableError,
@@ -185,6 +186,15 @@ def test_upload_accepts_and_delegates(
     assert user_id == TEST_USER_ID
     assert filename == "report.pdf"
     assert data == b"%PDF real-ish"
+
+
+def test_upload_duplicate_gives_409(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.error = DuplicateUploadError()
+    response = _upload(client, b"%PDF real-ish")
+    assert response.status_code == 409
 
 
 def test_list_uploads_delegates(

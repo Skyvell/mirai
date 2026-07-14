@@ -1,4 +1,4 @@
-"""create draft_measurements
+"""create draft_biomarker_measurements
 
 Revision ID: 0007
 Revises: 0006
@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.create_table(
-        "draft_measurements",
+        "draft_biomarker_measurements",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("lab_upload_id", sa.Uuid(), nullable=False),
         sa.Column("biomarker_id", sa.Uuid(), nullable=True),
@@ -37,27 +37,29 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.PrimaryKeyConstraint("id", name="pk_draft_measurements"),
+        sa.PrimaryKeyConstraint("id", name="pk_draft_biomarker_measurements"),
         sa.ForeignKeyConstraint(
             ["lab_upload_id"],
             ["lab_uploads.id"],
-            name="fk_draft_measurements_lab_uploads_lab_upload_id",
+            name="fk_draft_biomarker_measurements_lab_uploads_lab_upload_id",
             ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["biomarker_id"],
             ["biomarkers.id"],
-            name="fk_draft_measurements_biomarkers_biomarker_id",
+            name="fk_draft_biomarker_measurements_biomarkers_biomarker_id",
             ondelete="RESTRICT",
         ),
     )
     op.create_index(
-        "ix_draft_measurements_lab_upload_id",
-        "draft_measurements",
+        "ix_draft_biomarker_measurements_lab_upload_id",
+        "draft_biomarker_measurements",
         ["lab_upload_id"],
     )
 
 
 def downgrade() -> None:
-    op.drop_index("ix_draft_measurements_lab_upload_id", table_name="draft_measurements")
-    op.drop_table("draft_measurements")
+    op.drop_index(
+        "ix_draft_biomarker_measurements_lab_upload_id", table_name="draft_biomarker_measurements"
+    )
+    op.drop_table("draft_biomarker_measurements")

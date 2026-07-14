@@ -8,6 +8,7 @@ from mirai_api.schemas.lab_uploads import LabDraftUpdate, LabUploadDetail, LabUp
 from mirai_api.services.lab_uploads import (
     DraftItemsNotFoundError,
     DraftNotCommittableError,
+    DuplicateUploadError,
     LabUploadNotDeletableError,
     LabUploadNotFoundError,
     LabUploadNotReviewableError,
@@ -23,6 +24,7 @@ _ERROR_STATUS = {
     DraftItemsNotFoundError: status.HTTP_404_NOT_FOUND,
     LabUploadNotDeletableError: status.HTTP_409_CONFLICT,
     LabUploadNotReviewableError: status.HTTP_409_CONFLICT,
+    DuplicateUploadError: status.HTTP_409_CONFLICT,
     DraftNotCommittableError: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
