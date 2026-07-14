@@ -3,55 +3,44 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-def _split_csv(value: str) -> list[str]:
-    """Split a comma-separated env value into stripped, non-empty items."""
+def _parse_csv_env(value: str) -> list[str]:
+    """Parse a comma-separated env var into stripped, non-empty values."""
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
 class Settings(BaseSettings):
-    """Runtime configuration, sourced from environment variables.
-
-    Cloud Run injects these (see infra/opentofu/modules/app); locally an
-    untracked backend/.env supplies them.
-    """
-
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Cloud SQL (IAM auth — no password).
-    instance_connection_name: str = ""  # project:region:instance
+    # Cloud SQL, authenticated via IAM.
+    instance_connection_name: str = ""
     db_name: str = "mirai"
-    db_iam_user: str = ""  # runtime SA email, ".gserviceaccount.com" stripped
+    db_iam_user: str = ""
 
-    # Clerk — JWT verification needs only the public JWKS, not the secret key.
+    # Clerk JWT verification.
     clerk_jwks_url: str = ""
-    clerk_issuer: str = ""  # optional; verified when set
+    clerk_issuer: str = ""
 
-    # CORS — comma-separated allow-list of origins permitted to call the API
-    # (local dev origin now; the deployed frontend origin is added per environment).
+    # Browser origins allowed to call the API.
     frontend_origins: str = "http://localhost:5173"
 
-    # User-uploaded files (lab PDFs today), stored in GCS — keyless via ADC.
+    # User-uploaded files in GCS.
     gcs_bucket: str = ""
     gcp_project_id: str = ""
 
-    # Claude via the Anthropic API parses lab PDFs. Key-based auth: Secret
-    # Manager injects it on Cloud Run; backend/.env supplies it locally.
+    # Lab PDF parsing via Anthropic.
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-8"
 
-    # LLM cost-control gate: comma-separated user UUIDs allowed to upload.
-    # Empty = allow all; auth stays Clerk's job.
+    # Empty means all authenticated users may upload.
     upload_allowlist: str = ""
 
     @property
     def cors_origins(self) -> list[str]:
-        """Origins permitted to call the API."""
-        return _split_csv(self.frontend_origins)
+        return _parse_csv_env(self.frontend_origins)
 
     @property
     def upload_allowlist_ids(self) -> frozenset[str]:
-        """User UUIDs allowed to upload; empty means allow everyone."""
-        return frozenset(_split_csv(self.upload_allowlist))
+        return frozenset(_parse_csv_env(self.upload_allowlist))
 
 
 @lru_cache
