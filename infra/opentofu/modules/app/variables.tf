@@ -94,12 +94,3 @@ variable "bucket_force_destroy" {
   description = "Allow destroying the lab-uploads bucket even when it holds objects."
   default     = false
 }
-
-# The service's own URL can't be referenced from its own resource (cycle), so it
-# is provided out-of-band: after the first apply, read the service URI and set
-# this in the environment root, then re-apply. Non-empty enables async parsing.
-variable "worker_base_url" {
-  type        = string
-  description = "This service's https base URL; the parse worker target and OIDC audience. Empty keeps parsing synchronous."
-  default     = ""
-}

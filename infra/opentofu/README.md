@@ -36,11 +36,11 @@ per project (see Setup) and never enters code or state.
 
 **Async lab parsing** (`modules/app/tasks.tf`): a Cloud Tasks queue the API
 enqueues onto; Cloud Tasks calls the internal parse worker back with an OIDC
-token minted as the runtime SA (`iam.tf`). Because the worker's target is the
-service's own URL — a reference cycle tofu can't resolve — `worker_base_url` is
-provided out-of-band: after the first apply, read the `api_url` output and set
-`worker_base_url` in `environments/<env>/main.tf`, then re-apply. It stays
-synchronous (parsing in-request) until that value is set.
+token minted as the runtime SA (`iam.tf`). The worker target is the service's
+own URL, which would be a self-reference cycle if read back from the service
+resource — so it is computed instead (`locals.tf`) from the deterministic
+`{service}-{project_number}.{region}.run.app` form, letting a single apply wire
+everything. Async parsing is always on for a deployed env.
 
 ## Setup (once per project)
 

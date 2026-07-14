@@ -67,10 +67,10 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "GCP_PROJECT_ID"
         value = var.project_id
       }
-      # Async parsing turns on exactly when the self-URL is provided (see variables.tf).
+      # The worker URL is always computed (locals.tf), so async parsing is always on.
       env {
         name  = "TASKS_ENABLED"
-        value = tostring(var.worker_base_url != "")
+        value = "true"
       }
       env {
         name  = "TASKS_QUEUE"
@@ -86,7 +86,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "WORKER_BASE_URL"
-        value = var.worker_base_url
+        value = local.worker_base_url
       }
       env {
         name = "ANTHROPIC_API_KEY"
