@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from mirai_api.core.config import Settings, get_settings
 from mirai_api.core.db import get_session
-from mirai_api.core.security import verify_clerk_token
+from mirai_api.core.security import verify_clerk_token, verify_cloud_tasks_token
 from mirai_api.models import User
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.repositories.draft_measurements import DraftMeasurementRepository
@@ -33,16 +33,41 @@ def get_biomarker_service(session: DbSession) -> BiomarkerService:
 BiomarkerServiceDep = Annotated[BiomarkerService, Depends(get_biomarker_service)]
 
 
-def get_lab_upload_service(session: DbSession) -> LabUploadService:
+def get_lab_upload_service(session: DbSession, settings: AppSettings) -> LabUploadService:
     return LabUploadService(
         LabUploadRepository(session),
         DraftMeasurementRepository(session),
         BiomarkerRepository(session),
         session,
+        tasks_enabled=settings.tasks_enabled,
     )
 
 
 LabUploadServiceDep = Annotated[LabUploadService, Depends(get_lab_upload_service)]
+
+
+def verify_cloud_tasks(request: Request, settings: AppSettings) -> None:
+    """Gate the internal parse worker on a valid Cloud Tasks OIDC token."""
+    header = request.headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing bearer token.",
+        )
+    try:
+        verify_cloud_tasks_token(
+            header.removeprefix("Bearer "),
+            settings.worker_base_url,
+            settings.task_invoker_sa,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden.",
+        ) from exc
+
+
+CloudTasksAuth = Annotated[None, Depends(verify_cloud_tasks)]
 
 
 def get_current_user(

@@ -34,6 +34,14 @@ The one real secret — the Anthropic API key for lab-PDF parsing — lives in
 the runtime SA's per-secret accessor grant; the value is seeded manually once
 per project (see Setup) and never enters code or state.
 
+**Async lab parsing** (`modules/app/tasks.tf`): a Cloud Tasks queue the API
+enqueues onto; Cloud Tasks calls the internal parse worker back with an OIDC
+token minted as the runtime SA (`iam.tf`). Because the worker's target is the
+service's own URL — a reference cycle tofu can't resolve — `worker_base_url` is
+provided out-of-band: after the first apply, read the `api_url` output and set
+`worker_base_url` in `environments/<env>/main.tf`, then re-apply. It stays
+synchronous (parsing in-request) until that value is set.
+
 ## Setup (once per project)
 
 Bootstrap creates the foundation tofu can't manage itself — the state bucket and

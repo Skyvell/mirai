@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, status
 from fastapi.responses import JSONResponse
 
-from mirai_api.core.deps import AppSettings, CurrentUser, LabUploadServiceDep
+from mirai_api.core.deps import AppSettings, CloudTasksAuth, CurrentUser, LabUploadServiceDep
 from mirai_api.schemas.lab_uploads import LabDraftUpdate, LabUploadDetail, LabUploadSummary
 from mirai_api.services.lab_uploads import (
     DraftItemsNotFoundError,
@@ -73,6 +73,23 @@ def confirm_lab_upload(
 ) -> LabUploadDetail:
     """Commit the kept, mapped draft measurements into the biomarker record."""
     return service.confirm(user.id, upload_id)
+
+
+@router.post(
+    "/internal/lab-uploads/{upload_id}/parse",
+    include_in_schema=False,
+)
+async def parse_lab_upload(
+    service: LabUploadServiceDep,
+    upload_id: uuid.UUID,
+    _auth: CloudTasksAuth,
+) -> None:
+    """Cloud Tasks worker: parse a pending upload into a draft.
+
+    OIDC-authed, not user-facing. Returns 200 on success or a no-op redelivery;
+    an infrastructure failure propagates as 500 so the queue retries.
+    """
+    await service.process(upload_id)
 
 
 @router.delete(

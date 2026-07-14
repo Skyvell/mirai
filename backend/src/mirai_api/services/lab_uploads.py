@@ -17,7 +17,7 @@ from mirai_api.schemas.lab_uploads import (
     LabUploadDetail,
     LabUploadSummary,
 )
-from mirai_api.services import storage
+from mirai_api.services import storage, tasks
 from mirai_api.services.biomarkers import UnknownBiomarkersError
 from mirai_api.services.lab_parsing import (
     MappedMeasurement,
@@ -80,12 +80,15 @@ class LabUploadService:
         draft_measurement_repository: DraftMeasurementRepository,
         biomarker_repository: BiomarkerRepository,
         session: Session,
+        tasks_enabled: bool = False,
     ) -> None:
         self._lab_upload_repository = lab_upload_repository
         self._draft_measurement_repository = draft_measurement_repository
         self._biomarker_repository = biomarker_repository
         # Used for transaction control only; queries go through repositories.
         self._session = session
+        # When true, parsing is dispatched to the task queue; else it runs in-request.
+        self._tasks_enabled = tasks_enabled
 
     def list(self, user_id: uuid.UUID) -> list[LabUploadSummary]:
         rows = self._lab_upload_repository.list_with_counts(user_id)
@@ -116,14 +119,17 @@ class LabUploadService:
     ) -> LabUploadDetail:
         """Store the PDF, then parse it into a reviewable draft.
 
-        Transport is synchronous for now: parsing runs in-request. The upload
-        row is committed first so it survives a parse failure (marked failed).
+        The upload row is committed before dispatch so it survives a parse
+        failure (marked failed) and so a queued worker can read its state.
         """
         # Record the upload as pending and stash the PDF in GCS.
         upload = await run_in_threadpool(self._store_upload, user_id, filename, data)
 
-        # Parse in-process; a later stage moves this onto a task queue.
-        await self.process(upload.id)
+        # Dispatch parsing to the queue, or run it in-request where none is configured.
+        if self._tasks_enabled:
+            await run_in_threadpool(tasks.enqueue_parse, upload.id)
+        else:
+            await self.process(upload.id)
 
         return await run_in_threadpool(self.get, user_id, upload.id)
 
@@ -131,36 +137,45 @@ class LabUploadService:
         """Parse a pending upload into draft measurements. Idempotent and re-runnable.
 
         Claims the upload atomically; a redelivered task whose upload is no
-        longer pending is a safe no-op. Parse failure marks the upload failed
-        rather than raising — the state is surfaced to the user on read.
+        longer pending is a safe no-op. A parse failure is terminal (marked
+        failed). Infrastructure errors reset the claim to pending and re-raise
+        so the task queue retries.
         """
         # Win the claim, or bail out as a no-op on a redelivery.
         claimed = await run_in_threadpool(self._claim, upload_id)
         if not claimed:
             return
 
-        # Load the claimed row and the catalogue, and pull the PDF back from GCS.
-        upload = await run_in_threadpool(self._lab_upload_repository.get, upload_id)
-        catalogue, prompt = await run_in_threadpool(cached_catalogue)
-        data = await run_in_threadpool(storage.download, upload.gcs_object_name)
-
-        # Parse; a failure is terminal for this upload.
         try:
-            extraction = await parse_lab_pdf(data, prompt)
-        except Exception:
-            logger.exception("Lab parse failed for upload %s", upload_id)
-            await run_in_threadpool(self._mark_failed, upload, "Failed to parse the lab report.")
-            return
+            # Load the claimed row and the catalogue, and pull the PDF back from GCS.
+            upload = await run_in_threadpool(self._lab_upload_repository.get, upload_id)
+            catalogue, prompt = await run_in_threadpool(cached_catalogue)
+            data = await run_in_threadpool(storage.download, upload.gcs_object_name)
 
-        # Map against the catalogue and write the reviewable draft.
-        mapped, skipped = map_extraction(extraction, catalogue)
-        await run_in_threadpool(
-            self._write_drafts,
-            upload,
-            mapped,
-            skipped,
-            extraction.measured_at,
-        )
+            # A parse failure is terminal for this upload, never retried.
+            try:
+                extraction = await parse_lab_pdf(data, prompt)
+            except Exception:
+                logger.exception("Lab parse failed for upload %s", upload_id)
+                await run_in_threadpool(
+                    self._mark_failed, upload, "Failed to parse the lab report."
+                )
+                return
+
+            # Map against the catalogue and write the reviewable draft.
+            mapped, skipped = map_extraction(extraction, catalogue)
+            await run_in_threadpool(
+                self._write_drafts,
+                upload,
+                mapped,
+                skipped,
+                extraction.measured_at,
+            )
+        except Exception:
+            # Infrastructure failure: release the claim so the retry can re-run.
+            logger.exception("Lab processing failed for upload %s", upload_id)
+            await run_in_threadpool(self._reset_to_pending, upload_id)
+            raise
 
     def update_draft(
         self,
@@ -347,6 +362,11 @@ class LabUploadService:
         """Record a terminal parse failure. Blocking."""
         upload.status = UploadStatus.FAILED
         upload.error_message = message
+        self._session.commit()
+
+    def _reset_to_pending(self, upload_id: uuid.UUID) -> None:
+        """Release a claim after an infrastructure failure so a retry can re-run. Blocking."""
+        self._lab_upload_repository.reset_to_pending(upload_id)
         self._session.commit()
 
 
