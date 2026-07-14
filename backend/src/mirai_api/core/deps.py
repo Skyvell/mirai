@@ -12,7 +12,9 @@ from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token, verify_cloud_tasks_token
 from mirai_api.models import User
 from mirai_api.repositories.biomarkers import BiomarkerRepository
-from mirai_api.repositories.draft_measurements import DraftMeasurementRepository
+from mirai_api.repositories.draft_biomarker_measurements import (
+    DraftBiomarkerMeasurementRepository,
+)
 from mirai_api.repositories.lab_uploads import LabUploadRepository
 from mirai_api.services.biomarkers import BiomarkerService
 from mirai_api.services.lab_uploads import LabUploadService
@@ -36,7 +38,7 @@ BiomarkerServiceDep = Annotated[BiomarkerService, Depends(get_biomarker_service)
 def get_lab_upload_service(session: DbSession, settings: AppSettings) -> LabUploadService:
     return LabUploadService(
         LabUploadRepository(session),
-        DraftMeasurementRepository(session),
+        DraftBiomarkerMeasurementRepository(session),
         BiomarkerRepository(session),
         session,
         tasks_enabled=settings.tasks_enabled,

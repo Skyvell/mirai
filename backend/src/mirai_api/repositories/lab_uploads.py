@@ -53,6 +53,18 @@ class LabUploadRepository:
         """Return the upload with this id, unscoped; for the parse worker."""
         return self._session.get(LabUpload, upload_id)
 
+    def find_duplicate(self, user_id: uuid.UUID, content_sha256: str) -> LabUpload | None:
+        """Return a non-failed upload of the same file for this user, or None."""
+        return self._session.scalar(
+            select(LabUpload)
+            .where(
+                LabUpload.user_id == user_id,
+                LabUpload.content_sha256 == content_sha256,
+                LabUpload.status != UploadStatus.FAILED,
+            )
+            .limit(1)
+        )
+
     def claim_for_processing(self, upload_id: uuid.UUID) -> bool:
         """Atomically move a pending upload to processing; True if this call won it.
 

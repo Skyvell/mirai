@@ -1,14 +1,18 @@
+import hashlib
 import logging
 import uuid
 from datetime import UTC, date, datetime
 
 from fastapi.concurrency import run_in_threadpool
+from sqlalchemy import Row
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
-from mirai_api.models import BiomarkerMeasurement, DraftMeasurement, LabUpload
+from mirai_api.models import BiomarkerMeasurement, DraftBiomarkerMeasurement, LabUpload
 from mirai_api.repositories.biomarkers import BiomarkerRepository
-from mirai_api.repositories.draft_measurements import DraftMeasurementRepository
+from mirai_api.repositories.draft_biomarker_measurements import (
+    DraftBiomarkerMeasurementRepository,
+)
 from mirai_api.repositories.lab_uploads import LabUploadRepository
 from mirai_api.schemas.lab_uploads import (
     LabDraft,
@@ -49,6 +53,14 @@ class LabUploadNotDeletableError(LabUploadServiceError):
         self.upload_id = upload_id
 
 
+class DuplicateUploadError(LabUploadServiceError):
+    def __init__(self) -> None:
+        super().__init__(
+            "You've already uploaded this report. Find it under Sources, "
+            "or delete it there to upload it again."
+        )
+
+
 class LabUploadNotReviewableError(LabUploadServiceError):
     def __init__(self, upload_id: uuid.UUID) -> None:
         super().__init__("Upload is not awaiting review.")
@@ -77,13 +89,13 @@ class LabUploadService:
     def __init__(
         self,
         lab_upload_repository: LabUploadRepository,
-        draft_measurement_repository: DraftMeasurementRepository,
+        draft_biomarker_measurement_repository: DraftBiomarkerMeasurementRepository,
         biomarker_repository: BiomarkerRepository,
         session: Session,
         tasks_enabled: bool = False,
     ) -> None:
         self._lab_upload_repository = lab_upload_repository
-        self._draft_measurement_repository = draft_measurement_repository
+        self._draft_biomarker_measurement_repository = draft_biomarker_measurement_repository
         self._biomarker_repository = biomarker_repository
         # Used for transaction control only; queries go through repositories.
         self._session = session
@@ -92,7 +104,7 @@ class LabUploadService:
 
     def list(self, user_id: uuid.UUID) -> list[LabUploadSummary]:
         rows = self._lab_upload_repository.list_with_counts(user_id)
-        return [LabUploadSummary.model_validate(r) for r in rows]
+        return [_to_summary(r) for r in rows]
 
     def get(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
         # Resolve the upload scoped to the user; a miss is not-found and not-owned alike.
@@ -101,12 +113,12 @@ class LabUploadService:
             raise LabUploadNotFoundError(upload_id)
 
         # A non-terminal upload that never progressed is reported as failed, not mutated.
-        status = _effective_status(upload)
+        status = _effective_status(upload.status, upload.created_at)
 
         # The draft is loaded only while there is one to review.
         draft = None
         if status == UploadStatus.AWAITING_REVIEW:
-            rows = self._draft_measurement_repository.list_for_upload(upload_id)
+            rows = self._draft_biomarker_measurement_repository.list_for_upload(upload_id)
             draft = _to_draft(upload.measured_at, rows)
 
         return _to_detail(upload, status, draft)
@@ -122,8 +134,18 @@ class LabUploadService:
         The upload row is committed before dispatch so it survives a parse
         failure (marked failed) and so a queued worker can read its state.
         """
+        # Reject a byte-identical re-upload before spending storage or an LLM call.
+        content_sha256 = hashlib.sha256(data).hexdigest()
+        existing = await run_in_threadpool(
+            self._lab_upload_repository.find_duplicate, user_id, content_sha256
+        )
+        if existing is not None:
+            raise DuplicateUploadError()
+
         # Record the upload as pending and stash the PDF in GCS.
-        upload = await run_in_threadpool(self._store_upload, user_id, filename, data)
+        upload = await run_in_threadpool(
+            self._store_upload, user_id, filename, data, content_sha256
+        )
 
         # Dispatch parsing to the queue, or run it in-request where none is configured.
         if self._tasks_enabled:
@@ -188,7 +210,10 @@ class LabUploadService:
 
         # Fetch the targeted rows scoped to this upload; a miss is unknown or not-owned.
         ids = [item.id for item in payload.items]
-        by_id = {r.id: r for r in self._draft_measurement_repository.get_for_upload(upload_id, ids)}
+        by_id = {
+            r.id: r
+            for r in self._draft_biomarker_measurement_repository.get_for_upload(upload_id, ids)
+        }
         missing = sorted(set(ids) - by_id.keys())
         if missing:
             raise DraftItemsNotFoundError(missing)
@@ -231,7 +256,7 @@ class LabUploadService:
             raise LabUploadNotReviewableError(upload_id)
 
         # Only kept, mapped rows become measurements.
-        rows = self._draft_measurement_repository.list_for_upload(upload_id)
+        rows = self._draft_biomarker_measurement_repository.list_for_upload(upload_id)
         committable = [r for r in rows if r.included and r.biomarker_id is not None]
 
         # Every committed measurement needs a numeric value.
@@ -297,13 +322,20 @@ class LabUploadService:
             raise LabUploadNotReviewableError(upload_id)
         return upload
 
-    def _store_upload(self, user_id: uuid.UUID, filename: str, data: bytes) -> LabUpload:
+    def _store_upload(
+        self,
+        user_id: uuid.UUID,
+        filename: str,
+        data: bytes,
+        content_sha256: str,
+    ) -> LabUpload:
         """Write the PDF to GCS, then record the pending upload row. Blocking."""
         upload = LabUpload(
             id=uuid.uuid7(),
             user_id=user_id,
             filename=filename,
             status=UploadStatus.PENDING,
+            content_sha256=content_sha256,
         )
         storage.upload(upload.gcs_object_name, data, "application/pdf")
         self._lab_upload_repository.add(upload)
@@ -325,13 +357,14 @@ class LabUploadService:
     ) -> None:
         """Replace the upload's draft with this parse and await review. Blocking."""
         # Clear any prior parse so a re-run is idempotent.
-        self._draft_measurement_repository.delete_for_upload(upload.id)
+        self._draft_biomarker_measurement_repository.delete_for_upload(upload.id)
 
         # Mapped measurements are kept by default; unmatched markers are carried for mapping.
         drafts = [
-            DraftMeasurement(
+            DraftBiomarkerMeasurement(
                 lab_upload_id=upload.id,
                 biomarker_id=m.biomarker.id,
+                biomarker=m.biomarker,
                 value=m.measurement.value,
                 unit=m.measurement.unit,
                 reference_low=m.measurement.reference_low,
@@ -341,7 +374,7 @@ class LabUploadService:
             for m in mapped
         ]
         drafts += [
-            DraftMeasurement(
+            DraftBiomarkerMeasurement(
                 lab_upload_id=upload.id,
                 raw_value=s.value,
                 unit=s.unit,
@@ -351,7 +384,7 @@ class LabUploadService:
             )
             for s in skipped
         ]
-        self._draft_measurement_repository.add_all(drafts)
+        self._draft_biomarker_measurement_repository.add_all(drafts)
 
         upload.status = UploadStatus.AWAITING_REVIEW
         upload.measured_at = measured_at
@@ -370,13 +403,18 @@ class LabUploadService:
         self._session.commit()
 
 
-def _effective_status(upload: LabUpload) -> UploadStatus:
+def _effective_status(status: UploadStatus, created_at: datetime) -> UploadStatus:
     """Report a long-stuck pending/processing upload as failed, without mutating it."""
-    if upload.status not in (UploadStatus.PENDING, UploadStatus.PROCESSING):
-        return upload.status
+    if status not in (UploadStatus.PENDING, UploadStatus.PROCESSING):
+        return status
 
-    age = (datetime.now(UTC) - upload.created_at).total_seconds()
-    return UploadStatus.FAILED if age > _STUCK_AFTER else upload.status
+    age = (datetime.now(UTC) - created_at).total_seconds()
+    return UploadStatus.FAILED if age > _STUCK_AFTER else status
+
+
+def _to_summary(row: Row) -> LabUploadSummary:
+    summary = LabUploadSummary.model_validate(row)
+    return summary.model_copy(update={"status": _effective_status(row.status, row.created_at)})
 
 
 def _to_detail(
@@ -397,13 +435,13 @@ def _to_detail(
     )
 
 
-def _to_draft(measured_at: date | None, rows: list[DraftMeasurement]) -> LabDraft:
+def _to_draft(measured_at: date | None, rows: list[DraftBiomarkerMeasurement]) -> LabDraft:
     items = [_to_draft_item(r) for r in rows if r.biomarker_id is not None]
     skipped = [_to_draft_item(r) for r in rows if r.biomarker_id is None]
     return LabDraft(measured_at=measured_at, items=items, skipped=skipped)
 
 
-def _to_draft_item(row: DraftMeasurement) -> LabDraftItemRead:
+def _to_draft_item(row: DraftBiomarkerMeasurement) -> LabDraftItemRead:
     return LabDraftItemRead(
         id=row.id,
         biomarker_slug=row.biomarker.slug if row.biomarker_id else None,

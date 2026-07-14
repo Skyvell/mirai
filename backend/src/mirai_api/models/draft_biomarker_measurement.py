@@ -9,7 +9,7 @@ from mirai_api.models.base import Base
 from mirai_api.models.biomarker import Biomarker
 
 
-class DraftMeasurement(Base):
+class DraftBiomarkerMeasurement(Base):
     """An extracted lab value awaiting the user's review, before it is committed.
 
     Keeps unreviewed LLM output structurally out of the biomarker record. A row
@@ -17,7 +17,7 @@ class DraftMeasurement(Base):
     the parser could not match (skip_reason set), carried so the user can map it.
     """
 
-    __tablename__ = "draft_measurements"
+    __tablename__ = "draft_biomarker_measurements"
 
     id: Mapped[uuid.UUID] = mapped_column(
         primary_key=True,
