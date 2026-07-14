@@ -12,7 +12,9 @@ from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token
 from mirai_api.models import User
 from mirai_api.repositories.biomarkers import BiomarkerRepository
+from mirai_api.repositories.lab_uploads import LabUploadRepository
 from mirai_api.services.biomarkers import BiomarkerService
+from mirai_api.services.lab_uploads import LabUploadService
 
 _bearer = HTTPBearer(auto_error=True)
 
@@ -28,6 +30,17 @@ def get_biomarker_service(session: DbSession) -> BiomarkerService:
 
 
 BiomarkerServiceDep = Annotated[BiomarkerService, Depends(get_biomarker_service)]
+
+
+def get_lab_upload_service(session: DbSession) -> LabUploadService:
+    return LabUploadService(
+        LabUploadRepository(session),
+        BiomarkerRepository(session),
+        session,
+    )
+
+
+LabUploadServiceDep = Annotated[LabUploadService, Depends(get_lab_upload_service)]
 
 
 def get_current_user(
