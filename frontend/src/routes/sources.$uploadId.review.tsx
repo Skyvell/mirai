@@ -1,19 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { BiomarkerSelect } from '@/components/biomarker-select'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   confirmLabUploadMutation,
   getLabUploadOptions,
@@ -22,14 +14,13 @@ import {
   listLabUploadsQueryKey,
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
-import type { BiomarkerRead, LabDraftItemRead, LabUploadDetail } from '@/client'
+import type { LabDraftItemRead, LabUploadDetail } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import { IN_PROGRESS } from '@/lib/lab-uploads'
 
 export const Route = createFileRoute('/sources/$uploadId/review')({
   component: ReviewComponent,
 })
-
-const IN_PROGRESS = new Set(['pending', 'processing'])
 
 function ReviewComponent() {
   const { uploadId } = Route.useParams()
@@ -280,6 +271,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
                   catalogue={catalogue.data ?? []}
                   value={row.slug}
                   onChange={(slug) => patchSkipped(row.id, { slug })}
+                  triggerClassName="w-56"
                 />
                 <div className="w-24">
                   <NumberCell
@@ -325,44 +317,4 @@ function NumberCell({ value, onChange }: { value: string; onChange: (v: string) 
 
 function TextCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return <Input className="h-8" value={value} onChange={(e) => onChange(e.target.value)} />
-}
-
-function BiomarkerSelect({
-  catalogue,
-  value,
-  onChange,
-}: {
-  catalogue: BiomarkerRead[]
-  value: string
-  onChange: (slug: string) => void
-}) {
-  const byCategory = useMemo(() => {
-    const groups = new Map<string, BiomarkerRead[]>()
-    for (const b of catalogue) {
-      const group = groups.get(b.category)
-      if (group) group.push(b)
-      else groups.set(b.category, [b])
-    }
-    return groups
-  }, [catalogue])
-
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-56">
-        <SelectValue placeholder="Map to biomarker" />
-      </SelectTrigger>
-      <SelectContent>
-        {[...byCategory.entries()].map(([category, biomarkers]) => (
-          <SelectGroup key={category}>
-            <SelectLabel>{category}</SelectLabel>
-            {biomarkers.map((b) => (
-              <SelectItem key={b.slug} value={b.slug}>
-                {b.display_name}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-      </SelectContent>
-    </Select>
-  )
 }
