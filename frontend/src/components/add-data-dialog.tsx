@@ -33,17 +33,14 @@ import type { BiomarkerRead } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { localIsoDate } from '@/lib/utils'
 
-// Owned by the dialog (not the tab) so the pending state guarding close
-// survives tab switches; reset on each open so old results don't resurface.
+// Owned by the dialog (not the tab) so the uploaded confirmation survives tab
+// switches; reset on each open so an old confirmation doesn't resurface.
 function useUploadLab() {
   const queryClient = useQueryClient()
   return useMutation({
     ...uploadLabMutation(),
+    // Parsing is async: the new report appears under Sources as pending.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
-    },
-    // Settled, not success: a failed parse still persists a report row.
-    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
     },
   })
@@ -56,9 +53,7 @@ export function AddDataDialog() {
   return (
     <Dialog
       open={open}
-      // Ignore close requests while an upload is parsing (~30 s).
       onOpenChange={(next) => {
-        if (!next && upload.isPending) return
         if (next) upload.reset()
         setOpen(next)
       }}
@@ -111,8 +106,6 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
     if (file) upload.mutate({ body: { file } })
   }
 
-  const result = upload.data
-
   return (
     <div className="flex flex-col gap-3">
       <input
@@ -124,7 +117,7 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
       />
       <div>
         <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-          {upload.isPending ? 'Parsing report… (takes up to 30 s)' : 'Choose PDF'}
+          {upload.isPending ? 'Uploading…' : 'Choose PDF'}
         </Button>
       </div>
 
@@ -132,26 +125,11 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
         <p className="text-sm text-destructive">{apiErrorMessage(upload.error)}</p>
       )}
 
-      {result && (
-        <div className="text-sm text-muted-foreground">
-          <p>
-            Added {result.measurements.length} measurement
-            {result.measurements.length === 1 ? '' : 's'}
-            {result.measured_at ? ` from a report collected ${result.measured_at}` : ''}.
-          </p>
-          {result.skipped.length > 0 && (
-            <>
-              <p className="font-medium">Skipped</p>
-              <ul className="list-inside list-disc">
-                {result.skipped.map((s, i) => (
-                  <li key={`${s.name}-${i}`}>
-                    {s.name} ({s.reason})
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
+      {upload.isSuccess && (
+        <p className="text-sm text-muted-foreground">
+          Report uploaded — we&rsquo;re reading it now. Find it under Sources to review the
+          extracted values before they&rsquo;re added to your record.
+        </p>
       )}
     </div>
   )
