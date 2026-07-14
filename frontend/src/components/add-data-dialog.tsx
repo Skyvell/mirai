@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { BiomarkerSelect } from '@/components/biomarker-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,15 +13,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   createBiomarkerMeasurementsMutation,
@@ -29,7 +21,6 @@ import {
   listLabUploadsQueryKey,
   uploadLabMutation,
 } from '@/client/@tanstack/react-query.gen'
-import type { BiomarkerRead } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { localIsoDate } from '@/lib/utils'
 
@@ -150,16 +141,6 @@ function ManualEntryTab() {
   const [measuredAt, setMeasuredAt] = useState(today)
   const [lastAdded, setLastAdded] = useState<string | null>(null)
 
-  const byCategory = useMemo(() => {
-    const groups = new Map<string, BiomarkerRead[]>()
-    for (const b of catalog.data ?? []) {
-      const group = groups.get(b.category)
-      if (group) group.push(b)
-      else groups.set(b.category, [b])
-    }
-    return groups
-  }, [catalog.data])
-
   const findBiomarker = (s: string) => catalog.data?.find((b) => b.slug === s)
   const selected = findBiomarker(slug)
 
@@ -194,9 +175,13 @@ function ManualEntryTab() {
     <form className="flex flex-col gap-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="biomarker">Biomarker</Label>
-        <Select
+        <BiomarkerSelect
+          id="biomarker"
+          triggerClassName="w-full"
+          catalogue={catalog.data ?? []}
           value={slug}
-          onValueChange={(next) => {
+          placeholder={catalog.isPending ? 'Loading catalogue…' : 'Pick a biomarker'}
+          onChange={(next) => {
             setSlug(next)
             const picked = findBiomarker(next)
             if (picked) setUnit(picked.canonical_unit)
@@ -204,25 +189,7 @@ function ManualEntryTab() {
             setReferenceLow('')
             setReferenceHigh('')
           }}
-        >
-          <SelectTrigger id="biomarker" className="w-full">
-            <SelectValue
-              placeholder={catalog.isPending ? 'Loading catalogue…' : 'Pick a biomarker'}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {[...byCategory.entries()].map(([category, biomarkers]) => (
-              <SelectGroup key={category}>
-                <SelectLabel>{category}</SelectLabel>
-                {biomarkers.map((b) => (
-                  <SelectItem key={b.slug} value={b.slug}>
-                    {b.display_name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            ))}
-          </SelectContent>
-        </Select>
+        />
         {catalog.isError && (
           <p className="text-sm text-destructive">{apiErrorMessage(catalog.error)}</p>
         )}

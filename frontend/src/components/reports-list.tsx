@@ -24,6 +24,7 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary, UploadStatus } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import { IN_PROGRESS } from '@/lib/lab-uploads'
 import { cn, localIsoDate } from '@/lib/utils'
 
 // User-facing label per lifecycle state; pending and processing read the same.
@@ -34,8 +35,6 @@ const STATUS_LABEL: Record<UploadStatus, string> = {
   committed: 'Committed',
   failed: 'Failed',
 }
-
-const IN_PROGRESS: ReadonlySet<UploadStatus> = new Set(['pending', 'processing'])
 
 export function ReportsList() {
   const uploads = useQuery({
