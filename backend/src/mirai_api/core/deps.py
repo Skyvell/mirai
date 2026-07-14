@@ -21,7 +21,10 @@ AppSettings = Annotated[Settings, Depends(get_settings)]
 
 
 def get_biomarker_service(session: DbSession) -> BiomarkerService:
-    return BiomarkerService(BiomarkerRepository(session))
+    return BiomarkerService(
+        BiomarkerRepository(session),
+        session,
+    )
 
 
 BiomarkerServiceDep = Annotated[BiomarkerService, Depends(get_biomarker_service)]

@@ -1,6 +1,8 @@
 import uuid
 from itertools import groupby
 
+from sqlalchemy.orm import Session
+
 from mirai_api.models import Biomarker, BiomarkerMeasurement
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.schemas.biomarkers import (
@@ -36,14 +38,21 @@ class BiomarkerService:
     future lab/admin flow authorizes the actor and passes another subject.
     """
 
-    def __init__(self, repo: BiomarkerRepository) -> None:
-        self._repo = repo
+    def __init__(
+        self,
+        biomarker_repository: BiomarkerRepository,
+        session: Session,
+    ) -> None:
+        self._biomarker_repository = biomarker_repository
+        # Used for transaction control only; queries go through repositories.
+        self._session = session
 
     def list_biomarkers(self) -> list[BiomarkerRead]:
-        return [BiomarkerRead.model_validate(b) for b in self._repo.list_biomarkers()]
+        biomarkers = self._biomarker_repository.list_biomarkers()
+        return [BiomarkerRead.model_validate(b) for b in biomarkers]
 
     def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
-        measurements = self._repo.list_measurements(user_id)
+        measurements = self._biomarker_repository.list_measurements(user_id)
         return [
             _to_series(biomarker, list(points))
             for biomarker, points in groupby(measurements, key=lambda m: m.biomarker)
@@ -51,12 +60,12 @@ class BiomarkerService:
 
     def get_series(self, user_id: uuid.UUID, slug: str) -> BiomarkerSeries:
         # Common case: data exists and already carries its biomarker.
-        measurements = self._repo.list_measurements(user_id, slug)
+        measurements = self._biomarker_repository.list_measurements(user_id, slug)
         if measurements:
             return _to_series(measurements[0].biomarker, measurements)
 
         # No data: distinguish a known slug (empty series) from an unknown one.
-        biomarkers = self._repo.get_biomarkers([slug])
+        biomarkers = self._biomarker_repository.get_biomarkers([slug])
         if not biomarkers:
             raise UnknownBiomarkersError([slug])
 
@@ -69,7 +78,7 @@ class BiomarkerService:
     ) -> list[BiomarkerMeasurementRead]:
         # Resolve every referenced biomarker; reject the whole batch on any unknown slug.
         slugs = {item.biomarker_slug for item in items}
-        by_slug = {b.slug: b for b in self._repo.get_biomarkers(slugs)}
+        by_slug = {b.slug: b for b in self._biomarker_repository.get_biomarkers(slugs)}
         missing = sorted(slugs - by_slug.keys())
         if missing:
             raise UnknownBiomarkersError(missing)
@@ -92,8 +101,8 @@ class BiomarkerService:
             )
 
         # Persist as one transaction; the flush gives the rows their ids.
-        self._repo.add_measurements(measurements)
-        self._repo.commit()
+        self._biomarker_repository.add_measurements(measurements)
+        self._session.commit()
         return [_to_measurement_read(m) for m in measurements]
 
     def update_measurements(
@@ -103,7 +112,7 @@ class BiomarkerService:
     ) -> list[BiomarkerMeasurementRead]:
         # Fetch the targets scoped to the user; a miss is unknown and not-owned alike.
         ids = [item.id for item in items]
-        by_id = {m.id: m for m in self._repo.get_measurements(user_id, ids)}
+        by_id = {m.id: m for m in self._biomarker_repository.get_measurements(user_id, ids)}
         missing = sorted(set(ids) - by_id.keys())
         if missing:
             raise MeasurementsNotFoundError(missing)
@@ -114,7 +123,7 @@ class BiomarkerService:
                 setattr(by_id[item.id], field, value)
 
         # Commit once; return the updated rows in request order.
-        self._repo.commit()
+        self._session.commit()
         return [_to_measurement_read(by_id[item.id]) for item in items]
 
     def delete_measurements(
@@ -124,13 +133,13 @@ class BiomarkerService:
     ) -> None:
         # One DELETE; the returned ids reveal what actually existed for this user.
         requested = set(ids)
-        deleted = self._repo.delete_measurements(user_id, requested)
+        deleted = self._biomarker_repository.delete_measurements(user_id, requested)
 
         # Any miss aborts before commit, rolling the partial delete back.
         if deleted != requested:
             raise MeasurementsNotFoundError(sorted(requested - deleted))
 
-        self._repo.commit()
+        self._session.commit()
 
 
 def _to_series(

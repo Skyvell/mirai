@@ -53,18 +53,30 @@ def _measurement(
     return BiomarkerMeasurement(**fields)
 
 
+class FakeSession:
+    """Session double: counts commits, holds no state."""
+
+    def __init__(self) -> None:
+        self.commits = 0
+
+    def commit(self) -> None:
+        self.commits += 1
+
+
 class FakeBiomarkerRepository:
-    """Repository fake: in-memory lists, commits counted."""
+    """Repository fake: in-memory lists over a shared fake session."""
 
     def __init__(
         self,
         biomarkers: list[Biomarker] | None = None,
         measurements: list[BiomarkerMeasurement] | None = None,
     ) -> None:
+        # The service commits this same session; the repository holds it too,
+        # mirroring the real BiomarkerRepository(session) wiring.
+        self.session = FakeSession()
         self.biomarkers = biomarkers or []
         self.measurements = measurements or []
         self.added: list[BiomarkerMeasurement] = []
-        self.commits = 0
 
     def list_biomarkers(self) -> list[Biomarker]:
         return list(self.biomarkers)
@@ -109,12 +121,9 @@ class FakeBiomarkerRepository:
         self.measurements = [m for m in self.measurements if m.id not in deleted]
         return deleted
 
-    def commit(self) -> None:
-        self.commits += 1
-
 
 def _service(repo: FakeBiomarkerRepository) -> BiomarkerService:
-    return BiomarkerService(repo)  # type: ignore[arg-type]
+    return BiomarkerService(repo, repo.session)  # type: ignore[arg-type]
 
 
 def test_create_defaults_unit_to_canonical() -> None:
@@ -135,7 +144,7 @@ def test_create_defaults_unit_to_canonical() -> None:
     assert read.lab_upload_id is None
     (added,) = repo.added
     assert added.user_id == TEST_USER_ID
-    assert repo.commits == 1
+    assert repo.session.commits == 1
 
 
 def test_create_keeps_explicit_unit() -> None:
@@ -169,7 +178,7 @@ def test_create_unknown_slug_raises_before_commit() -> None:
         )
     assert exc_info.value.slugs == ["nope"]
     assert repo.added == []
-    assert repo.commits == 0
+    assert repo.session.commits == 0
 
 
 def test_list_series_groups_contiguous_measurements() -> None:
@@ -220,7 +229,7 @@ def test_update_applies_only_set_fields() -> None:
     # Omitted fields stay untouched.
     assert measurement.unit == "mmol/L"
     assert measurement.measured_at == date(2026, 1, 2)
-    assert repo.commits == 1
+    assert repo.session.commits == 1
 
 
 def test_update_explicit_null_clears_nullable_field() -> None:
@@ -249,7 +258,7 @@ def test_update_foreign_measurement_raises_not_found() -> None:
             TEST_USER_ID,
             [BiomarkerMeasurementUpdate(id=foreign.id)],
         )
-    assert repo.commits == 0
+    assert repo.session.commits == 0
 
 
 def test_delete_removes_owned_measurements() -> None:
@@ -257,7 +266,7 @@ def test_delete_removes_owned_measurements() -> None:
     repo = FakeBiomarkerRepository(measurements=[measurement])
     _service(repo).delete_measurements(TEST_USER_ID, [measurement.id])
     assert repo.measurements == []
-    assert repo.commits == 1
+    assert repo.session.commits == 1
 
 
 def test_delete_partial_match_raises_before_commit() -> None:
@@ -268,4 +277,4 @@ def test_delete_partial_match_raises_before_commit() -> None:
             TEST_USER_ID,
             [measurement.id, uuid.uuid7()],
         )
-    assert repo.commits == 0
+    assert repo.session.commits == 0

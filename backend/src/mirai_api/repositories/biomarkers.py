@@ -10,8 +10,8 @@ from mirai_api.models import Biomarker, BiomarkerMeasurement
 class BiomarkerRepository:
     """Database access for biomarkers and their measurements.
 
-    Write methods flush but never commit; the owning service calls commit()
-    as the transaction boundary.
+    Write methods flush but never commit; the owning service commits the
+    session as the transaction boundary.
     """
 
     def __init__(self, session: Session) -> None:
@@ -96,7 +96,3 @@ class BiomarkerRepository:
             .returning(BiomarkerMeasurement.id)
         )
         return set(deleted.scalars())
-
-    def commit(self) -> None:
-        """Transaction boundary; called only by the owning service."""
-        self._session.commit()
