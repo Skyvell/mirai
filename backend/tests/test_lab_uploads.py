@@ -16,8 +16,11 @@ from mirai_api.schemas.lab_uploads import (
     LabUploadSummary,
 )
 from mirai_api.services.lab_uploads import (
+    DraftItemsNotFoundError,
+    DraftNotCommittableError,
     LabUploadNotDeletableError,
     LabUploadNotFoundError,
+    LabUploadNotReviewableError,
 )
 
 UPLOAD_ID = uuid.UUID("00000000-0000-7000-8000-000000000010")
@@ -86,6 +89,16 @@ class StubLabUploadService:
 
     async def submit(self, user_id: uuid.UUID, filename: str, data: bytes) -> LabUploadDetail:
         self._record("submit", user_id, filename, data)
+        return self.detail
+
+    def update_draft(
+        self, user_id: uuid.UUID, upload_id: uuid.UUID, payload: object
+    ) -> LabUploadDetail:
+        self._record("update_draft", user_id, upload_id, payload)
+        return self.detail
+
+    def confirm(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
+        self._record("confirm", user_id, upload_id)
         return self.detail
 
     def delete(
@@ -235,3 +248,73 @@ def test_delete_upload_mid_parse_is_rejected(
     stub_service.error = LabUploadNotDeletableError(UPLOAD_ID)
     response = client.delete(f"/lab-uploads/{UPLOAD_ID}")
     assert response.status_code == 409
+
+
+def test_update_draft_delegates(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    item_id = "00000000-0000-7000-8000-000000000021"
+    response = client.patch(
+        f"/lab-uploads/{UPLOAD_ID}/draft",
+        json={
+            "measured_at": "2026-07-13",
+            "items": [{"id": item_id, "value": "6.0", "included": True}],
+        },
+    )
+    assert response.status_code == 200
+    (name, user_id, upload_id, payload) = stub_service.calls[0]
+    assert name == "update_draft"
+    assert user_id == TEST_USER_ID
+    assert upload_id == UPLOAD_ID
+    assert payload.measured_at == date(2026, 7, 13)
+    assert str(payload.items[0].id) == item_id
+
+
+def test_update_draft_duplicate_ids_give_422(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    item_id = "00000000-0000-7000-8000-000000000021"
+    response = client.patch(
+        f"/lab-uploads/{UPLOAD_ID}/draft",
+        json={"items": [{"id": item_id}, {"id": item_id}]},
+    )
+    assert response.status_code == 422
+    assert stub_service.calls == []
+
+
+def test_update_draft_unknown_item_gives_404(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.error = DraftItemsNotFoundError([UPLOAD_ID])
+    response = client.patch(f"/lab-uploads/{UPLOAD_ID}/draft", json={"items": []})
+    assert response.status_code == 404
+
+
+def test_confirm_delegates(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    response = client.post(f"/lab-uploads/{UPLOAD_ID}/confirm")
+    assert response.status_code == 200
+    assert stub_service.calls == [("confirm", TEST_USER_ID, UPLOAD_ID)]
+
+
+def test_confirm_wrong_state_gives_409(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.error = LabUploadNotReviewableError(UPLOAD_ID)
+    response = client.post(f"/lab-uploads/{UPLOAD_ID}/confirm")
+    assert response.status_code == 409
+
+
+def test_confirm_incomplete_draft_gives_422(
+    client: TestClient,
+    stub_service: StubLabUploadService,
+) -> None:
+    stub_service.error = DraftNotCommittableError([UPLOAD_ID])
+    response = client.post(f"/lab-uploads/{UPLOAD_ID}/confirm")
+    assert response.status_code == 422

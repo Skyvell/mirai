@@ -4,10 +4,13 @@ from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, sta
 from fastapi.responses import JSONResponse
 
 from mirai_api.core.deps import AppSettings, CurrentUser, LabUploadServiceDep
-from mirai_api.schemas.lab_uploads import LabUploadDetail, LabUploadSummary
+from mirai_api.schemas.lab_uploads import LabDraftUpdate, LabUploadDetail, LabUploadSummary
 from mirai_api.services.lab_uploads import (
+    DraftItemsNotFoundError,
+    DraftNotCommittableError,
     LabUploadNotDeletableError,
     LabUploadNotFoundError,
+    LabUploadNotReviewableError,
     LabUploadServiceError,
 )
 
@@ -17,7 +20,10 @@ _MAX_BYTES = 20 * 1024 * 1024
 
 _ERROR_STATUS = {
     LabUploadNotFoundError: status.HTTP_404_NOT_FOUND,
+    DraftItemsNotFoundError: status.HTTP_404_NOT_FOUND,
     LabUploadNotDeletableError: status.HTTP_409_CONFLICT,
+    LabUploadNotReviewableError: status.HTTP_409_CONFLICT,
+    DraftNotCommittableError: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 
@@ -46,6 +52,27 @@ def get_lab_upload(
 ) -> LabUploadDetail:
     """Return one upload's status, and its reviewable draft while awaiting review."""
     return service.get(user.id, upload_id)
+
+
+@router.patch("/lab-uploads/{upload_id}/draft", operation_id="update_lab_draft")
+def update_lab_draft(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+    payload: LabDraftUpdate,
+) -> LabUploadDetail:
+    """Apply the user's review edits to a draft; only while awaiting review."""
+    return service.update_draft(user.id, upload_id, payload)
+
+
+@router.post("/lab-uploads/{upload_id}/confirm", operation_id="confirm_lab_upload")
+def confirm_lab_upload(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+) -> LabUploadDetail:
+    """Commit the kept, mapped draft measurements into the biomarker record."""
+    return service.confirm(user.id, upload_id)
 
 
 @router.delete(

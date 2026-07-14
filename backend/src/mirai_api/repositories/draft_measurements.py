@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Iterable
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
@@ -29,6 +30,23 @@ class DraftMeasurementRepository:
                 .options(joinedload(DraftMeasurement.biomarker))
                 .where(DraftMeasurement.lab_upload_id == upload_id)
                 .order_by(DraftMeasurement.id)
+            )
+        )
+
+    def get_for_upload(
+        self,
+        upload_id: uuid.UUID,
+        ids: Iterable[uuid.UUID],
+    ) -> list[DraftMeasurement]:
+        """Return an upload's draft rows matching the given ids, biomarker eager-loaded."""
+        return list(
+            self._session.scalars(
+                select(DraftMeasurement)
+                .options(joinedload(DraftMeasurement.biomarker))
+                .where(
+                    DraftMeasurement.lab_upload_id == upload_id,
+                    DraftMeasurement.id.in_(ids),
+                )
             )
         )
 

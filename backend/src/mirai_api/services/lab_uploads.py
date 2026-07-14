@@ -6,17 +6,19 @@ from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
-from mirai_api.models import DraftMeasurement, LabUpload
+from mirai_api.models import BiomarkerMeasurement, DraftMeasurement, LabUpload
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.repositories.draft_measurements import DraftMeasurementRepository
 from mirai_api.repositories.lab_uploads import LabUploadRepository
 from mirai_api.schemas.lab_uploads import (
     LabDraft,
     LabDraftItemRead,
+    LabDraftUpdate,
     LabUploadDetail,
     LabUploadSummary,
 )
 from mirai_api.services import storage
+from mirai_api.services.biomarkers import UnknownBiomarkersError
 from mirai_api.services.lab_parsing import (
     MappedMeasurement,
     SkippedMarker,
@@ -45,6 +47,24 @@ class LabUploadNotDeletableError(LabUploadServiceError):
     def __init__(self, upload_id: uuid.UUID) -> None:
         super().__init__("Upload is still being processed.")
         self.upload_id = upload_id
+
+
+class LabUploadNotReviewableError(LabUploadServiceError):
+    def __init__(self, upload_id: uuid.UUID) -> None:
+        super().__init__("Upload is not awaiting review.")
+        self.upload_id = upload_id
+
+
+class DraftItemsNotFoundError(LabUploadServiceError):
+    def __init__(self, ids: list[uuid.UUID]) -> None:
+        super().__init__("Draft items not found.")
+        self.ids = ids
+
+
+class DraftNotCommittableError(LabUploadServiceError):
+    def __init__(self, ids: list[uuid.UUID]) -> None:
+        super().__init__("Some kept measurements are missing a value.")
+        self.ids = ids
 
 
 class LabUploadService:
@@ -142,6 +162,89 @@ class LabUploadService:
             extraction.measured_at,
         )
 
+    def update_draft(
+        self,
+        user_id: uuid.UUID,
+        upload_id: uuid.UUID,
+        payload: LabDraftUpdate,
+    ) -> LabUploadDetail:
+        """Apply the user's edits to a draft: keep/drop rows, correct values, map markers."""
+        upload = self._require_reviewable(user_id, upload_id)
+
+        # Fetch the targeted rows scoped to this upload; a miss is unknown or not-owned.
+        ids = [item.id for item in payload.items]
+        by_id = {r.id: r for r in self._draft_measurement_repository.get_for_upload(upload_id, ids)}
+        missing = sorted(set(ids) - by_id.keys())
+        if missing:
+            raise DraftItemsNotFoundError(missing)
+
+        # Resolve any catalogue slugs used to map previously unmatched markers.
+        slugs = {item.biomarker_slug for item in payload.items if item.biomarker_slug is not None}
+        by_slug = {b.slug: b for b in self._biomarker_repository.get_biomarkers(slugs)}
+        unknown = sorted(slugs - by_slug.keys())
+        if unknown:
+            raise UnknownBiomarkersError(unknown)
+
+        # Apply each item's set fields; a mapped slug clears the skip and attaches the biomarker.
+        for item in payload.items:
+            row = by_id[item.id]
+            edits = item.model_dump(exclude_unset=True, exclude={"id", "biomarker_slug"})
+            for field, value in edits.items():
+                setattr(row, field, value)
+            if item.biomarker_slug is not None:
+                biomarker = by_slug[item.biomarker_slug]
+                row.biomarker = biomarker
+                row.biomarker_id = biomarker.id
+                row.skip_reason = None
+
+        upload.measured_at = payload.measured_at
+        self._session.commit()
+        return self.get(user_id, upload_id)
+
+    def confirm(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
+        """Commit the kept, mapped draft rows into the biomarker record.
+
+        Idempotent: a repeat confirm on an already-committed upload is a no-op.
+        Draft rows are retained as an audit trail of what was extracted.
+        """
+        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
+        if upload is None:
+            raise LabUploadNotFoundError(upload_id)
+        if upload.status == UploadStatus.COMMITTED:
+            return self.get(user_id, upload_id)
+        if upload.status != UploadStatus.AWAITING_REVIEW:
+            raise LabUploadNotReviewableError(upload_id)
+
+        # Only kept, mapped rows become measurements.
+        rows = self._draft_measurement_repository.list_for_upload(upload_id)
+        committable = [r for r in rows if r.included and r.biomarker_id is not None]
+
+        # Every committed measurement needs a numeric value.
+        incomplete = sorted(r.id for r in committable if r.value is None)
+        if incomplete:
+            raise DraftNotCommittableError(incomplete)
+
+        # Build the measurements; unit falls back to the biomarker's canonical unit.
+        measurements = [
+            BiomarkerMeasurement(
+                user_id=user_id,
+                biomarker_id=r.biomarker_id,
+                lab_upload_id=upload_id,
+                value=r.value,
+                unit=r.unit or r.biomarker.canonical_unit,
+                reference_low=r.reference_low,
+                reference_high=r.reference_high,
+                measured_at=upload.measured_at,
+            )
+            for r in committable
+        ]
+        self._biomarker_repository.add_measurements(measurements)
+
+        upload.status = UploadStatus.COMMITTED
+        upload.committed_at = datetime.now(UTC)
+        self._session.commit()
+        return self.get(user_id, upload_id)
+
     def delete(
         self,
         user_id: uuid.UUID,
@@ -169,6 +272,15 @@ class LabUploadService:
             self._lab_upload_repository.delete_measurements(upload_id)
         self._lab_upload_repository.delete(upload)
         self._session.commit()
+
+    def _require_reviewable(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUpload:
+        """Resolve an upload that must be awaiting review, for a draft mutation."""
+        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
+        if upload is None:
+            raise LabUploadNotFoundError(upload_id)
+        if upload.status != UploadStatus.AWAITING_REVIEW:
+            raise LabUploadNotReviewableError(upload_id)
+        return upload
 
     def _store_upload(self, user_id: uuid.UUID, filename: str, data: bytes) -> LabUpload:
         """Write the PDF to GCS, then record the pending upload row. Blocking."""

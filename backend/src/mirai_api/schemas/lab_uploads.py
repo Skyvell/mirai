@@ -1,10 +1,12 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict
 
 from mirai_api.core.enums import UploadStatus
+from mirai_api.schemas.biomarkers import BoundedDecimal
 
 
 class LabUploadSummary(BaseModel):
@@ -52,3 +54,28 @@ class LabUploadDetail(BaseModel):
     error_message: str | None
     # Present only while awaiting review.
     draft: LabDraft | None
+
+
+class LabDraftItemUpdate(BaseModel):
+    id: uuid.UUID
+    value: BoundedDecimal | None = None
+    unit: str | None = None
+    reference_low: BoundedDecimal | None = None
+    reference_high: BoundedDecimal | None = None
+    # Whether to keep this row on commit.
+    included: bool | None = None
+    # Maps a previously unmatched marker to a catalogue biomarker.
+    biomarker_slug: str | None = None
+
+
+def _unique_ids(items: list[LabDraftItemUpdate]) -> list[LabDraftItemUpdate]:
+    ids = [item.id for item in items]
+    if len(set(ids)) != len(ids):
+        raise ValueError("Duplicate draft item ids.")
+    return items
+
+
+class LabDraftUpdate(BaseModel):
+    # The user-confirmed collection date, applied to every committed measurement.
+    measured_at: date | None = None
+    items: Annotated[list[LabDraftItemUpdate], AfterValidator(_unique_ids)] = []
