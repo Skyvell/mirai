@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadErrors, ConfirmLabUploadResponses, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, GetLabUploadData, GetLabUploadErrors, GetLabUploadResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UpdateLabDraftData, UpdateLabDraftErrors, UpdateLabDraftResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -60,10 +60,10 @@ export const listLabUploads = <ThrowOnError extends boolean = false>(options?: O
 /**
  * Upload Lab
  *
- * Upload a lab PDF, parse it into biomarker measurements, and store both.
+ * Accept a lab PDF for parsing into a reviewable draft.
  *
- * Synchronous end-to-end (~10-30 s). The original PDF is kept in GCS and the
- * upload row is retained even on parse failure, for debugging and retry.
+ * Validates the request here; the service stores the PDF and parses it. The
+ * caller polls GET /lab-uploads/{id} until the draft is ready to review.
  */
 export const uploadLab = <ThrowOnError extends boolean = false>(options: Options<UploadLabData, ThrowOnError>): RequestResult<UploadLabResponses, UploadLabErrors, ThrowOnError> => (options.client ?? client).post<UploadLabResponses, UploadLabErrors, ThrowOnError>({
     ...formDataBodySerializer,
@@ -84,6 +84,43 @@ export const uploadLab = <ThrowOnError extends boolean = false>(options: Options
 export const deleteLabUpload = <ThrowOnError extends boolean = false>(options: Options<DeleteLabUploadData, ThrowOnError>): RequestResult<DeleteLabUploadResponses, DeleteLabUploadErrors, ThrowOnError> => (options.client ?? client).delete<DeleteLabUploadResponses, DeleteLabUploadErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/lab-uploads/{upload_id}',
+    ...options
+});
+
+/**
+ * Get Lab Upload
+ *
+ * Return one upload's status, and its reviewable draft while awaiting review.
+ */
+export const getLabUpload = <ThrowOnError extends boolean = false>(options: Options<GetLabUploadData, ThrowOnError>): RequestResult<GetLabUploadResponses, GetLabUploadErrors, ThrowOnError> => (options.client ?? client).get<GetLabUploadResponses, GetLabUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/lab-uploads/{upload_id}',
+    ...options
+});
+
+/**
+ * Update Lab Draft
+ *
+ * Apply the user's review edits to a draft; only while awaiting review.
+ */
+export const updateLabDraft = <ThrowOnError extends boolean = false>(options: Options<UpdateLabDraftData, ThrowOnError>): RequestResult<UpdateLabDraftResponses, UpdateLabDraftErrors, ThrowOnError> => (options.client ?? client).patch<UpdateLabDraftResponses, UpdateLabDraftErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/lab-uploads/{upload_id}/draft',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Confirm Lab Upload
+ *
+ * Commit the kept, mapped draft measurements into the biomarker record.
+ */
+export const confirmLabUpload = <ThrowOnError extends boolean = false>(options: Options<ConfirmLabUploadData, ThrowOnError>): RequestResult<ConfirmLabUploadResponses, ConfirmLabUploadErrors, ThrowOnError> => (options.client ?? client).post<ConfirmLabUploadResponses, ConfirmLabUploadErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/lab-uploads/{upload_id}/confirm',
     ...options
 });
 

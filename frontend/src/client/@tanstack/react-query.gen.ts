@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, uploadLab } from '../sdk.gen';
-import type { CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
+import { confirmLabUpload, createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, getLabUpload, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, updateLabDraft, uploadLab } from '../sdk.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadError, ConfirmLabUploadResponse, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, GetLabUploadData, GetLabUploadError, GetLabUploadResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UpdateLabDraftData, UpdateLabDraftError, UpdateLabDraftResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -125,10 +125,10 @@ export const listLabUploadsOptions = (options?: Options<ListLabUploadsData>) => 
 /**
  * Upload Lab
  *
- * Upload a lab PDF, parse it into biomarker measurements, and store both.
+ * Accept a lab PDF for parsing into a reviewable draft.
  *
- * Synchronous end-to-end (~10-30 s). The original PDF is kept in GCS and the
- * upload row is retained even on parse failure, for debugging and retry.
+ * Validates the request here; the service stores the PDF and parses it. The
+ * caller polls GET /lab-uploads/{id} until the draft is ready to review.
  */
 export const uploadLabMutation = (options?: Partial<Options<UploadLabData>>): UseMutationOptions<UploadLabResponse, UploadLabError, Options<UploadLabData>> => {
     const mutationOptions: UseMutationOptions<UploadLabResponse, UploadLabError, Options<UploadLabData>> = {
@@ -153,6 +153,64 @@ export const deleteLabUploadMutation = (options?: Partial<Options<DeleteLabUploa
     const mutationOptions: UseMutationOptions<DeleteLabUploadResponse, DeleteLabUploadError, Options<DeleteLabUploadData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await deleteLabUpload({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getLabUploadQueryKey = (options: Options<GetLabUploadData>) => createQueryKey('getLabUpload', options);
+
+/**
+ * Get Lab Upload
+ *
+ * Return one upload's status, and its reviewable draft while awaiting review.
+ */
+export const getLabUploadOptions = (options: Options<GetLabUploadData>) => queryOptions<GetLabUploadResponse, GetLabUploadError, GetLabUploadResponse, ReturnType<typeof getLabUploadQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getLabUpload({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getLabUploadQueryKey(options)
+});
+
+/**
+ * Update Lab Draft
+ *
+ * Apply the user's review edits to a draft; only while awaiting review.
+ */
+export const updateLabDraftMutation = (options?: Partial<Options<UpdateLabDraftData>>): UseMutationOptions<UpdateLabDraftResponse, UpdateLabDraftError, Options<UpdateLabDraftData>> => {
+    const mutationOptions: UseMutationOptions<UpdateLabDraftResponse, UpdateLabDraftError, Options<UpdateLabDraftData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateLabDraft({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Confirm Lab Upload
+ *
+ * Commit the kept, mapped draft measurements into the biomarker record.
+ */
+export const confirmLabUploadMutation = (options?: Partial<Options<ConfirmLabUploadData>>): UseMutationOptions<ConfirmLabUploadResponse, ConfirmLabUploadError, Options<ConfirmLabUploadData>> => {
+    const mutationOptions: UseMutationOptions<ConfirmLabUploadResponse, ConfirmLabUploadError, Options<ConfirmLabUploadData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await confirmLabUpload({
                 ...options,
                 ...fnOptions,
                 throwOnError: true

@@ -16,6 +16,7 @@ import { Route as InterventionsRouteImport } from './routes/interventions'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as BiomarkersRouteImport } from './routes/biomarkers'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SourcesUploadIdReviewRouteImport } from './routes/sources.$uploadId.review'
 
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SourcesUploadIdReviewRoute = SourcesUploadIdReviewRouteImport.update({
+  id: '/$uploadId/review',
+  path: '/$uploadId/review',
+  getParentRoute: () => SourcesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -60,7 +66,8 @@ export interface FileRoutesByFullPath {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/sources': typeof SourcesRoute
+  '/sources': typeof SourcesRouteWithChildren
+  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -69,7 +76,8 @@ export interface FileRoutesByTo {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/sources': typeof SourcesRoute
+  '/sources': typeof SourcesRouteWithChildren
+  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -79,7 +87,8 @@ export interface FileRoutesById {
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
   '/physiology': typeof PhysiologyRoute
-  '/sources': typeof SourcesRoute
+  '/sources': typeof SourcesRouteWithChildren
+  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/omics'
     | '/physiology'
     | '/sources'
+    | '/sources/$uploadId/review'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/omics'
     | '/physiology'
     | '/sources'
+    | '/sources/$uploadId/review'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/omics'
     | '/physiology'
     | '/sources'
+    | '/sources/$uploadId/review'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -118,7 +130,7 @@ export interface RootRouteChildren {
   InterventionsRoute: typeof InterventionsRoute
   OmicsRoute: typeof OmicsRoute
   PhysiologyRoute: typeof PhysiologyRoute
-  SourcesRoute: typeof SourcesRoute
+  SourcesRoute: typeof SourcesRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -172,8 +184,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sources/$uploadId/review': {
+      id: '/sources/$uploadId/review'
+      path: '/$uploadId/review'
+      fullPath: '/sources/$uploadId/review'
+      preLoaderRoute: typeof SourcesUploadIdReviewRouteImport
+      parentRoute: typeof SourcesRoute
+    }
   }
 }
+
+interface SourcesRouteChildren {
+  SourcesUploadIdReviewRoute: typeof SourcesUploadIdReviewRoute
+}
+
+const SourcesRouteChildren: SourcesRouteChildren = {
+  SourcesUploadIdReviewRoute: SourcesUploadIdReviewRoute,
+}
+
+const SourcesRouteWithChildren =
+  SourcesRoute._addFileChildren(SourcesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -182,7 +212,7 @@ const rootRouteChildren: RootRouteChildren = {
   InterventionsRoute: InterventionsRoute,
   OmicsRoute: OmicsRoute,
   PhysiologyRoute: PhysiologyRoute,
-  SourcesRoute: SourcesRoute,
+  SourcesRoute: SourcesRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

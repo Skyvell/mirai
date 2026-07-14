@@ -209,25 +209,155 @@ export type HttpValidationError = {
 };
 
 /**
- * LabUploadResponse
+ * LabDraft
  */
-export type LabUploadResponse = {
-    /**
-     * Upload Id
-     */
-    upload_id: string;
+export type LabDraft = {
     /**
      * Measured At
      */
     measured_at: string | null;
     /**
-     * Measurements
+     * Items
      */
-    measurements: Array<MeasurementOut>;
+    items: Array<LabDraftItemRead>;
     /**
      * Skipped
      */
-    skipped: Array<SkippedMarker>;
+    skipped: Array<LabDraftItemRead>;
+};
+
+/**
+ * LabDraftItemRead
+ */
+export type LabDraftItemRead = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Biomarker Slug
+     */
+    biomarker_slug: string | null;
+    /**
+     * Display Name
+     */
+    display_name: string | null;
+    /**
+     * Value
+     */
+    value: string | null;
+    /**
+     * Raw Value
+     */
+    raw_value: string | null;
+    /**
+     * Unit
+     */
+    unit: string | null;
+    /**
+     * Reference Low
+     */
+    reference_low: string | null;
+    /**
+     * Reference High
+     */
+    reference_high: string | null;
+    /**
+     * Source Name
+     */
+    source_name: string | null;
+    /**
+     * Skip Reason
+     */
+    skip_reason: string | null;
+    /**
+     * Included
+     */
+    included: boolean;
+};
+
+/**
+ * LabDraftItemUpdate
+ */
+export type LabDraftItemUpdate = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Value
+     */
+    value?: number | string | null;
+    /**
+     * Unit
+     */
+    unit?: string | null;
+    /**
+     * Reference Low
+     */
+    reference_low?: number | string | null;
+    /**
+     * Reference High
+     */
+    reference_high?: number | string | null;
+    /**
+     * Included
+     */
+    included?: boolean | null;
+    /**
+     * Biomarker Slug
+     */
+    biomarker_slug?: string | null;
+};
+
+/**
+ * LabDraftUpdate
+ */
+export type LabDraftUpdate = {
+    /**
+     * Measured At
+     */
+    measured_at?: string | null;
+    /**
+     * Items
+     */
+    items?: Array<LabDraftItemUpdate>;
+};
+
+/**
+ * LabUploadDetail
+ */
+export type LabUploadDetail = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Filename
+     */
+    filename: string;
+    status: UploadStatus;
+    /**
+     * Measured At
+     */
+    measured_at: string | null;
+    /**
+     * Parsed At
+     */
+    parsed_at: string | null;
+    /**
+     * Committed At
+     */
+    committed_at: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Error Message
+     */
+    error_message: string | null;
+    draft: LabDraft | null;
 };
 
 /**
@@ -272,65 +402,14 @@ export type MeResponse = {
 };
 
 /**
- * MeasurementOut
- */
-export type MeasurementOut = {
-    /**
-     * Biomarker Slug
-     */
-    biomarker_slug: string;
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Value
-     */
-    value: string;
-    /**
-     * Unit
-     */
-    unit: string;
-    /**
-     * Reference Low
-     */
-    reference_low: string | null;
-    /**
-     * Reference High
-     */
-    reference_high: string | null;
-};
-
-/**
- * SkippedMarker
- *
- * A marker that did not become a measurement, with why.
- */
-export type SkippedMarker = {
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Value
-     */
-    value: string;
-    /**
-     * Unit
-     */
-    unit: string | null;
-    /**
-     * Reason
-     */
-    reason: string;
-};
-
-/**
  * UploadStatus
  *
- * Parse lifecycle of a user-uploaded file, shared by all upload types.
+ * Lifecycle of a user-uploaded file, from receipt to committed record.
+ *
+ * pending → processing → awaiting_review → committed is the happy path;
+ * failed is the terminal error branch from processing.
  */
-export type UploadStatus = 'uploaded' | 'parsed' | 'failed';
+export type UploadStatus = 'pending' | 'processing' | 'awaiting_review' | 'committed' | 'failed';
 
 /**
  * ValidationError
@@ -454,7 +533,7 @@ export type UploadLabResponses = {
     /**
      * Successful Response
      */
-    200: LabUploadResponse;
+    202: LabUploadDetail;
 };
 
 export type UploadLabResponse = UploadLabResponses[keyof UploadLabResponses];
@@ -493,6 +572,96 @@ export type DeleteLabUploadResponses = {
 };
 
 export type DeleteLabUploadResponse = DeleteLabUploadResponses[keyof DeleteLabUploadResponses];
+
+export type GetLabUploadData = {
+    body?: never;
+    path: {
+        /**
+         * Upload Id
+         */
+        upload_id: string;
+    };
+    query?: never;
+    url: '/lab-uploads/{upload_id}';
+};
+
+export type GetLabUploadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLabUploadError = GetLabUploadErrors[keyof GetLabUploadErrors];
+
+export type GetLabUploadResponses = {
+    /**
+     * Successful Response
+     */
+    200: LabUploadDetail;
+};
+
+export type GetLabUploadResponse = GetLabUploadResponses[keyof GetLabUploadResponses];
+
+export type UpdateLabDraftData = {
+    body: LabDraftUpdate;
+    path: {
+        /**
+         * Upload Id
+         */
+        upload_id: string;
+    };
+    query?: never;
+    url: '/lab-uploads/{upload_id}/draft';
+};
+
+export type UpdateLabDraftErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateLabDraftError = UpdateLabDraftErrors[keyof UpdateLabDraftErrors];
+
+export type UpdateLabDraftResponses = {
+    /**
+     * Successful Response
+     */
+    200: LabUploadDetail;
+};
+
+export type UpdateLabDraftResponse = UpdateLabDraftResponses[keyof UpdateLabDraftResponses];
+
+export type ConfirmLabUploadData = {
+    body?: never;
+    path: {
+        /**
+         * Upload Id
+         */
+        upload_id: string;
+    };
+    query?: never;
+    url: '/lab-uploads/{upload_id}/confirm';
+};
+
+export type ConfirmLabUploadErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ConfirmLabUploadError = ConfirmLabUploadErrors[keyof ConfirmLabUploadErrors];
+
+export type ConfirmLabUploadResponses = {
+    /**
+     * Successful Response
+     */
+    200: LabUploadDetail;
+};
+
+export type ConfirmLabUploadResponse = ConfirmLabUploadResponses[keyof ConfirmLabUploadResponses];
 
 export type ListBiomarkersData = {
     body?: never;

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -21,12 +22,28 @@ import {
   listLabUploadsOptions,
   listLabUploadsQueryKey,
 } from '@/client/@tanstack/react-query.gen'
-import type { LabUploadSummary } from '@/client'
+import type { LabUploadSummary, UploadStatus } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { cn, localIsoDate } from '@/lib/utils'
 
+// User-facing label per lifecycle state; pending and processing read the same.
+const STATUS_LABEL: Record<UploadStatus, string> = {
+  pending: 'Processing',
+  processing: 'Processing',
+  awaiting_review: 'Ready to review',
+  committed: 'Committed',
+  failed: 'Failed',
+}
+
+const IN_PROGRESS: ReadonlySet<UploadStatus> = new Set(['pending', 'processing'])
+
 export function ReportsList() {
-  const uploads = useQuery(listLabUploadsOptions())
+  const uploads = useQuery({
+    ...listLabUploadsOptions(),
+    // Poll only while something is still parsing; stop once all rows are terminal.
+    refetchInterval: (query) =>
+      query.state.data?.some((u) => IN_PROGRESS.has(u.status)) ? 3000 : false,
+  })
 
   return (
     <section className="flex flex-col gap-2">
@@ -76,6 +93,8 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
     },
   })
 
+  const inProgress = IN_PROGRESS.has(upload.status)
+
   return (
     <tr className="border-b">
       <td className="py-2">{upload.filename}</td>
@@ -85,17 +104,28 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
       <td
         className={cn(
           'py-2',
-          upload.status === 'failed' ? 'text-destructive' : 'text-muted-foreground',
+          upload.status === 'failed'
+            ? 'text-destructive'
+            : upload.status === 'awaiting_review'
+              ? 'font-medium text-foreground'
+              : 'text-muted-foreground',
         )}
       >
-        {upload.status}
+        {STATUS_LABEL[upload.status]}
       </td>
-      <td className="py-2">{upload.measurement_count}</td>
-      <td className="py-2 text-right">
+      <td className="py-2">{upload.measurement_count || '—'}</td>
+      <td className="py-2 text-right whitespace-nowrap">
         {remove.isError && (
           <span className="mr-2 text-xs text-destructive">
             {apiErrorMessage(remove.error)}
           </span>
+        )}
+        {upload.status === 'awaiting_review' && (
+          <Button asChild size="sm" variant="outline" className="mr-1">
+            <Link to="/sources/$uploadId/review" params={{ uploadId: upload.id }}>
+              Review
+            </Link>
+          </Button>
         )}
         <AlertDialog onOpenChange={(open) => open && setDeleteMeasurements(false)}>
           <AlertDialogTrigger asChild>
@@ -103,7 +133,8 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
               variant="ghost"
               size="icon"
               aria-label={`Delete ${upload.filename}`}
-              disabled={remove.isPending}
+              // Deleting mid-parse would strand the worker's inserts; the API blocks it too.
+              disabled={remove.isPending || inProgress}
             >
               <Trash2 />
             </Button>
