@@ -78,7 +78,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
       env {
         name  = "TASKS_LOCATION"
-        value = var.region
+        value = var.tasks_location
       }
       env {
         name  = "TASK_INVOKER_SA"

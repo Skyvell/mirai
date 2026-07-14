@@ -3,6 +3,7 @@ module "app" {
 
   project_id             = "mirai-dev-501218"
   region                 = "europe-north1"
+  tasks_location         = "europe-west1" # Cloud Tasks is not offered in europe-north1; queue dispatches cross-region.
   db_tier                = "db-f1-micro"
   db_deletion_protection = false
   clerk_jwks_url         = "https://promoted-elephant-55.clerk.accounts.dev/.well-known/jwks.json"

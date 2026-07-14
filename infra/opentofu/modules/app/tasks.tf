@@ -3,7 +3,7 @@
 # LLM parses (cost control); retries cover transient failures.
 resource "google_cloud_tasks_queue" "parse" {
   name     = "mirai-lab-parse"
-  location = var.region
+  location = var.tasks_location
 
   rate_limits {
     max_concurrent_dispatches = 5

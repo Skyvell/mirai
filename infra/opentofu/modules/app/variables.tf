@@ -9,6 +9,12 @@ variable "region" {
   description = "Region for all resources."
 }
 
+variable "tasks_location" {
+  type        = string
+  description = "Cloud Tasks queue location; must be a Cloud Tasks-supported region, which may differ from var.region. The queue dispatches to the worker over HTTPS, so cross-region is fine."
+  default     = "europe-west1"
+}
+
 variable "image" {
   type        = string
   description = "Container image at Cloud Run creation only; the live image is CI-owned (ignore_changes)."
