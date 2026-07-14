@@ -10,6 +10,7 @@ from mirai_api.core.config import get_settings
 from mirai_api.core.db import warm_engine
 from mirai_api.routers import biomarkers, health, lab_uploads, me
 from mirai_api.services.biomarkers import BiomarkerServiceError
+from mirai_api.services.lab_uploads import LabUploadServiceError
 
 
 @asynccontextmanager
@@ -38,6 +39,7 @@ app.add_middleware(
 )
 
 app.add_exception_handler(BiomarkerServiceError, biomarkers.biomarker_error_handler)
+app.add_exception_handler(LabUploadServiceError, lab_uploads.lab_upload_error_handler)
 
 app.include_router(health.router)
 app.include_router(me.router)
