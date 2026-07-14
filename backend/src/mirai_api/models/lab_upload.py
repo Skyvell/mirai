@@ -1,7 +1,7 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Text, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mirai_api.core.enums import UploadStatus
@@ -12,7 +12,8 @@ class LabUpload(Base):
     """One uploaded lab PDF and its parse lifecycle.
 
     The stored object lives at ``gcs_object_name``; a failed parse keeps the
-    row and the object for debugging.
+    row and the object for debugging. Extracted values land as draft rows the
+    user reviews before they are committed to the biomarker record.
     """
 
     __tablename__ = "lab_uploads"
@@ -35,7 +36,13 @@ class LabUpload(Base):
             values_callable=lambda e: [m.value for m in e],
         ),
     )
+    # Report collection date; parsed from the PDF, user-confirmable, copied to
+    # each measurement on commit.
+    measured_at: Mapped[date | None] = mapped_column(Date)
+    # Human-readable reason set when status is failed.
+    error_message: Mapped[str | None] = mapped_column(Text)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

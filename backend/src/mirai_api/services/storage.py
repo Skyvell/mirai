@@ -22,6 +22,12 @@ def upload(object_name: str, data: bytes, content_type: str) -> None:
     )
 
 
+def download(object_name: str) -> bytes:
+    """Read object_name from the uploads bucket. Blocking; call via threadpool."""
+    bucket = _client().bucket(get_settings().gcs_bucket)
+    return bucket.blob(object_name).download_as_bytes()
+
+
 def delete_blob(object_name: str) -> None:
     """Delete object_name from the uploads bucket; already-missing objects are
     ignored so interrupted deletes stay retryable. Blocking; call via threadpool."""
