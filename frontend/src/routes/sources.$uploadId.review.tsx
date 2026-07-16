@@ -79,6 +79,7 @@ type DraftRow = {
   id: string
   origin: 'matched' | 'unmatched'
   sourceName: string | null
+  displayName: string | null
   slug: string
   value: string
   unit: string
@@ -114,8 +115,9 @@ function toRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): DraftRo
     id: item.id,
     origin,
     sourceName: item.source_name,
+    displayName: item.display_name,
     slug: item.biomarker_slug ?? '',
-    value: trimDecimal((item.value ?? item.raw_value) ?? ''),
+    value: trimDecimal(item.value ?? item.raw_value ?? ''),
     unit: item.unit ?? '',
     referenceLow: trimDecimal(item.reference_low ?? ''),
     referenceHigh: trimDecimal(item.reference_high ?? ''),
@@ -297,8 +299,7 @@ function DraftItemsTable({
         <tbody>
           {rows.map((row) => {
             const status = rangeStatus(row.value, row.referenceLow, row.referenceHigh)
-            const name =
-              row.sourceName ?? catalogue.find((b) => b.slug === row.slug)?.display_name ?? 'biomarker'
+            const name = row.sourceName ?? row.displayName ?? 'biomarker'
             return (
               <tr key={row.id} className="border-b [&>td]:py-1 [&>td]:pr-4">
                 <td>
