@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { Activity } from 'lucide-react'
 import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerSeries } from '@/client'
-import { apiErrorMessage } from '@/lib/api'
+import { ApiErrorAlert } from '@/components/api-error-alert'
+import { EmptyState } from '@/components/empty-state'
+import { TableSkeleton } from '@/components/table-skeleton'
 import {
   Table,
   TableBody,
@@ -41,11 +44,15 @@ function BiomarkersComponent() {
       </p>
 
       {biomarkers.isError ? (
-        <p className="text-sm text-destructive">{apiErrorMessage(biomarkers.error)}</p>
+        <ApiErrorAlert error={biomarkers.error} />
       ) : biomarkers.data === undefined ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <TableSkeleton />
       ) : biomarkers.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No biomarkers yet.</p>
+        <EmptyState
+          icon={<Activity />}
+          title="No biomarkers yet"
+          description="Your measurements will appear here once you add data."
+        />
       ) : (
         <Table>
           <TableHeader>

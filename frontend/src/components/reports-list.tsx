@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Trash2 } from 'lucide-react'
+import { FileText, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import { ApiErrorAlert } from '@/components/api-error-alert'
+import { EmptyState } from '@/components/empty-state'
+import { TableSkeleton } from '@/components/table-skeleton'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -33,7 +38,7 @@ import {
 import type { LabUploadSummary, UploadStatus } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
-import { cn, localIsoDate } from '@/lib/utils'
+import { localIsoDate } from '@/lib/utils'
 
 // User-facing label per lifecycle state; pending and processing read the same.
 const STATUS_LABEL: Record<UploadStatus, string> = {
@@ -42,6 +47,14 @@ const STATUS_LABEL: Record<UploadStatus, string> = {
   awaiting_review: 'Ready to review',
   committed: 'Committed',
   failed: 'Failed',
+}
+
+const STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant']> = {
+  pending: 'outline',
+  processing: 'outline',
+  awaiting_review: 'default',
+  committed: 'secondary',
+  failed: 'destructive',
 }
 
 export function ReportsList() {
@@ -56,11 +69,15 @@ export function ReportsList() {
     <section className="flex flex-col gap-2">
       <h2 className="text-xl font-semibold tracking-tight">Reports</h2>
       {uploads.isError ? (
-        <p className="text-sm text-destructive">{apiErrorMessage(uploads.error)}</p>
+        <ApiErrorAlert error={uploads.error} />
       ) : uploads.data === undefined ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <TableSkeleton />
       ) : uploads.data.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No reports uploaded yet.</p>
+        <EmptyState
+          icon={<FileText />}
+          title="No reports uploaded yet"
+          description="Upload a lab PDF via “Add data” in the top bar to get started."
+        />
       ) : (
         <Table>
           <TableHeader>
@@ -98,6 +115,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
       // series payload changed.
       queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
     },
+    // Row actions have no inline slot, so delete failures surface as a toast;
+    // form and query errors elsewhere render inline via ApiErrorAlert.
+    onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
   const inProgress = IN_PROGRESS.has(upload.status)
@@ -106,24 +126,13 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
     <TableRow>
       <TableCell>{upload.filename}</TableCell>
       <TableCell>{localIsoDate(new Date(upload.created_at))}</TableCell>
-      <TableCell
-        className={cn(
-          upload.status === 'failed'
-            ? 'text-destructive'
-            : upload.status === 'awaiting_review'
-              ? 'font-medium text-foreground'
-              : 'text-muted-foreground',
-        )}
-      >
-        {STATUS_LABEL[upload.status]}
+      <TableCell>
+        <Badge variant={STATUS_VARIANT[upload.status]}>
+          {STATUS_LABEL[upload.status]}
+        </Badge>
       </TableCell>
       <TableCell>{upload.measurement_count || '—'}</TableCell>
       <TableCell className="text-right">
-        {remove.isError && (
-          <span className="mr-2 text-xs text-destructive">
-            {apiErrorMessage(remove.error)}
-          </span>
-        )}
         {upload.status === 'awaiting_review' && (
           <Button asChild size="sm" variant="outline" className="mr-1">
             <Link to="/sources/$uploadId/review" params={{ uploadId: upload.id }}>

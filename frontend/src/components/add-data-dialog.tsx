@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
+import { ApiErrorAlert } from '@/components/api-error-alert'
 import { BiomarkerSelect } from '@/components/biomarker-select'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,11 +23,10 @@ import {
   listLabUploadsQueryKey,
   uploadLabMutation,
 } from '@/client/@tanstack/react-query.gen'
-import { apiErrorMessage } from '@/lib/api'
 import { localIsoDate } from '@/lib/utils'
 
-// Owned by the dialog (not the tab) so the uploaded confirmation survives tab
-// switches; reset on each open so an old confirmation doesn't resurface.
+// Owned by the dialog (not the tab) so upload state survives tab switches;
+// reset on each open so an old error doesn't resurface.
 function useUploadLab() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -33,6 +34,10 @@ function useUploadLab() {
     // Parsing is async: the new report appears under Sources as pending.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
+      toast.success('Report uploaded', {
+        description:
+          'We’re reading it now — review it under Sources before it’s added to your record.',
+      })
     },
   })
 }
@@ -112,16 +117,7 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
         </Button>
       </div>
 
-      {upload.isError && (
-        <p className="text-sm text-destructive">{apiErrorMessage(upload.error)}</p>
-      )}
-
-      {upload.isSuccess && (
-        <p className="text-sm text-muted-foreground">
-          Report uploaded — we&rsquo;re reading it now. Find it under Sources to review the
-          extracted values before they&rsquo;re added to your record.
-        </p>
-      )}
+      {upload.isError && <ApiErrorAlert error={upload.error} />}
     </div>
   )
 }
@@ -139,7 +135,6 @@ function ManualEntryTab() {
   const [referenceLow, setReferenceLow] = useState('')
   const [referenceHigh, setReferenceHigh] = useState('')
   const [measuredAt, setMeasuredAt] = useState(today)
-  const [lastAdded, setLastAdded] = useState<string | null>(null)
 
   const findBiomarker = (s: string) => catalog.data?.find((b) => b.slug === s)
   const selected = findBiomarker(slug)
@@ -149,14 +144,13 @@ function ManualEntryTab() {
     onSuccess: ([created]) => {
       queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
       setValue('')
-      setLastAdded(`${created.display_name} — ${created.value} ${created.unit}`)
+      toast.success(`Added ${created.display_name} — ${created.value} ${created.unit}`)
     },
   })
 
   function onSubmit(event: React.FormEvent) {
     event.preventDefault()
     if (!slug || !value || !measuredAt) return
-    setLastAdded(null)
     create.mutate({
       body: [
         {
@@ -190,9 +184,7 @@ function ManualEntryTab() {
             setReferenceHigh('')
           }}
         />
-        {catalog.isError && (
-          <p className="text-sm text-destructive">{apiErrorMessage(catalog.error)}</p>
-        )}
+        {catalog.isError && <ApiErrorAlert error={catalog.error} />}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -250,10 +242,7 @@ function ManualEntryTab() {
         />
       </div>
 
-      {create.isError && (
-        <p className="text-sm text-destructive">{apiErrorMessage(create.error)}</p>
-      )}
-      {lastAdded && <p className="text-sm text-muted-foreground">Added {lastAdded}.</p>}
+      {create.isError && <ApiErrorAlert error={create.error} />}
 
       <div>
         <Button

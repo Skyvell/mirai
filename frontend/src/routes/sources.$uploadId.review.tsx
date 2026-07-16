@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { toast } from 'sonner'
+import { ApiErrorAlert } from '@/components/api-error-alert'
 import { BiomarkerSelect } from '@/components/biomarker-select'
+import { TableSkeleton } from '@/components/table-skeleton'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -23,7 +26,6 @@ import {
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerRead, LabDraftItemRead, LabUploadDetail } from '@/client'
-import { apiErrorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
 
@@ -50,9 +52,9 @@ function ReviewComponent() {
       </Link>
 
       {detail.isError ? (
-        <p className="text-sm text-destructive">{apiErrorMessage(detail.error)}</p>
+        <ApiErrorAlert error={detail.error} />
       ) : detail.data === undefined ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <TableSkeleton />
       ) : (
         <ReviewBody detail={detail.data} />
       )}
@@ -65,11 +67,7 @@ function ReviewBody({ detail }: { detail: LabUploadDetail }) {
     return <p className="text-sm text-muted-foreground">Still reading this report…</p>
   }
   if (detail.status === 'failed') {
-    return (
-      <p className="text-sm text-destructive">
-        {detail.error_message ?? 'Parsing failed.'}
-      </p>
-    )
+    return <ApiErrorAlert message={detail.error_message ?? 'Parsing failed.'} />
   }
   if (detail.status === 'committed') {
     return <p className="text-sm text-muted-foreground">This report has been committed.</p>
@@ -131,7 +129,14 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   ])
 
   const update = useMutation(updateLabDraftMutation())
-  const confirm = useMutation(confirmLabUploadMutation())
+  const confirm = useMutation({
+    ...confirmLabUploadMutation(),
+    onSuccess: () => {
+      toast.success(
+        `Added ${keptCount} measurement${keptCount === 1 ? '' : 's'} to your record`,
+      )
+    },
+  })
   const pending = update.isPending || confirm.isPending
   const error = update.error ?? confirm.error
 
@@ -228,7 +233,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
         </section>
       )}
 
-      {error && <p className="text-sm text-destructive">{apiErrorMessage(error)}</p>}
+      {error && <ApiErrorAlert error={error} />}
 
       {/* The negative margin cancels the `p-6` padding on <main> in __root.tsx so the bar spans full width. */}
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-background px-6 py-3">
