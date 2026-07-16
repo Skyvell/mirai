@@ -404,7 +404,7 @@ function RangeBadge({ status }: { status: RangeStatus }) {
   if (status === 'ok') return null
   const { label, title } = RANGE_BADGE[status]
   return (
-    <span className="text-xs font-medium text-warning" title={title}>
+    <span className="text-xs font-medium whitespace-nowrap text-warning" title={title}>
       {label}
     </span>
   )
