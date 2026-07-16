@@ -95,21 +95,6 @@ function trimDecimal(value: string): string {
   return value.replace(/\.?0+$/, '')
 }
 
-// Only out-of-range needs surfacing; 'ok' covers in-range, unbounded, and unparseable.
-type RangeStatus = 'low' | 'high' | 'ok'
-
-// Classify a value against its reference bounds from the live edit strings.
-function rangeStatus(value: string, low: string, high: string): RangeStatus {
-  const v = Number(value)
-  if (value === '' || Number.isNaN(v)) return 'ok'
-
-  const hi = high === '' ? null : Number(high)
-  const lo = low === '' ? null : Number(low)
-  if (hi !== null && !Number.isNaN(hi) && v > hi) return 'high'
-  if (lo !== null && !Number.isNaN(lo) && v < lo) return 'low'
-  return 'ok'
-}
-
 function toRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): DraftRow {
   return {
     id: item.id,
@@ -147,9 +132,6 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
   // A row commits only once kept and mapped to a catalogue biomarker.
   const keptCount = rows.filter((r) => r.included && r.slug).length
-  const outOfRange = matched.filter(
-    (r) => rangeStatus(r.value, r.referenceLow, r.referenceHigh) !== 'ok',
-  ).length
 
   function patchRow(id: string, patch: Partial<DraftRow>) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -196,11 +178,6 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
         <p className="text-muted-foreground">
           Check the extracted values, then add them to your record.
         </p>
-        {outOfRange > 0 && (
-          <p className="mt-1 text-sm text-warning">
-            {outOfRange} of {matched.length} outside reference range
-          </p>
-        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -231,6 +208,9 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
       {unmatched.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-lg font-medium">Unmapped biomarkers</h2>
+          <p className="text-sm text-muted-foreground">
+            These labels weren&rsquo;t recognized. Map one to a biomarker to include it.
+          </p>
           <DraftItemsTable
             rows={unmatched}
             catalogue={catalogue.data ?? []}
@@ -280,7 +260,6 @@ function DraftItemsTable({
           <col />
           <col />
           <col />
-          <col />
         </colgroup>
         <thead>
           <tr className="border-b text-left text-muted-foreground [&>th]:py-2 [&>th]:pr-4 [&>th]:font-medium [&>th]:whitespace-nowrap">
@@ -290,12 +269,10 @@ function DraftItemsTable({
             <th>Unit</th>
             <th className="text-right">Ref. low</th>
             <th className="text-right">Ref. high</th>
-            <th />
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => {
-            const status = rangeStatus(row.value, row.referenceLow, row.referenceHigh)
             const name = row.sourceName ?? row.displayName ?? 'biomarker'
             return (
               <tr key={row.id} className="border-b [&>td]:py-1 [&>td]:pr-4">
@@ -322,7 +299,6 @@ function DraftItemsTable({
                 <td className="text-right">
                   <NumberCell
                     value={row.value}
-                    flagged={status !== 'ok'}
                     onChange={(v) => onPatch(row.id, { value: v })}
                   />
                 </td>
@@ -340,9 +316,6 @@ function DraftItemsTable({
                     value={row.referenceHigh}
                     onChange={(v) => onPatch(row.id, { referenceHigh: v })}
                   />
-                </td>
-                <td className="pl-1">
-                  <RangeBadge status={status} />
                 </td>
               </tr>
             )
@@ -364,19 +337,11 @@ const CELL_CLASS =
 const SELECT_CELL_CLASS =
   'h-8 w-full min-w-0 border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
 
-function NumberCell({
-  value,
-  onChange,
-  flagged,
-}: {
-  value: string
-  onChange: (v: string) => void
-  flagged?: boolean
-}) {
+function NumberCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Input
       inputMode="decimal"
-      className={cn(CELL_CLASS, 'text-right tabular-nums', flagged && 'text-warning')}
+      className={cn(CELL_CLASS, 'text-right tabular-nums')}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -393,17 +358,3 @@ function TextCell({ value, onChange }: { value: string; onChange: (v: string) =>
   )
 }
 
-const RANGE_BADGE = {
-  high: { label: 'High ↑', title: 'Above reference range' },
-  low: { label: 'Low ↓', title: 'Below reference range' },
-} as const
-
-function RangeBadge({ status }: { status: RangeStatus }) {
-  if (status === 'ok') return null
-  const { label, title } = RANGE_BADGE[status]
-  return (
-    <span className="text-xs font-medium whitespace-nowrap text-warning" title={title}>
-      {label}
-    </span>
-  )
-}
