@@ -249,7 +249,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-sm">
               <colgroup>
-                <col className="w-10" />
+                <col className="w-16" />
                 <col />
                 <col className="w-24" />
                 <col className="w-24" />
@@ -260,12 +260,14 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2 font-medium">
-                    <Checkbox
-                      checked={allKept}
-                      onCheckedChange={(c) => toggleAll(c === true)}
-                      aria-label="Keep all biomarkers"
-                      title="Keep all"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={allKept}
+                        onCheckedChange={(c) => toggleAll(c === true)}
+                        aria-label="Keep all biomarkers"
+                      />
+                      Keep
+                    </div>
                   </th>
                   <th className="py-2 font-medium">Biomarker</th>
                   <th className="py-2 pr-3 text-right font-medium">Value</th>
@@ -331,33 +333,78 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
           <p className="text-sm text-muted-foreground">
             Map any of these to a biomarker to include them.
           </p>
-          <div className="flex flex-col gap-3">
-            {skipped.map((row) => (
-              <div key={row.id} className="flex flex-wrap items-end gap-2 border-b pb-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">{row.sourceName}</span>
-                  <span className="text-xs text-muted-foreground">printed: {row.value}</span>
-                </div>
-                <BiomarkerSelect
-                  catalogue={catalogue.data ?? []}
-                  value={row.slug}
-                  onChange={(slug) => mapSkipped(row, slug)}
-                  triggerClassName="w-56"
-                />
-                <div className="w-24">
-                  <NumberCell
-                    value={row.value}
-                    onChange={(v) => patchSkipped(row.id, { value: v })}
-                  />
-                </div>
-                <div className="w-24">
-                  <TextCell
-                    value={row.unit}
-                    onChange={(v) => patchSkipped(row.id, { unit: v })}
-                  />
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] text-sm">
+              <colgroup>
+                <col className="w-16" />
+                <col />
+                <col className="w-24" />
+                <col className="w-24" />
+                <col className="w-20" />
+                <col className="w-20" />
+                <col className="w-16" />
+              </colgroup>
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2 font-medium" />
+                  <th className="py-2 font-medium">Marker</th>
+                  <th className="py-2 pr-3 text-right font-medium">Value</th>
+                  <th className="py-2 font-medium">Unit</th>
+                  <th className="py-2 text-right font-medium">Ref. low</th>
+                  <th className="py-2 text-right font-medium">Ref. high</th>
+                  <th className="py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {skipped.map((row) => {
+                  const status = rangeStatus(row.value, row.referenceLow, row.referenceHigh)
+                  return (
+                    <tr key={row.id} className="border-b">
+                      <td className="py-2" />
+                      <td className="py-2 pr-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">{row.sourceName}</span>
+                          <BiomarkerSelect
+                            catalogue={catalogue.data ?? []}
+                            value={row.slug}
+                            onChange={(slug) => mapSkipped(row, slug)}
+                            triggerClassName="w-full"
+                          />
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <NumberCell
+                          value={row.value}
+                          flagged={status !== 'ok'}
+                          onChange={(v) => patchSkipped(row.id, { value: v })}
+                        />
+                      </td>
+                      <td className="py-2">
+                        <TextCell
+                          value={row.unit}
+                          onChange={(v) => patchSkipped(row.id, { unit: v })}
+                        />
+                      </td>
+                      <td className="py-2">
+                        <NumberCell
+                          value={row.referenceLow}
+                          onChange={(v) => patchSkipped(row.id, { referenceLow: v })}
+                        />
+                      </td>
+                      <td className="py-2">
+                        <NumberCell
+                          value={row.referenceHigh}
+                          onChange={(v) => patchSkipped(row.id, { referenceHigh: v })}
+                        />
+                      </td>
+                      <td className="py-2 pl-1">
+                        <RangeBadge status={status} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
