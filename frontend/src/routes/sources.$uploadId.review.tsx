@@ -268,7 +268,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
                     />
                   </th>
                   <th className="py-2 font-medium">Biomarker</th>
-                  <th className="py-2 text-right font-medium">Value</th>
+                  <th className="py-2 pr-3 text-right font-medium">Value</th>
                   <th className="py-2 font-medium">Unit</th>
                   <th className="py-2 text-right font-medium">Ref. low</th>
                   <th className="py-2 text-right font-medium">Ref. high</th>
@@ -288,7 +288,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
                         />
                       </td>
                       <td className="py-1 pr-2">{item.displayName}</td>
-                      <td className="py-1">
+                      <td className="py-1 pr-3">
                         <NumberCell
                           value={item.value}
                           flagged={status !== 'ok'}
