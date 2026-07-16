@@ -26,6 +26,7 @@ from mirai_api.services.lab_uploads import (
     LabUploadNotFoundError,
     LabUploadNotReviewableError,
     LabUploadService,
+    MissingCollectionDateError,
 )
 
 GLUCOSE = Biomarker(
@@ -542,12 +543,21 @@ def test_confirm_is_idempotent_when_committed() -> None:
 
 
 def test_confirm_rejects_kept_row_without_value() -> None:
-    upload = _upload(status=UploadStatus.AWAITING_REVIEW)
+    upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=date(2026, 7, 12))
     incomplete = _mapped_draft(upload.id, value=None)
     lab_repo = FakeLabUploadRepository([upload])
     draft_repo = FakeDraftBiomarkerMeasurementRepository([incomplete])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
     with pytest.raises(DraftNotCommittableError):
+        _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+
+
+def test_confirm_rejects_missing_collection_date() -> None:
+    upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=None)
+    lab_repo = FakeLabUploadRepository([upload])
+    draft_repo = FakeDraftBiomarkerMeasurementRepository([_mapped_draft(upload.id)])
+    biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
+    with pytest.raises(MissingCollectionDateError):
         _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
 

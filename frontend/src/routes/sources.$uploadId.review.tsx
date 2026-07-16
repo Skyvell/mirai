@@ -224,11 +224,16 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
       {/* The negative margin cancels the `p-6` padding on <main> in __root.tsx so the bar spans full width. */}
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-background px-6 py-3">
-        <Button onClick={onConfirm} disabled={pending || keptCount === 0}>
+        <Button onClick={onConfirm} disabled={pending || keptCount === 0 || !measuredAt}>
           {pending
             ? 'Adding…'
             : `Add ${keptCount} measurement${keptCount === 1 ? '' : 's'} to my record`}
         </Button>
+        {!measuredAt && (
+          <p className="text-sm text-muted-foreground">
+            Set the collection date to add these measurements.
+          </p>
+        )}
       </div>
     </div>
   )

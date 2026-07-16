@@ -41,7 +41,7 @@ class BiomarkerMeasurement(Base):
     unit: Mapped[str] = mapped_column(Text)
     reference_low: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
     reference_high: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
-    measured_at: Mapped[date | None] = mapped_column(Date)
+    measured_at: Mapped[date] = mapped_column(Date)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

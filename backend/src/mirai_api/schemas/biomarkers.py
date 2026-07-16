@@ -24,7 +24,7 @@ class BiomarkerMeasurementPoint(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    measured_at: date | None
+    measured_at: date
     value: Decimal
     unit: str
     reference_low: Decimal | None

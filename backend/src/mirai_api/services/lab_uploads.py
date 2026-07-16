@@ -79,6 +79,12 @@ class DraftNotCommittableError(LabUploadServiceError):
         self.ids = ids
 
 
+class MissingCollectionDateError(LabUploadServiceError):
+    def __init__(self, upload_id: uuid.UUID) -> None:
+        super().__init__("Set the collection date before committing.")
+        self.upload_id = upload_id
+
+
 class LabUploadService:
     """Application logic for lab uploads; owns the transaction boundary.
 
@@ -254,6 +260,10 @@ class LabUploadService:
             return self.get(user_id, upload_id)
         if upload.status != UploadStatus.AWAITING_REVIEW:
             raise LabUploadNotReviewableError(upload_id)
+
+        # Measurements are time-series points; committing without a date is invalid.
+        if upload.measured_at is None:
+            raise MissingCollectionDateError(upload_id)
 
         # Only kept, mapped rows become measurements.
         rows = self._draft_biomarker_measurement_repository.list_for_upload(upload_id)

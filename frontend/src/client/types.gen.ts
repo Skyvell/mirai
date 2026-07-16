@@ -45,7 +45,7 @@ export type BiomarkerMeasurementPoint = {
     /**
      * Measured At
      */
-    measured_at: string | null;
+    measured_at: string;
     /**
      * Value
      */
@@ -79,7 +79,7 @@ export type BiomarkerMeasurementRead = {
     /**
      * Measured At
      */
-    measured_at: string | null;
+    measured_at: string;
     /**
      * Value
      */

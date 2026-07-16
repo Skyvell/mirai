@@ -13,6 +13,7 @@ from mirai_api.services.lab_uploads import (
     LabUploadNotFoundError,
     LabUploadNotReviewableError,
     LabUploadServiceError,
+    MissingCollectionDateError,
 )
 
 router = APIRouter(tags=["lab-uploads"])
@@ -26,6 +27,7 @@ _ERROR_STATUS = {
     LabUploadNotReviewableError: status.HTTP_409_CONFLICT,
     DuplicateUploadError: status.HTTP_409_CONFLICT,
     DraftNotCommittableError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    MissingCollectionDateError: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 
