@@ -230,10 +230,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
       {unmatched.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-medium">Couldn&rsquo;t match</h2>
-          <p className="text-sm text-muted-foreground">
-            Map any of these to a biomarker to include them.
-          </p>
+          <h2 className="text-lg font-medium">Unmapped biomarkers</h2>
           <DraftItemsTable
             rows={unmatched}
             catalogue={catalogue.data ?? []}
