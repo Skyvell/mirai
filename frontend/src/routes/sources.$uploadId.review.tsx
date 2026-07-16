@@ -361,9 +361,10 @@ const CELL_CLASS =
   'h-8 w-auto min-w-12 field-sizing-content border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
 
 // Ghost styling for the biomarker dropdown so it reads like the other cells:
-// borderless at rest, border on hover/focus.
+// borderless at rest, border on hover/focus. min-w-0 lets the flex column
+// shrink (name truncates) instead of pushing the table past the container.
 const SELECT_CELL_CLASS =
-  'h-8 w-full border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
+  'h-8 w-full min-w-0 border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
 
 function NumberCell({
   value,
