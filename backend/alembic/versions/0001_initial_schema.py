@@ -1,8 +1,8 @@
-"""create biomarker tables
+"""initial schema
 
-Revision ID: 0002
-Revises: 0001
-Create Date: 2026-07-07 15:10:00.000000
+Revision ID: 0001
+Revises:
+Create Date: 2026-07-16 23:10:00.000000
 
 """
 
@@ -12,8 +12,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0002"
-down_revision: str | None = "0001"
+revision: str = "0001"
+down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -94,66 +94,110 @@ _CATALOGUE: list[tuple[str, str, str | None, str, str]] = [
 def upgrade() -> None:
     op.create_table(
         "biomarkers",
-        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("slug", sa.Text(), nullable=False),
         sa.Column("display_name", sa.Text(), nullable=False),
         sa.Column("loinc_code", sa.Text(), nullable=True),
         sa.Column("canonical_unit", sa.Text(), nullable=False),
         sa.Column("category", sa.Text(), nullable=False),
-        sa.UniqueConstraint("slug"),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_biomarkers")),
+        sa.UniqueConstraint("slug", name=op.f("uq_biomarkers_slug")),
     )
-    op.create_index("ix_biomarkers_loinc_code", "biomarkers", ["loinc_code"])
+    op.create_index(op.f("ix_biomarkers_loinc_code"), "biomarkers", ["loinc_code"])
+
+    op.create_table(
+        "users",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("clerk_user_id", sa.Text(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_users")),
+        sa.UniqueConstraint("clerk_user_id", name=op.f("uq_users_clerk_user_id")),
+    )
 
     op.create_table(
         "lab_uploads",
-        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("filename", sa.Text(), nullable=False),
+        sa.Column("content_sha256", sa.Text(), nullable=True),
         sa.Column(
             "status",
             sa.Enum(
-                "uploaded",
-                "parsed",
+                "pending",
+                "processing",
+                "awaiting_review",
+                "committed",
                 "failed",
                 name="lab_upload_status",
                 native_enum=False,
             ),
             nullable=False,
         ),
+        sa.Column("measured_at", sa.Date(), nullable=True),
+        sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("parsed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("committed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_lab_uploads_users_user_id"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_lab_uploads")),
     )
-    op.create_index("ix_lab_uploads_user_id", "lab_uploads", ["user_id"])
+    op.create_index(op.f("ix_lab_uploads_content_sha256"), "lab_uploads", ["content_sha256"])
+    op.create_index(op.f("ix_lab_uploads_user_id"), "lab_uploads", ["user_id"])
 
     op.create_table(
         "biomarker_measurements",
-        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("biomarker_id", sa.Uuid(), nullable=False),
-        sa.Column("lab_upload_id", sa.Uuid(), nullable=False),
-        sa.Column("value", sa.Numeric(12, 4), nullable=False),
+        sa.Column("lab_upload_id", sa.Uuid(), nullable=True),
+        sa.Column("value", sa.Numeric(precision=12, scale=4), nullable=False),
         sa.Column("unit", sa.Text(), nullable=False),
-        sa.Column("reference_low", sa.Numeric(12, 4), nullable=True),
-        sa.Column("reference_high", sa.Numeric(12, 4), nullable=True),
-        sa.Column("measured_at", sa.Date(), nullable=True),
+        sa.Column("reference_low", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("reference_high", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("measured_at", sa.Date(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
+            server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["biomarker_id"], ["biomarkers.id"], ondelete="RESTRICT"),
-        sa.ForeignKeyConstraint(["lab_upload_id"], ["lab_uploads.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["biomarker_id"],
+            ["biomarkers.id"],
+            name=op.f("fk_biomarker_measurements_biomarkers_biomarker_id"),
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["lab_upload_id"],
+            ["lab_uploads.id"],
+            name=op.f("fk_biomarker_measurements_lab_uploads_lab_upload_id"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["users.id"],
+            name=op.f("fk_biomarker_measurements_users_user_id"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_biomarker_measurements")),
     )
     op.create_index(
-        "ix_biomarker_measurements_lab_upload_id",
+        op.f("ix_biomarker_measurements_lab_upload_id"),
         "biomarker_measurements",
         ["lab_upload_id"],
     )
@@ -161,6 +205,45 @@ def upgrade() -> None:
         "ix_biomarker_measurements_user_series",
         "biomarker_measurements",
         ["user_id", "biomarker_id", "measured_at"],
+    )
+
+    op.create_table(
+        "draft_biomarker_measurements",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("lab_upload_id", sa.Uuid(), nullable=False),
+        sa.Column("biomarker_id", sa.Uuid(), nullable=True),
+        sa.Column("value", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("raw_value", sa.Text(), nullable=True),
+        sa.Column("unit", sa.Text(), nullable=True),
+        sa.Column("reference_low", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("reference_high", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("source_name", sa.Text(), nullable=True),
+        sa.Column("skip_reason", sa.Text(), nullable=True),
+        sa.Column("included", sa.Boolean(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["biomarker_id"],
+            ["biomarkers.id"],
+            name=op.f("fk_draft_biomarker_measurements_biomarkers_biomarker_id"),
+            ondelete="RESTRICT",
+        ),
+        sa.ForeignKeyConstraint(
+            ["lab_upload_id"],
+            ["lab_uploads.id"],
+            name=op.f("fk_draft_biomarker_measurements_lab_uploads_lab_upload_id"),
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_draft_biomarker_measurements")),
+    )
+    op.create_index(
+        op.f("ix_draft_biomarker_measurements_lab_upload_id"),
+        "draft_biomarker_measurements",
+        ["lab_upload_id"],
     )
 
     biomarkers = sa.table(
@@ -189,7 +272,20 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index(
+        op.f("ix_draft_biomarker_measurements_lab_upload_id"),
+        table_name="draft_biomarker_measurements",
+    )
+    op.drop_table("draft_biomarker_measurements")
+    op.drop_index("ix_biomarker_measurements_user_series", table_name="biomarker_measurements")
+    op.drop_index(
+        op.f("ix_biomarker_measurements_lab_upload_id"),
+        table_name="biomarker_measurements",
+    )
     op.drop_table("biomarker_measurements")
+    op.drop_index(op.f("ix_lab_uploads_user_id"), table_name="lab_uploads")
+    op.drop_index(op.f("ix_lab_uploads_content_sha256"), table_name="lab_uploads")
     op.drop_table("lab_uploads")
-    op.drop_index("ix_biomarkers_loinc_code", table_name="biomarkers")
+    op.drop_table("users")
+    op.drop_index(op.f("ix_biomarkers_loinc_code"), table_name="biomarkers")
     op.drop_table("biomarkers")
