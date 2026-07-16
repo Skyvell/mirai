@@ -246,78 +246,82 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No biomarkers were matched.</p>
         ) : (
-          <table className="w-full text-sm">
-            <colgroup>
-              <col className="w-10" />
-              <col />
-              <col className="w-24" />
-              <col className="w-24" />
-              <col className="w-20" />
-              <col className="w-20" />
-              <col className="w-16" />
-            </colgroup>
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 font-medium">
-                  <Checkbox
-                    checked={allKept}
-                    onCheckedChange={(c) => toggleAll(c === true)}
-                    aria-label="Keep all biomarkers"
-                  />
-                </th>
-                <th className="py-2 font-medium">Biomarker</th>
-                <th className="py-2 text-right font-medium">Value</th>
-                <th className="py-2 font-medium">Unit</th>
-                <th className="py-2 text-right font-medium">Ref. low</th>
-                <th className="py-2 text-right font-medium">Ref. high</th>
-                <th className="py-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const status = statuses[index]
-                return (
-                  <tr key={item.id} className="border-b">
-                    <td className="py-1">
-                      <Checkbox
-                        checked={item.included}
-                        onCheckedChange={(c) => patchItem(item.id, { included: c === true })}
-                        aria-label={`Keep ${item.displayName ?? 'biomarker'}`}
-                      />
-                    </td>
-                    <td className="py-1 pr-2">{item.displayName}</td>
-                    <td className="py-1">
-                      <NumberCell
-                        value={item.value}
-                        onChange={(v) => patchItem(item.id, { value: v })}
-                      />
-                    </td>
-                    <td className="py-1">
-                      <TextCell
-                        value={item.unit}
-                        onChange={(v) => patchItem(item.id, { unit: v })}
-                      />
-                    </td>
-                    <td className="py-1">
-                      <NumberCell
-                        value={item.referenceLow}
-                        onChange={(v) => patchItem(item.id, { referenceLow: v })}
-                      />
-                    </td>
-                    <td className="py-1">
-                      <NumberCell
-                        value={item.referenceHigh}
-                        onChange={(v) => patchItem(item.id, { referenceHigh: v })}
-                      />
-                    </td>
-                    <td className="py-1 pl-1">
-                      <RangeBadge status={status} />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[34rem] text-sm">
+              <colgroup>
+                <col className="w-10" />
+                <col />
+                <col className="w-24" />
+                <col className="w-24" />
+                <col className="w-20" />
+                <col className="w-20" />
+                <col className="w-16" />
+              </colgroup>
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2 font-medium">
+                    <Checkbox
+                      checked={allKept}
+                      onCheckedChange={(c) => toggleAll(c === true)}
+                      aria-label="Keep all biomarkers"
+                      title="Keep all"
+                    />
+                  </th>
+                  <th className="py-2 font-medium">Biomarker</th>
+                  <th className="py-2 text-right font-medium">Value</th>
+                  <th className="py-2 font-medium">Unit</th>
+                  <th className="py-2 text-right font-medium">Ref. low</th>
+                  <th className="py-2 text-right font-medium">Ref. high</th>
+                  <th className="py-2 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => {
+                  const status = statuses[index]
+                  return (
+                    <tr key={item.id} className="border-b">
+                      <td className="py-1">
+                        <Checkbox
+                          checked={item.included}
+                          onCheckedChange={(c) => patchItem(item.id, { included: c === true })}
+                          aria-label={`Keep ${item.displayName ?? 'biomarker'}`}
+                        />
+                      </td>
+                      <td className="py-1 pr-2">{item.displayName}</td>
+                      <td className="py-1">
+                        <NumberCell
+                          value={item.value}
+                          flagged={status !== 'ok'}
+                          onChange={(v) => patchItem(item.id, { value: v })}
+                        />
+                      </td>
+                      <td className="py-1">
+                        <TextCell
+                          value={item.unit}
+                          onChange={(v) => patchItem(item.id, { unit: v })}
+                        />
+                      </td>
+                      <td className="py-1">
+                        <NumberCell
+                          value={item.referenceLow}
+                          onChange={(v) => patchItem(item.id, { referenceLow: v })}
+                        />
+                      </td>
+                      <td className="py-1">
+                        <NumberCell
+                          value={item.referenceHigh}
+                          onChange={(v) => patchItem(item.id, { referenceHigh: v })}
+                        />
+                      </td>
+                      <td className="py-1 pl-1">
+                        <RangeBadge status={status} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -375,11 +379,19 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 const CELL_CLASS =
   'h-8 border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
 
-function NumberCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function NumberCell({
+  value,
+  onChange,
+  flagged,
+}: {
+  value: string
+  onChange: (v: string) => void
+  flagged?: boolean
+}) {
   return (
     <Input
       inputMode="decimal"
-      className={cn(CELL_CLASS, 'text-right')}
+      className={cn(CELL_CLASS, 'text-right tabular-nums', flagged && 'text-warning')}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
