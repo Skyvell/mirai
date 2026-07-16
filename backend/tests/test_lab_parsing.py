@@ -71,10 +71,21 @@ def test_unmatched_markers_pass_through() -> None:
     extraction = LabExtraction(
         measured_at=None,
         measurements=[],
-        unmatched=[UnmatchedMarker(name="Exotic Marker", value="42", unit="ng/mL")],
+        unmatched=[
+            UnmatchedMarker(
+                name="Exotic Marker",
+                value="42",
+                unit="ng/mL",
+                reference_low=Decimal("10"),
+                reference_high=Decimal("50"),
+            )
+        ],
     )
     mapped, skipped = map_extraction(extraction, _catalogue())
     assert not mapped
     assert len(skipped) == 1
     assert skipped[0].reason == "unmatched"
     assert skipped[0].name == "Exotic Marker"
+    # The reference range is carried through so the user can keep it on mapping.
+    assert skipped[0].reference_low == Decimal("10")
+    assert skipped[0].reference_high == Decimal("50")

@@ -378,6 +378,8 @@ class LabUploadService:
                 lab_upload_id=upload.id,
                 raw_value=s.value,
                 unit=s.unit,
+                reference_low=s.reference_low,
+                reference_high=s.reference_high,
                 source_name=s.name,
                 skip_reason=s.reason,
                 included=False,

@@ -27,7 +27,7 @@ You are given a catalogue of known biomarkers, one per line, formatted as
 - Copy the value, unit, and reference range exactly as printed. Do NOT convert
   units or values.
 - Use `unmatched` only when no catalogue slug names the analyte — never because
-  of a unit mismatch.
+  of a unit mismatch. Copy its value, unit, and reference range as printed too.
 Extract the sample collection date if present. Only report results actually
 present in the document — never invent values.
 """
@@ -45,14 +45,17 @@ class UnmatchedMarker(BaseModel):
     name: str
     value: str
     unit: str | None
+    reference_low: Decimal | None = None
+    reference_high: Decimal | None = None
 
 
-class SkippedMarker(BaseModel):
-    """A marker that did not become a measurement, with why."""
+class SkippedMarker(UnmatchedMarker):
+    """An unmatched marker plus why it did not become a measurement.
 
-    name: str
-    value: str
-    unit: str | None
+    Extends the model's output shape with our own classification; `reason`
+    stays out of the LLM contract (UnmatchedMarker).
+    """
+
     reason: str
 
 
@@ -83,13 +86,7 @@ def map_extraction(
     by_slug = {b.slug: b for b in catalogue}
     mapped: list[MappedMeasurement] = []
     skipped: list[SkippedMarker] = [
-        SkippedMarker(
-            name=u.name,
-            value=u.value,
-            unit=u.unit,
-            reason="unmatched",
-        )
-        for u in extraction.unmatched
+        SkippedMarker(**u.model_dump(), reason="unmatched") for u in extraction.unmatched
     ]
 
     for m in extraction.measurements:
@@ -100,6 +97,8 @@ def map_extraction(
                     name=m.biomarker_slug,
                     value=str(m.value),
                     unit=m.unit,
+                    reference_low=m.reference_low,
+                    reference_high=m.reference_high,
                     reason="unknown_slug",
                 )
             )
