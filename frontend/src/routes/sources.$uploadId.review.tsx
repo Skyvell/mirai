@@ -73,24 +73,18 @@ function ReviewBody({ detail }: { detail: LabUploadDetail }) {
   return <ReviewForm key={detail.id} detail={detail} />
 }
 
-type ItemRow = {
+// One editable draft row, shared by both tables. Matched rows arrive pre-mapped;
+// unmatched rows carry the parser's original label and start unmapped.
+type DraftRow = {
   id: string
-  displayName: string | null
-  value: string
-  unit: string
-  referenceLow: string
-  referenceHigh: string
-  included: boolean
-}
-
-type SkippedRow = {
-  id: string
+  origin: 'matched' | 'unmatched'
   sourceName: string | null
   slug: string
   value: string
   unit: string
   referenceLow: string
   referenceHigh: string
+  included: boolean
 }
 
 // Strip trailing zeros (and a bare trailing dot) so parsed decimals read
@@ -115,27 +109,17 @@ function rangeStatus(value: string, low: string, high: string): RangeStatus {
   return 'ok'
 }
 
-function toItemRow(item: LabDraftItemRead): ItemRow {
+function toRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): DraftRow {
   return {
     id: item.id,
-    displayName: item.display_name,
-    value: trimDecimal(item.value ?? ''),
+    origin,
+    sourceName: item.source_name,
+    slug: item.biomarker_slug ?? '',
+    value: trimDecimal((item.value ?? item.raw_value) ?? ''),
     unit: item.unit ?? '',
     referenceLow: trimDecimal(item.reference_low ?? ''),
     referenceHigh: trimDecimal(item.reference_high ?? ''),
     included: item.included,
-  }
-}
-
-function toSkippedRow(item: LabDraftItemRead): SkippedRow {
-  return {
-    id: item.id,
-    sourceName: item.source_name,
-    slug: '',
-    value: trimDecimal(item.raw_value ?? ''),
-    unit: item.unit ?? '',
-    referenceLow: '',
-    referenceHigh: '',
   }
 }
 
@@ -146,67 +130,54 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   const catalogue = useQuery(listBiomarkersOptions())
 
   const [measuredAt, setMeasuredAt] = useState(draft.measured_at ?? '')
-  const [items, setItems] = useState<ItemRow[]>(() => draft.items.map(toItemRow))
-  const [skipped, setSkipped] = useState<SkippedRow[]>(() => draft.skipped.map(toSkippedRow))
+  const [rows, setRows] = useState<DraftRow[]>(() => [
+    ...draft.items.map((i) => toRow(i, 'matched')),
+    ...draft.skipped.map((i) => toRow(i, 'unmatched')),
+  ])
 
   const update = useMutation(updateLabDraftMutation())
   const confirm = useMutation(confirmLabUploadMutation())
   const pending = update.isPending || confirm.isPending
   const error = update.error ?? confirm.error
 
-  const keptCount =
-    items.filter((i) => i.included).length + skipped.filter((s) => s.slug).length
-  const allKept = items.length > 0 && items.every((i) => i.included)
-  // Classify each row once; reused for both the summary count and its badge.
-  const statuses = items.map((i) => rangeStatus(i.value, i.referenceLow, i.referenceHigh))
-  const outOfRange = statuses.filter((s) => s !== 'ok').length
+  const matched = rows.filter((r) => r.origin === 'matched')
+  const unmatched = rows.filter((r) => r.origin === 'unmatched')
 
-  function patchItem(id: string, patch: Partial<ItemRow>) {
-    setItems((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  // A row commits only once kept and mapped to a catalogue biomarker.
+  const keptCount = rows.filter((r) => r.included && r.slug).length
+  const outOfRange = matched.filter(
+    (r) => rangeStatus(r.value, r.referenceLow, r.referenceHigh) !== 'ok',
+  ).length
+
+  function patchRow(id: string, patch: Partial<DraftRow>) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
-  function patchSkipped(id: string, patch: Partial<SkippedRow>) {
-    setSkipped((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  }
-
-  function toggleAll(included: boolean) {
-    setItems((rows) => rows.map((r) => ({ ...r, included })))
-  }
-
-  // Map an unmatched marker, prefilling the unit from the catalogue when blank.
-  function mapSkipped(row: SkippedRow, slug: string) {
+  // Mapping a marker keeps it and fills the unit from the catalogue when blank.
+  function mapRow(id: string, slug: string) {
     const canonical = catalogue.data?.find((b: BiomarkerRead) => b.slug === slug)
-    patchSkipped(row.id, {
-      slug,
-      unit: row.unit || canonical?.canonical_unit || '',
-    })
+    setRows((rs) =>
+      rs.map((r) =>
+        r.id === id
+          ? { ...r, slug, included: true, unit: r.unit || canonical?.canonical_unit || '' }
+          : r,
+      ),
+    )
   }
 
   async function onConfirm() {
-    // One edit payload, then commit; mapped skipped rows join as included items.
+    // One edit payload carries every row's fields and mapping, then commit.
     const body = {
       measured_at: measuredAt || null,
-      items: [
-        ...items.map((i) => ({
-          id: i.id,
-          value: i.value,
-          unit: i.unit || null,
-          reference_low: i.referenceLow || null,
-          reference_high: i.referenceHigh || null,
-          included: i.included,
-        })),
-        ...skipped
-          .filter((s) => s.slug)
-          .map((s) => ({
-            id: s.id,
-            biomarker_slug: s.slug,
-            value: s.value,
-            unit: s.unit || null,
-            reference_low: s.referenceLow || null,
-            reference_high: s.referenceHigh || null,
-            included: true,
-          })),
-      ],
+      items: rows.map((r) => ({
+        id: r.id,
+        value: r.value,
+        unit: r.unit || null,
+        reference_low: r.referenceLow || null,
+        reference_high: r.referenceHigh || null,
+        included: r.included,
+        ...(r.slug ? { biomarker_slug: r.slug } : {}),
+      })),
     }
 
     await update.mutateAsync({ path: { upload_id: detail.id }, body })
@@ -225,7 +196,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
         </p>
         {outOfRange > 0 && (
           <p className="mt-1 text-sm text-warning">
-            {outOfRange} of {items.length} outside reference range
+            {outOfRange} of {matched.length} outside reference range
           </p>
         )}
       </div>
@@ -243,169 +214,30 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Extracted biomarkers</h2>
-        {items.length === 0 ? (
+        {matched.length === 0 ? (
           <p className="text-sm text-muted-foreground">No biomarkers were matched.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-sm">
-              <colgroup>
-                <col className="w-16" />
-                <col />
-                <col className="w-24" />
-                <col className="w-24" />
-                <col className="w-20" />
-                <col className="w-20" />
-                <col className="w-16" />
-              </colgroup>
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={allKept}
-                        onCheckedChange={(c) => toggleAll(c === true)}
-                        aria-label="Keep all biomarkers"
-                      />
-                      Keep
-                    </div>
-                  </th>
-                  <th className="py-2 font-medium">Biomarker</th>
-                  <th className="py-2 pr-3 text-right font-medium">Value</th>
-                  <th className="py-2 font-medium">Unit</th>
-                  <th className="py-2 text-right font-medium">Ref. low</th>
-                  <th className="py-2 text-right font-medium">Ref. high</th>
-                  <th className="py-2 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => {
-                  const status = statuses[index]
-                  return (
-                    <tr key={item.id} className="border-b">
-                      <td className="py-1">
-                        <Checkbox
-                          checked={item.included}
-                          onCheckedChange={(c) => patchItem(item.id, { included: c === true })}
-                          aria-label={`Keep ${item.displayName ?? 'biomarker'}`}
-                        />
-                      </td>
-                      <td className="py-1 pr-2">{item.displayName}</td>
-                      <td className="py-1 pr-3">
-                        <NumberCell
-                          value={item.value}
-                          flagged={status !== 'ok'}
-                          onChange={(v) => patchItem(item.id, { value: v })}
-                        />
-                      </td>
-                      <td className="py-1">
-                        <TextCell
-                          value={item.unit}
-                          onChange={(v) => patchItem(item.id, { unit: v })}
-                        />
-                      </td>
-                      <td className="py-1">
-                        <NumberCell
-                          value={item.referenceLow}
-                          onChange={(v) => patchItem(item.id, { referenceLow: v })}
-                        />
-                      </td>
-                      <td className="py-1">
-                        <NumberCell
-                          value={item.referenceHigh}
-                          onChange={(v) => patchItem(item.id, { referenceHigh: v })}
-                        />
-                      </td>
-                      <td className="py-1 pl-1">
-                        <RangeBadge status={status} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DraftItemsTable
+            rows={matched}
+            catalogue={catalogue.data ?? []}
+            onPatch={patchRow}
+            onMap={mapRow}
+          />
         )}
       </section>
 
-      {skipped.length > 0 && (
+      {unmatched.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-lg font-medium">Couldn&rsquo;t match</h2>
           <p className="text-sm text-muted-foreground">
             Map any of these to a biomarker to include them.
           </p>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[34rem] text-sm">
-              <colgroup>
-                <col className="w-16" />
-                <col />
-                <col className="w-24" />
-                <col className="w-24" />
-                <col className="w-20" />
-                <col className="w-20" />
-                <col className="w-16" />
-              </colgroup>
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2 font-medium" />
-                  <th className="py-2 font-medium">Marker</th>
-                  <th className="py-2 pr-3 text-right font-medium">Value</th>
-                  <th className="py-2 font-medium">Unit</th>
-                  <th className="py-2 text-right font-medium">Ref. low</th>
-                  <th className="py-2 text-right font-medium">Ref. high</th>
-                  <th className="py-2 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {skipped.map((row) => {
-                  const status = rangeStatus(row.value, row.referenceLow, row.referenceHigh)
-                  return (
-                    <tr key={row.id} className="border-b">
-                      <td className="py-2" />
-                      <td className="py-2 pr-2">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-medium">{row.sourceName}</span>
-                          <BiomarkerSelect
-                            catalogue={catalogue.data ?? []}
-                            value={row.slug}
-                            onChange={(slug) => mapSkipped(row, slug)}
-                            triggerClassName="w-full"
-                          />
-                        </div>
-                      </td>
-                      <td className="py-2 pr-3">
-                        <NumberCell
-                          value={row.value}
-                          flagged={status !== 'ok'}
-                          onChange={(v) => patchSkipped(row.id, { value: v })}
-                        />
-                      </td>
-                      <td className="py-2">
-                        <TextCell
-                          value={row.unit}
-                          onChange={(v) => patchSkipped(row.id, { unit: v })}
-                        />
-                      </td>
-                      <td className="py-2">
-                        <NumberCell
-                          value={row.referenceLow}
-                          onChange={(v) => patchSkipped(row.id, { referenceLow: v })}
-                        />
-                      </td>
-                      <td className="py-2">
-                        <NumberCell
-                          value={row.referenceHigh}
-                          onChange={(v) => patchSkipped(row.id, { referenceHigh: v })}
-                        />
-                      </td>
-                      <td className="py-2 pl-1">
-                        <RangeBadge status={status} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DraftItemsTable
+            rows={unmatched}
+            catalogue={catalogue.data ?? []}
+            onPatch={patchRow}
+            onMap={mapRow}
+          />
         </section>
       )}
 
@@ -423,8 +255,111 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   )
 }
 
+// Shared editable table for both matched and unmatched draft rows. Each row's
+// biomarker is a dropdown: pre-selected when matched, empty when the parser
+// couldn't map it (its original label shows above the dropdown).
+function DraftItemsTable({
+  rows,
+  catalogue,
+  onPatch,
+  onMap,
+}: {
+  rows: DraftRow[]
+  catalogue: BiomarkerRead[]
+  onPatch: (id: string, patch: Partial<DraftRow>) => void
+  onMap: (id: string, slug: string) => void
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[34rem] text-sm">
+        <colgroup>
+          <col className="w-16" />
+          <col />
+          <col className="w-20" />
+          <col className="w-32" />
+          <col className="w-20" />
+          <col className="w-20" />
+          <col className="w-16" />
+        </colgroup>
+        <thead>
+          <tr className="border-b text-left text-muted-foreground">
+            <th className="py-2 font-medium">Keep</th>
+            <th className="py-2 font-medium">Biomarker</th>
+            <th className="py-2 pr-3 text-right font-medium">Value</th>
+            <th className="py-2 font-medium">Unit</th>
+            <th className="py-2 text-right font-medium">Ref. low</th>
+            <th className="py-2 text-right font-medium">Ref. high</th>
+            <th className="py-2 font-medium" />
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const status = rangeStatus(row.value, row.referenceLow, row.referenceHigh)
+            const name =
+              row.sourceName ?? catalogue.find((b) => b.slug === row.slug)?.display_name ?? 'biomarker'
+            return (
+              <tr key={row.id} className="border-b">
+                <td className="py-1">
+                  <Checkbox
+                    checked={row.included}
+                    onCheckedChange={(c) => onPatch(row.id, { included: c === true })}
+                    aria-label={`Keep ${name}`}
+                  />
+                </td>
+                <td className="py-1 pr-2">
+                  <div className="flex flex-col gap-1">
+                    {row.sourceName && (
+                      <span className="text-xs text-muted-foreground">{row.sourceName}</span>
+                    )}
+                    <BiomarkerSelect
+                      catalogue={catalogue}
+                      value={row.slug}
+                      onChange={(slug) => onMap(row.id, slug)}
+                      triggerClassName={SELECT_CELL_CLASS}
+                    />
+                  </div>
+                </td>
+                <td className="py-1 pr-3">
+                  <NumberCell
+                    value={row.value}
+                    flagged={status !== 'ok'}
+                    onChange={(v) => onPatch(row.id, { value: v })}
+                  />
+                </td>
+                <td className="py-1">
+                  <TextCell value={row.unit} onChange={(v) => onPatch(row.id, { unit: v })} />
+                </td>
+                <td className="py-1">
+                  <NumberCell
+                    value={row.referenceLow}
+                    onChange={(v) => onPatch(row.id, { referenceLow: v })}
+                  />
+                </td>
+                <td className="py-1">
+                  <NumberCell
+                    value={row.referenceHigh}
+                    onChange={(v) => onPatch(row.id, { referenceHigh: v })}
+                  />
+                </td>
+                <td className="py-1 pl-1">
+                  <RangeBadge status={status} />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 const CELL_CLASS =
   'h-8 border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
+
+// Ghost styling for the biomarker dropdown so it reads like the other cells:
+// borderless at rest, border on hover/focus.
+const SELECT_CELL_CLASS =
+  'h-8 w-full border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
 
 function NumberCell({
   value,
