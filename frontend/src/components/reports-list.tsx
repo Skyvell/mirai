@@ -17,6 +17,14 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
   deleteLabUploadMutation,
   listBiomarkerSeriesQueryKey,
   listLabUploadsOptions,
@@ -54,22 +62,22 @@ export function ReportsList() {
       ) : uploads.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">No reports uploaded yet.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2 font-medium">Report</th>
-              <th className="py-2 font-medium">Uploaded</th>
-              <th className="py-2 font-medium">Status</th>
-              <th className="py-2 font-medium">Measurements</th>
-              <th className="py-2" />
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Report</TableHead>
+              <TableHead>Uploaded</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Measurements</TableHead>
+              <TableHead />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {uploads.data.map((upload) => (
               <ReportRow key={upload.id} upload={upload} />
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
     </section>
   )
@@ -95,14 +103,11 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
   const inProgress = IN_PROGRESS.has(upload.status)
 
   return (
-    <tr className="border-b">
-      <td className="py-2">{upload.filename}</td>
-      <td className="py-2 whitespace-nowrap">
-        {localIsoDate(new Date(upload.created_at))}
-      </td>
-      <td
+    <TableRow>
+      <TableCell>{upload.filename}</TableCell>
+      <TableCell>{localIsoDate(new Date(upload.created_at))}</TableCell>
+      <TableCell
         className={cn(
-          'py-2',
           upload.status === 'failed'
             ? 'text-destructive'
             : upload.status === 'awaiting_review'
@@ -111,9 +116,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
         )}
       >
         {STATUS_LABEL[upload.status]}
-      </td>
-      <td className="py-2">{upload.measurement_count || '—'}</td>
-      <td className="py-2 text-right whitespace-nowrap">
+      </TableCell>
+      <TableCell>{upload.measurement_count || '—'}</TableCell>
+      <TableCell className="text-right">
         {remove.isError && (
           <span className="mr-2 text-xs text-destructive">
             {apiErrorMessage(remove.error)}
@@ -183,7 +188,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   )
 }

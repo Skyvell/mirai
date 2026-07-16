@@ -7,6 +7,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
   confirmLabUploadMutation,
   getLabUploadOptions,
   listBiomarkerSeriesQueryKey,
@@ -253,81 +261,79 @@ function DraftItemsTable({
   onPatch: (id: string, patch: Partial<DraftRow>) => void
   onMap: (id: string, slug: string) => void
 }) {
+  // Auto layout: the Biomarker column takes the slack, every other column
+  // sizes to its content (inputs use field-sizing), so nothing clips.
   return (
-    <div className="overflow-x-auto">
-      {/* Auto layout: the Biomarker column takes the slack, every other column
-          sizes to its content (inputs use field-sizing), so nothing clips. */}
-      <table className="w-full text-sm">
-        <colgroup>
-          <col />
-          <col className="w-full" />
-          <col />
-          <col />
-          <col />
-          <col />
-        </colgroup>
-        <thead>
-          <tr className="border-b text-left text-muted-foreground [&>th]:py-2 [&>th]:pr-4 [&>th]:font-medium [&>th]:whitespace-nowrap">
-            <th>Keep</th>
-            <th>Biomarker</th>
-            <th className="text-right">Value</th>
-            <th>Unit</th>
-            <th className="text-right">Ref. low</th>
-            <th className="text-right">Ref. high</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const name = row.sourceName ?? row.displayName ?? 'biomarker'
-            return (
-              <tr key={row.id} className="border-b [&>td]:py-1 [&>td]:pr-4">
-                <td>
-                  <Checkbox
-                    checked={row.included}
-                    onCheckedChange={(c) => onPatch(row.id, { included: c === true })}
-                    aria-label={`Keep ${name}`}
+    <Table>
+      <colgroup>
+        <col />
+        <col className="w-full" />
+        <col />
+        <col />
+        <col />
+        <col />
+      </colgroup>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Keep</TableHead>
+          <TableHead>Biomarker</TableHead>
+          <TableHead className="text-right">Value</TableHead>
+          <TableHead>Unit</TableHead>
+          <TableHead className="text-right">Ref. low</TableHead>
+          <TableHead className="text-right">Ref. high</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {rows.map((row) => {
+          const name = row.sourceName ?? row.displayName ?? 'biomarker'
+          return (
+            <TableRow key={row.id}>
+              <TableCell>
+                <Checkbox
+                  checked={row.included}
+                  onCheckedChange={(c) => onPatch(row.id, { included: c === true })}
+                  aria-label={`Keep ${name}`}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col gap-1">
+                  {row.sourceName && (
+                    <span className="text-xs text-muted-foreground">{row.sourceName}</span>
+                  )}
+                  <BiomarkerSelect
+                    catalogue={catalogue}
+                    value={row.slug}
+                    onChange={(slug) => onMap(row.id, slug)}
+                    triggerClassName={SELECT_CELL_CLASS}
                   />
-                </td>
-                <td>
-                  <div className="flex flex-col gap-1">
-                    {row.sourceName && (
-                      <span className="text-xs text-muted-foreground">{row.sourceName}</span>
-                    )}
-                    <BiomarkerSelect
-                      catalogue={catalogue}
-                      value={row.slug}
-                      onChange={(slug) => onMap(row.id, slug)}
-                      triggerClassName={SELECT_CELL_CLASS}
-                    />
-                  </div>
-                </td>
-                <td className="text-right">
-                  <NumberCell
-                    value={row.value}
-                    onChange={(v) => onPatch(row.id, { value: v })}
-                  />
-                </td>
-                <td>
-                  <TextCell value={row.unit} onChange={(v) => onPatch(row.id, { unit: v })} />
-                </td>
-                <td className="text-right">
-                  <NumberCell
-                    value={row.referenceLow}
-                    onChange={(v) => onPatch(row.id, { referenceLow: v })}
-                  />
-                </td>
-                <td className="text-right">
-                  <NumberCell
-                    value={row.referenceHigh}
-                    onChange={(v) => onPatch(row.id, { referenceHigh: v })}
-                  />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                </div>
+              </TableCell>
+              <TableCell className="text-right">
+                <NumberCell
+                  value={row.value}
+                  onChange={(v) => onPatch(row.id, { value: v })}
+                />
+              </TableCell>
+              <TableCell>
+                <TextCell value={row.unit} onChange={(v) => onPatch(row.id, { unit: v })} />
+              </TableCell>
+              <TableCell className="text-right">
+                <NumberCell
+                  value={row.referenceLow}
+                  onChange={(v) => onPatch(row.id, { referenceLow: v })}
+                />
+              </TableCell>
+              <TableCell className="text-right">
+                <NumberCell
+                  value={row.referenceHigh}
+                  onChange={(v) => onPatch(row.id, { referenceHigh: v })}
+                />
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 

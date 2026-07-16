@@ -3,6 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerSeries } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export const Route = createFileRoute('/biomarkers')({
   component: BiomarkersComponent,
@@ -39,33 +47,35 @@ function BiomarkersComponent() {
       ) : biomarkers.data.length === 0 ? (
         <p className="text-sm text-muted-foreground">No biomarkers yet.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2 font-medium">Biomarker</th>
-              <th className="py-2 font-medium">Latest</th>
-              <th className="py-2 font-medium">Reference</th>
-              <th className="py-2 font-medium">History</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Biomarker</TableHead>
+              <TableHead>Latest</TableHead>
+              <TableHead>Reference</TableHead>
+              <TableHead>History</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {biomarkers.data.map((b) => {
               const latest = b.measurements[b.measurements.length - 1]
               return (
-                <tr key={b.slug} className="border-b">
-                  <td className="py-2">{b.display_name}</td>
-                  <td className="py-2 whitespace-nowrap">
+                <TableRow key={b.slug}>
+                  <TableCell>{b.display_name}</TableCell>
+                  <TableCell>
                     <span className="font-mono">{latest.value}</span> {latest.unit}
-                  </td>
-                  <td className="py-2 text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
                     {referenceRange(latest.reference_low, latest.reference_high)}
-                  </td>
-                  <td className="py-2 text-xs text-muted-foreground">{history(b)}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-xs whitespace-normal text-muted-foreground">
+                    {history(b)}
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
     </div>
   )
