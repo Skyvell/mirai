@@ -271,25 +271,27 @@ function DraftItemsTable({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[34rem] text-sm">
+      {/* Auto layout: the Biomarker column takes the slack, every other column
+          sizes to its content (inputs use field-sizing), so nothing clips. */}
+      <table className="w-full text-sm">
         <colgroup>
-          <col className="w-16" />
           <col />
-          <col className="w-20" />
-          <col className="w-32" />
-          <col className="w-20" />
-          <col className="w-20" />
-          <col className="w-16" />
+          <col className="w-full" />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
         </colgroup>
         <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="py-2 font-medium">Keep</th>
-            <th className="py-2 font-medium">Biomarker</th>
-            <th className="py-2 pr-3 text-right font-medium">Value</th>
-            <th className="py-2 font-medium">Unit</th>
-            <th className="py-2 text-right font-medium">Ref. low</th>
-            <th className="py-2 text-right font-medium">Ref. high</th>
-            <th className="py-2 font-medium" />
+          <tr className="border-b text-left text-muted-foreground [&>th]:py-2 [&>th]:pr-4 [&>th]:font-medium [&>th]:whitespace-nowrap">
+            <th>Keep</th>
+            <th>Biomarker</th>
+            <th className="text-right">Value</th>
+            <th>Unit</th>
+            <th className="text-right">Ref. low</th>
+            <th className="text-right">Ref. high</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -298,15 +300,15 @@ function DraftItemsTable({
             const name =
               row.sourceName ?? catalogue.find((b) => b.slug === row.slug)?.display_name ?? 'biomarker'
             return (
-              <tr key={row.id} className="border-b">
-                <td className="py-1">
+              <tr key={row.id} className="border-b [&>td]:py-1 [&>td]:pr-4">
+                <td>
                   <Checkbox
                     checked={row.included}
                     onCheckedChange={(c) => onPatch(row.id, { included: c === true })}
                     aria-label={`Keep ${name}`}
                   />
                 </td>
-                <td className="py-1 pr-2">
+                <td>
                   <div className="flex flex-col gap-1">
                     {row.sourceName && (
                       <span className="text-xs text-muted-foreground">{row.sourceName}</span>
@@ -319,29 +321,29 @@ function DraftItemsTable({
                     />
                   </div>
                 </td>
-                <td className="py-1 pr-3">
+                <td className="text-right">
                   <NumberCell
                     value={row.value}
                     flagged={status !== 'ok'}
                     onChange={(v) => onPatch(row.id, { value: v })}
                   />
                 </td>
-                <td className="py-1">
+                <td>
                   <TextCell value={row.unit} onChange={(v) => onPatch(row.id, { unit: v })} />
                 </td>
-                <td className="py-1">
+                <td className="text-right">
                   <NumberCell
                     value={row.referenceLow}
                     onChange={(v) => onPatch(row.id, { referenceLow: v })}
                   />
                 </td>
-                <td className="py-1">
+                <td className="text-right">
                   <NumberCell
                     value={row.referenceHigh}
                     onChange={(v) => onPatch(row.id, { referenceHigh: v })}
                   />
                 </td>
-                <td className="py-1 pl-1">
+                <td className="pl-1">
                   <RangeBadge status={status} />
                 </td>
               </tr>
@@ -353,8 +355,10 @@ function DraftItemsTable({
   )
 }
 
+// Ghost cell input that sizes to its content (so the column fits the value —
+// no clipping, no fixed widths); min-width keeps empty cells clickable.
 const CELL_CLASS =
-  'h-8 border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
+  'h-8 w-auto min-w-12 field-sizing-content border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
 
 // Ghost styling for the biomarker dropdown so it reads like the other cells:
 // borderless at rest, border on hover/focus.
