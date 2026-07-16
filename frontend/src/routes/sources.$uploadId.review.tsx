@@ -14,8 +14,9 @@ import {
   listLabUploadsQueryKey,
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
-import type { LabDraftItemRead, LabUploadDetail } from '@/client'
+import type { BiomarkerRead, LabDraftItemRead, LabUploadDetail } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
 
 export const Route = createFileRoute('/sources/$uploadId/review')({
@@ -92,14 +93,36 @@ type SkippedRow = {
   referenceHigh: string
 }
 
+// Strip trailing zeros (and a bare trailing dot) so parsed decimals read
+// cleanly; only touches strings that carry a decimal point.
+function trimDecimal(value: string): string {
+  if (!value.includes('.')) return value
+  return value.replace(/\.?0+$/, '')
+}
+
+// Only out-of-range needs surfacing; 'ok' covers in-range, unbounded, and unparseable.
+type RangeStatus = 'low' | 'high' | 'ok'
+
+// Classify a value against its reference bounds from the live edit strings.
+function rangeStatus(value: string, low: string, high: string): RangeStatus {
+  const v = Number(value)
+  if (value === '' || Number.isNaN(v)) return 'ok'
+
+  const hi = high === '' ? null : Number(high)
+  const lo = low === '' ? null : Number(low)
+  if (hi !== null && !Number.isNaN(hi) && v > hi) return 'high'
+  if (lo !== null && !Number.isNaN(lo) && v < lo) return 'low'
+  return 'ok'
+}
+
 function toItemRow(item: LabDraftItemRead): ItemRow {
   return {
     id: item.id,
     displayName: item.display_name,
-    value: item.value ?? '',
+    value: trimDecimal(item.value ?? ''),
     unit: item.unit ?? '',
-    referenceLow: item.reference_low ?? '',
-    referenceHigh: item.reference_high ?? '',
+    referenceLow: trimDecimal(item.reference_low ?? ''),
+    referenceHigh: trimDecimal(item.reference_high ?? ''),
     included: item.included,
   }
 }
@@ -109,7 +132,7 @@ function toSkippedRow(item: LabDraftItemRead): SkippedRow {
     id: item.id,
     sourceName: item.source_name,
     slug: '',
-    value: item.raw_value ?? '',
+    value: trimDecimal(item.raw_value ?? ''),
     unit: item.unit ?? '',
     referenceLow: '',
     referenceHigh: '',
@@ -133,6 +156,10 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
   const keptCount =
     items.filter((i) => i.included).length + skipped.filter((s) => s.slug).length
+  const allKept = items.length > 0 && items.every((i) => i.included)
+  // Classify each row once; reused for both the summary count and its badge.
+  const statuses = items.map((i) => rangeStatus(i.value, i.referenceLow, i.referenceHigh))
+  const outOfRange = statuses.filter((s) => s !== 'ok').length
 
   function patchItem(id: string, patch: Partial<ItemRow>) {
     setItems((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -140,6 +167,19 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
   function patchSkipped(id: string, patch: Partial<SkippedRow>) {
     setSkipped((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  }
+
+  function toggleAll(included: boolean) {
+    setItems((rows) => rows.map((r) => ({ ...r, included })))
+  }
+
+  // Map an unmatched marker, prefilling the unit from the catalogue when blank.
+  function mapSkipped(row: SkippedRow, slug: string) {
+    const canonical = catalogue.data?.find((b: BiomarkerRead) => b.slug === slug)
+    patchSkipped(row.id, {
+      slug,
+      unit: row.unit || canonical?.canonical_unit || '',
+    })
   }
 
   async function onConfirm() {
@@ -177,12 +217,17 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pb-20">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Review {detail.filename}</h1>
         <p className="text-muted-foreground">
           Check the extracted values, then add them to your record.
         </p>
+        {outOfRange > 0 && (
+          <p className="mt-1 text-sm text-warning">
+            {outOfRange} of {items.length} outside reference range
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -202,53 +247,75 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
           <p className="text-sm text-muted-foreground">No biomarkers were matched.</p>
         ) : (
           <table className="w-full text-sm">
+            <colgroup>
+              <col className="w-10" />
+              <col />
+              <col className="w-24" />
+              <col className="w-24" />
+              <col className="w-20" />
+              <col className="w-20" />
+              <col className="w-16" />
+            </colgroup>
             <thead>
               <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 font-medium">Keep</th>
+                <th className="py-2 font-medium">
+                  <Checkbox
+                    checked={allKept}
+                    onCheckedChange={(c) => toggleAll(c === true)}
+                    aria-label="Keep all biomarkers"
+                  />
+                </th>
                 <th className="py-2 font-medium">Biomarker</th>
-                <th className="py-2 font-medium">Value</th>
+                <th className="py-2 text-right font-medium">Value</th>
                 <th className="py-2 font-medium">Unit</th>
-                <th className="py-2 font-medium">Ref. low</th>
-                <th className="py-2 font-medium">Ref. high</th>
+                <th className="py-2 text-right font-medium">Ref. low</th>
+                <th className="py-2 text-right font-medium">Ref. high</th>
+                <th className="py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b">
-                  <td className="py-2">
-                    <Checkbox
-                      checked={item.included}
-                      onCheckedChange={(c) => patchItem(item.id, { included: c === true })}
-                      aria-label={`Keep ${item.displayName ?? 'biomarker'}`}
-                    />
-                  </td>
-                  <td className="py-2">{item.displayName}</td>
-                  <td className="py-2">
-                    <NumberCell
-                      value={item.value}
-                      onChange={(v) => patchItem(item.id, { value: v })}
-                    />
-                  </td>
-                  <td className="py-2">
-                    <TextCell
-                      value={item.unit}
-                      onChange={(v) => patchItem(item.id, { unit: v })}
-                    />
-                  </td>
-                  <td className="py-2">
-                    <NumberCell
-                      value={item.referenceLow}
-                      onChange={(v) => patchItem(item.id, { referenceLow: v })}
-                    />
-                  </td>
-                  <td className="py-2">
-                    <NumberCell
-                      value={item.referenceHigh}
-                      onChange={(v) => patchItem(item.id, { referenceHigh: v })}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {items.map((item, index) => {
+                const status = statuses[index]
+                return (
+                  <tr key={item.id} className="border-b">
+                    <td className="py-1">
+                      <Checkbox
+                        checked={item.included}
+                        onCheckedChange={(c) => patchItem(item.id, { included: c === true })}
+                        aria-label={`Keep ${item.displayName ?? 'biomarker'}`}
+                      />
+                    </td>
+                    <td className="py-1 pr-2">{item.displayName}</td>
+                    <td className="py-1">
+                      <NumberCell
+                        value={item.value}
+                        onChange={(v) => patchItem(item.id, { value: v })}
+                      />
+                    </td>
+                    <td className="py-1">
+                      <TextCell
+                        value={item.unit}
+                        onChange={(v) => patchItem(item.id, { unit: v })}
+                      />
+                    </td>
+                    <td className="py-1">
+                      <NumberCell
+                        value={item.referenceLow}
+                        onChange={(v) => patchItem(item.id, { referenceLow: v })}
+                      />
+                    </td>
+                    <td className="py-1">
+                      <NumberCell
+                        value={item.referenceHigh}
+                        onChange={(v) => patchItem(item.id, { referenceHigh: v })}
+                      />
+                    </td>
+                    <td className="py-1 pl-1">
+                      <RangeBadge status={status} />
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -270,7 +337,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
                 <BiomarkerSelect
                   catalogue={catalogue.data ?? []}
                   value={row.slug}
-                  onChange={(slug) => patchSkipped(row.id, { slug })}
+                  onChange={(slug) => mapSkipped(row, slug)}
                   triggerClassName="w-56"
                 />
                 <div className="w-24">
@@ -293,7 +360,8 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
 
       {error && <p className="text-sm text-destructive">{apiErrorMessage(error)}</p>}
 
-      <div>
+      {/* The negative margin cancels the `p-6` padding on <main> in __root.tsx so the bar spans full width. */}
+      <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-background px-6 py-3">
         <Button onClick={onConfirm} disabled={pending || keptCount === 0}>
           {pending
             ? 'Adding…'
@@ -304,11 +372,14 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   )
 }
 
+const CELL_CLASS =
+  'h-8 border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
+
 function NumberCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Input
       inputMode="decimal"
-      className="h-8"
+      className={cn(CELL_CLASS, 'text-right')}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -316,5 +387,26 @@ function NumberCell({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function TextCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return <Input className="h-8" value={value} onChange={(e) => onChange(e.target.value)} />
+  return (
+    <Input
+      className={CELL_CLASS}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  )
+}
+
+const RANGE_BADGE = {
+  high: { label: 'High ↑', title: 'Above reference range' },
+  low: { label: 'Low ↓', title: 'Below reference range' },
+} as const
+
+function RangeBadge({ status }: { status: RangeStatus }) {
+  if (status === 'ok') return null
+  const { label, title } = RANGE_BADGE[status]
+  return (
+    <span className="text-xs font-medium text-warning" title={title}>
+      {label}
+    </span>
+  )
 }
