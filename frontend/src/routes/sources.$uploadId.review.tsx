@@ -4,7 +4,7 @@ import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { BiomarkerSelect } from '@/components/biomarker-select'
-import { TableSkeleton } from '@/components/table-skeleton'
+import { QueryPane } from '@/components/query-pane'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -25,8 +25,8 @@ import {
   listLabUploadsQueryKey,
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
-import type { BiomarkerRead, LabDraftItemRead, LabUploadDetail } from '@/client'
-import { cn } from '@/lib/utils'
+import type { BiomarkerRead, LabDraft, LabDraftItemRead, LabUploadDetail } from '@/client'
+import { cn, pluralize } from '@/lib/utils'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
 
 export const Route = createFileRoute('/sources/$uploadId/review')({
@@ -51,13 +51,7 @@ function ReviewComponent() {
         ← Back to sources
       </Link>
 
-      {detail.isError ? (
-        <ApiErrorAlert error={detail.error} />
-      ) : detail.data === undefined ? (
-        <TableSkeleton />
-      ) : (
-        <ReviewBody detail={detail.data} />
-      )}
+      <QueryPane query={detail}>{(data) => <ReviewBody detail={data} />}</QueryPane>
     </div>
   )
 }
@@ -76,7 +70,14 @@ function ReviewBody({ detail }: { detail: LabUploadDetail }) {
     return <p className="text-sm text-muted-foreground">Nothing to review.</p>
   }
   // Key on the id so local edit state initializes once from the loaded draft.
-  return <ReviewForm key={detail.id} detail={detail} />
+  return (
+    <ReviewForm
+      key={detail.id}
+      uploadId={detail.id}
+      filename={detail.filename}
+      draft={detail.draft}
+    />
+  )
 }
 
 // One editable draft row, shared by both tables. Matched rows arrive pre-mapped;
@@ -116,8 +117,15 @@ function toRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): DraftRo
   }
 }
 
-function ReviewForm({ detail }: { detail: LabUploadDetail }) {
-  const draft = detail.draft!
+function ReviewForm({
+  uploadId,
+  filename,
+  draft,
+}: {
+  uploadId: string
+  filename: string
+  draft: LabDraft
+}) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const catalogue = useQuery(listBiomarkersOptions())
@@ -132,9 +140,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   const confirm = useMutation({
     ...confirmLabUploadMutation(),
     onSuccess: () => {
-      toast.success(
-        `Added ${keptCount} measurement${keptCount === 1 ? '' : 's'} to your record`,
-      )
+      toast.success(`Added ${pluralize(keptCount, 'measurement')} to your record`)
     },
   })
   const pending = update.isPending || confirm.isPending
@@ -177,8 +183,14 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
       })),
     }
 
-    await update.mutateAsync({ path: { upload_id: detail.id }, body })
-    await confirm.mutateAsync({ path: { upload_id: detail.id } })
+    // A failed mutation renders inline via its error state; just stop here.
+    try {
+      await update.mutateAsync({ path: { upload_id: uploadId }, body })
+      await confirm.mutateAsync({ path: { upload_id: uploadId } })
+    } catch {
+      return
+    }
+
     queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
     queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
     navigate({ to: '/sources' })
@@ -187,7 +199,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
   return (
     <div className="flex flex-col gap-5 pb-20">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Review {detail.filename}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Review {filename}</h1>
         <p className="text-muted-foreground">
           Check the extracted values, then add them to your record.
         </p>
@@ -238,9 +250,7 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
       {/* The negative margin cancels the `p-6` padding on <main> in __root.tsx so the bar spans full width. */}
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-background px-6 py-3">
         <Button onClick={onConfirm} disabled={pending || keptCount === 0 || !measuredAt}>
-          {pending
-            ? 'Adding…'
-            : `Add ${keptCount} measurement${keptCount === 1 ? '' : 's'} to my record`}
+          {pending ? 'Adding…' : `Add ${pluralize(keptCount, 'measurement')} to my record`}
         </Button>
         {!measuredAt && (
           <p className="text-sm text-muted-foreground">
@@ -251,6 +261,17 @@ function ReviewForm({ detail }: { detail: LabUploadDetail }) {
     </div>
   )
 }
+
+// Ghost cell input that sizes to its content (so the column fits the value —
+// no clipping, no fixed widths); min-width keeps empty cells clickable.
+const CELL_CLASS =
+  'h-8 w-auto min-w-12 field-sizing-content border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
+
+// Ghost styling for the biomarker dropdown so it reads like the other cells:
+// borderless at rest, border on hover/focus. min-w-0 lets the flex column
+// shrink (name truncates) instead of pushing the table past the container.
+const SELECT_CELL_CLASS =
+  'h-8 w-full min-w-0 border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
 
 // Shared editable table for both matched and unmatched draft rows. Each row's
 // biomarker is a dropdown: pre-selected when matched, empty when the parser
@@ -341,17 +362,6 @@ function DraftItemsTable({
     </Table>
   )
 }
-
-// Ghost cell input that sizes to its content (so the column fits the value —
-// no clipping, no fixed widths); min-width keeps empty cells clickable.
-const CELL_CLASS =
-  'h-8 w-auto min-w-12 field-sizing-content border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
-
-// Ghost styling for the biomarker dropdown so it reads like the other cells:
-// borderless at rest, border on hover/focus. min-w-0 lets the flex column
-// shrink (name truncates) instead of pushing the table past the container.
-const SELECT_CELL_CLASS =
-  'h-8 w-full min-w-0 border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
 
 function NumberCell({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (

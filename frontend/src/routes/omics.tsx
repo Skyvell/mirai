@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { Page } from '@/components/page'
 
 export const Route = createFileRoute('/omics')({
   component: OmicsComponent,
@@ -6,12 +7,9 @@ export const Route = createFileRoute('/omics')({
 
 function OmicsComponent() {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <h1 className="text-3xl font-semibold tracking-tight">Omics</h1>
-      <p className="text-muted-foreground">
-        Genomics, transcriptomics, epigenomics, proteomics, metabolomics, and
-        microbiome.
-      </p>
-    </div>
+    <Page
+      title="Omics"
+      description="Genomics, transcriptomics, epigenomics, proteomics, metabolomics, and microbiome."
+    />
   )
 }

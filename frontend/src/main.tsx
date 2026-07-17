@@ -31,7 +31,7 @@ const queryClient = new QueryClient({
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!PUBLISHABLE_KEY) {
-  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in .env.local')
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY (set in frontend/.env)')
 }
 
 // The generated client configures itself at creation (createClientConfig in

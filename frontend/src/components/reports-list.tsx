@@ -3,9 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { FileText, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { ApiErrorAlert } from '@/components/api-error-alert'
 import { EmptyState } from '@/components/empty-state'
-import { TableSkeleton } from '@/components/table-skeleton'
+import { QueryPane } from '@/components/query-pane'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -38,7 +37,7 @@ import {
 import type { LabUploadSummary, UploadStatus } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
-import { localIsoDate } from '@/lib/utils'
+import { localIsoDate, pluralize } from '@/lib/utils'
 
 // User-facing label per lifecycle state; pending and processing read the same.
 const STATUS_LABEL: Record<UploadStatus, string> = {
@@ -68,34 +67,35 @@ export function ReportsList() {
   return (
     <section className="flex flex-col gap-2">
       <h2 className="text-xl font-semibold tracking-tight">Reports</h2>
-      {uploads.isError ? (
-        <ApiErrorAlert error={uploads.error} />
-      ) : uploads.data === undefined ? (
-        <TableSkeleton />
-      ) : uploads.data.length === 0 ? (
-        <EmptyState
-          icon={<FileText />}
-          title="No reports uploaded yet"
-          description="Upload a lab PDF via “Add data” in the top bar to get started."
-        />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Report</TableHead>
-              <TableHead>Uploaded</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Measurements</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {uploads.data.map((upload) => (
-              <ReportRow key={upload.id} upload={upload} />
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <QueryPane
+        query={uploads}
+        empty={
+          <EmptyState
+            icon={<FileText />}
+            title="No reports uploaded yet"
+            description="Upload a lab PDF via “Add data” in the top bar to get started."
+          />
+        }
+      >
+        {(reports) => (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Report</TableHead>
+                <TableHead>Uploaded</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Measurements</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {reports.map((upload) => (
+                <ReportRow key={upload.id} upload={upload} />
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </QueryPane>
     </section>
   )
 }
@@ -104,9 +104,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
   const queryClient = useQueryClient()
   const [deleteMeasurements, setDeleteMeasurements] = useState(false)
   const measurements =
-    upload.measurement_count === 0
-      ? ''
-      : `${upload.measurement_count} measurement${upload.measurement_count === 1 ? '' : 's'}`
+    upload.measurement_count > 0
+      ? pluralize(upload.measurement_count, 'measurement')
+      : null
   const remove = useMutation({
     ...deleteLabUploadMutation(),
     onSuccess: () => {
@@ -159,7 +159,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This action will permanently delete the report.
-                {measurements !== '' && (
+                {measurements && (
                   <>
                     {' '}
                     To also delete the {measurements} associated with this
@@ -168,7 +168,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            {measurements !== '' && (
+            {measurements && (
               <Label className="flex items-center gap-2 font-normal">
                 <Checkbox
                   checked={deleteMeasurements}
