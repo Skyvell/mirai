@@ -128,7 +128,7 @@ function ReviewForm({
 }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const catalogue = useQuery(listBiomarkersOptions())
+  const biomarkers = useQuery(listBiomarkersOptions())
 
   const [measuredAt, setMeasuredAt] = useState(draft.measured_at ?? '')
   const [rows, setRows] = useState<DraftRow[]>(() => [
@@ -149,16 +149,16 @@ function ReviewForm({
   const matched = rows.filter((r) => r.origin === 'matched')
   const unmatched = rows.filter((r) => r.origin === 'unmatched')
 
-  // A row commits only once kept and mapped to a catalogue biomarker.
+  // A row commits only once kept and mapped to a known biomarker.
   const keptCount = rows.filter((r) => r.included && r.slug).length
 
   function patchRow(id: string, patch: Partial<DraftRow>) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
-  // Mapping a marker keeps it and fills the unit from the catalogue when blank.
+  // Mapping a marker keeps it and fills the unit from the mapped biomarker when blank.
   function mapRow(id: string, slug: string) {
-    const canonical = catalogue.data?.find((b: BiomarkerRead) => b.slug === slug)
+    const canonical = biomarkers.data?.find((b: BiomarkerRead) => b.slug === slug)
     setRows((rs) =>
       rs.map((r) =>
         r.id === id
@@ -223,7 +223,7 @@ function ReviewForm({
         ) : (
           <DraftItemsTable
             rows={matched}
-            catalogue={catalogue.data ?? []}
+            biomarkers={biomarkers.data ?? []}
             onPatch={patchRow}
             onMap={mapRow}
           />
@@ -238,7 +238,7 @@ function ReviewForm({
           </p>
           <DraftItemsTable
             rows={unmatched}
-            catalogue={catalogue.data ?? []}
+            biomarkers={biomarkers.data ?? []}
             onPatch={patchRow}
             onMap={mapRow}
           />
@@ -267,23 +267,24 @@ function ReviewForm({
 const CELL_CLASS =
   'h-8 w-auto min-w-12 field-sizing-content border-transparent bg-transparent px-1.5 shadow-none hover:border-input focus-visible:border-ring dark:bg-transparent'
 
-// Ghost styling for the biomarker dropdown so it reads like the other cells:
-// borderless at rest, border on hover/focus. min-w-0 lets the flex column
-// shrink (name truncates) instead of pushing the table past the container.
+// Ghost styling for the biomarker combobox so it reads like the other cells:
+// borderless and transparent at rest, border on hover/focus. min-w-0 lets the
+// flex column shrink (name truncates) instead of pushing the table past the
+// container.
 const SELECT_CELL_CLASS =
-  'h-8 w-full min-w-0 border-transparent pl-1.5 shadow-none hover:border-input dark:bg-transparent dark:hover:bg-transparent'
+  'h-8 w-full min-w-0 border-transparent bg-transparent px-1.5 shadow-none hover:border-input hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent'
 
 // Shared editable table for both matched and unmatched draft rows. Each row's
 // biomarker is a dropdown: pre-selected when matched, empty when the parser
 // couldn't map it (its original label shows above the dropdown).
 function DraftItemsTable({
   rows,
-  catalogue,
+  biomarkers,
   onPatch,
   onMap,
 }: {
   rows: DraftRow[]
-  catalogue: BiomarkerRead[]
+  biomarkers: BiomarkerRead[]
   onPatch: (id: string, patch: Partial<DraftRow>) => void
   onMap: (id: string, slug: string) => void
 }) {
@@ -327,7 +328,7 @@ function DraftItemsTable({
                     <span className="text-xs text-muted-foreground">{row.sourceName}</span>
                   )}
                   <BiomarkerSelect
-                    catalogue={catalogue}
+                    biomarkers={biomarkers}
                     value={row.slug}
                     onChange={(slug) => onMap(row.id, slug)}
                     triggerClassName={SELECT_CELL_CLASS}

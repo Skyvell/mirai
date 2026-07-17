@@ -124,7 +124,7 @@ function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
 
 function ManualEntryTab() {
   const queryClient = useQueryClient()
-  const catalogue = useQuery(listBiomarkersOptions())
+  const biomarkers = useQuery(listBiomarkersOptions())
   const [slug, setSlug] = useState('')
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('')
@@ -132,7 +132,7 @@ function ManualEntryTab() {
   const [referenceHigh, setReferenceHigh] = useState('')
   const [measuredAt, setMeasuredAt] = useState(() => localIsoDate(new Date()))
 
-  const findBiomarker = (s: string) => catalogue.data?.find((b) => b.slug === s)
+  const findBiomarker = (s: string) => biomarkers.data?.find((b) => b.slug === s)
   const selected = findBiomarker(slug)
 
   const create = useMutation({
@@ -168,9 +168,9 @@ function ManualEntryTab() {
         <BiomarkerSelect
           id="biomarker"
           triggerClassName="w-full"
-          catalogue={catalogue.data ?? []}
+          biomarkers={biomarkers.data ?? []}
           value={slug}
-          placeholder={catalogue.isPending ? 'Loading catalogue…' : 'Pick a biomarker'}
+          placeholder={biomarkers.isPending ? 'Loading biomarkers…' : 'Pick a biomarker'}
           onChange={(next) => {
             setSlug(next)
             const picked = findBiomarker(next)
@@ -180,7 +180,7 @@ function ManualEntryTab() {
             setReferenceHigh('')
           }}
         />
-        {catalogue.isError && <ApiErrorAlert error={catalogue.error} />}
+        {biomarkers.isError && <ApiErrorAlert error={biomarkers.error} />}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
