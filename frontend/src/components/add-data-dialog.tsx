@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -45,6 +45,14 @@ function useUploadLab() {
 export function AddDataDialog() {
   const [open, setOpen] = useState(false)
   const upload = useUploadLab()
+
+  // Warm the biomarker catalogue when the shell mounts, not when the dialog
+  // opens: the backend scales to zero, so this absorbs the cold start during
+  // page load and the picker is already populated by the time it opens.
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    queryClient.prefetchQuery(listBiomarkersOptions())
+  }, [queryClient])
 
   return (
     <Dialog

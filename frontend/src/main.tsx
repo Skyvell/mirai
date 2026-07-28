@@ -24,7 +24,16 @@ declare module '@tanstack/react-router' {
 // the default focus/remount refetching — each request costs a JWT verify + DB hit.
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 5 * 60_000, refetchOnWindowFocus: false },
+    queries: {
+      staleTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      // The backend scales to zero, so the first request after idle waits on a
+      // cold start (~15-30s) and may see a transient 5xx during scale-up. Retry
+      // with backoff across that window so the app self-heals, rather than
+      // parking in an error state that only a manual page refresh clears.
+      retry: 6,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    },
   },
 })
 
