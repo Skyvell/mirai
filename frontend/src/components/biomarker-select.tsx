@@ -29,6 +29,7 @@ type BiomarkerSelectProps = {
   placeholder?: string
   id?: string
   triggerClassName?: string
+  modal?: boolean
 }
 
 export function BiomarkerSelect({
@@ -38,6 +39,7 @@ export function BiomarkerSelect({
   placeholder = 'Map to biomarker',
   id,
   triggerClassName,
+  modal,
 }: BiomarkerSelectProps) {
   const [open, setOpen] = useState(false)
 
@@ -63,7 +65,7 @@ export function BiomarkerSelect({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={modal}>
       <PopoverTrigger asChild>
         <Button
           id={id}

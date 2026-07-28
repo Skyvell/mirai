@@ -175,6 +175,7 @@ function ManualEntryTab() {
         <Label htmlFor="biomarker">Biomarker</Label>
         <BiomarkerSelect
           id="biomarker"
+          modal
           triggerClassName="w-full"
           biomarkers={biomarkers.data ?? []}
           value={slug}
