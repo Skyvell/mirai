@@ -12,7 +12,7 @@ Each plan is built from the individual's data; interventions are evaluated again
 ### Biomarkers
 Users upload blood-test PDFs; biomarkers are tracked over time.
 
-### Physiology
+### Wearables
 Users connect an Oura ring; wearable data syncs automatically.
 
 ### Omics
@@ -20,9 +20,6 @@ Users upload omics data: genomics, transcriptomics, epigenomics, proteomics, met
 
 ### Interventions
 Users create interventions (actions taken over time) and track how the data changes on a timeline.
-
-### AI recommendations
-Personalized recommendations derived from the user's data.
 
 ## Long-Term Vision
 Architected from the start to evolve into a precision-medicine platform; lab-test integration may come later.
