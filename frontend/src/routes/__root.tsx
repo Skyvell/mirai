@@ -41,8 +41,8 @@ function AppShell() {
         <Link to="/biomarkers" className={navLinkClass}>
           Biomarkers
         </Link>
-        <Link to="/physiology" className={navLinkClass}>
-          Physiology
+        <Link to="/wearables" className={navLinkClass}>
+          Wearables
         </Link>
         <Link to="/omics" className={navLinkClass}>
           Omics

@@ -9,8 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WearablesRouteImport } from './routes/wearables'
 import { Route as SourcesRouteImport } from './routes/sources'
-import { Route as PhysiologyRouteImport } from './routes/physiology'
 import { Route as OmicsRouteImport } from './routes/omics'
 import { Route as InterventionsRouteImport } from './routes/interventions'
 import { Route as InsightsRouteImport } from './routes/insights'
@@ -19,14 +19,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SourcesIndexRouteImport } from './routes/sources.index'
 import { Route as SourcesUploadIdReviewRouteImport } from './routes/sources.$uploadId.review'
 
+const WearablesRoute = WearablesRouteImport.update({
+  id: '/wearables',
+  path: '/wearables',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PhysiologyRoute = PhysiologyRouteImport.update({
-  id: '/physiology',
-  path: '/physiology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OmicsRoute = OmicsRouteImport.update({
@@ -71,8 +71,8 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
-  '/physiology': typeof PhysiologyRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/wearables': typeof WearablesRoute
   '/sources/': typeof SourcesIndexRoute
   '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
@@ -82,7 +82,7 @@ export interface FileRoutesByTo {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
-  '/physiology': typeof PhysiologyRoute
+  '/wearables': typeof WearablesRoute
   '/sources': typeof SourcesIndexRoute
   '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
@@ -93,8 +93,8 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
-  '/physiology': typeof PhysiologyRoute
   '/sources': typeof SourcesRouteWithChildren
+  '/wearables': typeof WearablesRoute
   '/sources/': typeof SourcesIndexRoute
   '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
 }
@@ -106,8 +106,8 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
-    | '/physiology'
     | '/sources'
+    | '/wearables'
     | '/sources/'
     | '/sources/$uploadId/review'
   fileRoutesByTo: FileRoutesByTo
@@ -117,7 +117,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
-    | '/physiology'
+    | '/wearables'
     | '/sources'
     | '/sources/$uploadId/review'
   id:
@@ -127,8 +127,8 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
-    | '/physiology'
     | '/sources'
+    | '/wearables'
     | '/sources/'
     | '/sources/$uploadId/review'
   fileRoutesById: FileRoutesById
@@ -139,24 +139,24 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   InterventionsRoute: typeof InterventionsRoute
   OmicsRoute: typeof OmicsRoute
-  PhysiologyRoute: typeof PhysiologyRoute
   SourcesRoute: typeof SourcesRouteWithChildren
+  WearablesRoute: typeof WearablesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wearables': {
+      id: '/wearables'
+      path: '/wearables'
+      fullPath: '/wearables'
+      preLoaderRoute: typeof WearablesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sources': {
       id: '/sources'
       path: '/sources'
       fullPath: '/sources'
       preLoaderRoute: typeof SourcesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/physiology': {
-      id: '/physiology'
-      path: '/physiology'
-      fullPath: '/physiology'
-      preLoaderRoute: typeof PhysiologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/omics': {
@@ -230,8 +230,8 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   InterventionsRoute: InterventionsRoute,
   OmicsRoute: OmicsRoute,
-  PhysiologyRoute: PhysiologyRoute,
   SourcesRoute: SourcesRouteWithChildren,
+  WearablesRoute: WearablesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
