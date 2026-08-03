@@ -32,7 +32,7 @@ _CATALOGUE: list[tuple[str, str, str | None, str, str]] = [
     ("lipoprotein_a", "Lipoprotein(a)", "43583-4", "nmol/L", "lipids"),
     # Metabolic.
     ("glucose", "Glucose (Fasting)", "1558-6", "mmol/L", "metabolic"),
-    ("hba1c", "HbA1c", "4548-4", "%", "metabolic"),
+    ("hba1c", "HbA1c", "59261-8", "mmol/mol", "metabolic"),
     ("insulin", "Insulin (Fasting)", "20448-7", "m[IU]/L", "metabolic"),
     # Hematology.
     ("hemoglobin", "Hemoglobin", "718-7", "g/L", "hematology"),
