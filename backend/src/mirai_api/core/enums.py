@@ -2,14 +2,14 @@ from enum import StrEnum
 
 
 class UploadStatus(StrEnum):
-    """Lifecycle of a user-uploaded file, from receipt to committed record.
+    """Lifecycle of a user-uploaded file, from receipt to confirmed record.
 
-    pending → processing → awaiting_review → committed is the happy path;
+    queued → processing → awaiting_review → confirmed is the happy path;
     failed is the terminal error branch from processing.
     """
 
-    PENDING = "pending"
+    QUEUED = "queued"
     PROCESSING = "processing"
     AWAITING_REVIEW = "awaiting_review"
-    COMMITTED = "committed"
+    CONFIRMED = "confirmed"
     FAILED = "failed"

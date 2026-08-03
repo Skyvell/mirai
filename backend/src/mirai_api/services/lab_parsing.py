@@ -49,16 +49,6 @@ class UnmatchedMarker(BaseModel):
     reference_high: Decimal | None = None
 
 
-class SkippedMarker(UnmatchedMarker):
-    """An unmatched marker plus why it did not become a measurement.
-
-    Extends the model's output shape with our own classification; `reason`
-    stays out of the LLM contract (UnmatchedMarker).
-    """
-
-    reason: str
-
-
 class LabExtraction(BaseModel):
     measured_at: date | None
     measurements: list[ExtractedMeasurement]
@@ -76,30 +66,27 @@ class MappedMeasurement:
 def map_extraction(
     extraction: LabExtraction,
     catalogue: list[Biomarker],
-) -> tuple[list[MappedMeasurement], list[SkippedMarker]]:
+) -> tuple[list[MappedMeasurement], list[UnmatchedMarker]]:
     """Resolve extracted measurements against the catalogue.
 
     Pure and DB-free. A measurement whose slug is not in the catalogue (a model
-    hallucination) is demoted to skipped rather than raising; skipped also
-    carries the model's own unmatched markers.
+    hallucination) is demoted to unmatched rather than raising; the unmatched
+    list also carries the model's own unmatched markers.
     """
     by_slug = {b.slug: b for b in catalogue}
     mapped: list[MappedMeasurement] = []
-    skipped: list[SkippedMarker] = [
-        SkippedMarker(**u.model_dump(), reason="unmatched") for u in extraction.unmatched
-    ]
+    unmatched: list[UnmatchedMarker] = list(extraction.unmatched)
 
     for m in extraction.measurements:
         biomarker = by_slug.get(m.biomarker_slug)
         if biomarker is None:
-            skipped.append(
-                SkippedMarker(
+            unmatched.append(
+                UnmatchedMarker(
                     name=m.biomarker_slug,
                     value=str(m.value),
                     unit=m.unit,
                     reference_low=m.reference_low,
                     reference_high=m.reference_high,
-                    reason="unknown_slug",
                 )
             )
             continue
@@ -109,7 +96,7 @@ def map_extraction(
                 measurement=m,
             )
         )
-    return mapped, skipped
+    return mapped, unmatched
 
 
 @lru_cache

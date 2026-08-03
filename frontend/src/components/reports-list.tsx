@@ -39,20 +39,20 @@ import { apiErrorMessage } from '@/lib/api'
 import { IN_PROGRESS } from '@/lib/lab-uploads'
 import { localIsoDate, pluralize } from '@/lib/utils'
 
-// User-facing label per lifecycle state; pending and processing read the same.
+// User-facing label per lifecycle state; queued and processing read the same.
 const STATUS_LABEL: Record<UploadStatus, string> = {
-  pending: 'Processing',
+  queued: 'Processing',
   processing: 'Processing',
   awaiting_review: 'Ready to review',
-  committed: 'Committed',
+  confirmed: 'Confirmed',
   failed: 'Failed',
 }
 
 const STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant']> = {
-  pending: 'outline',
+  queued: 'outline',
   processing: 'outline',
   awaiting_review: 'default',
-  committed: 'secondary',
+  confirmed: 'secondary',
   failed: 'destructive',
 }
 

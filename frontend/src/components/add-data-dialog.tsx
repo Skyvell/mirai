@@ -31,7 +31,7 @@ function useUploadLab() {
   const queryClient = useQueryClient()
   return useMutation({
     ...uploadLabMutation(),
-    // Parsing is async: the new report appears under Sources as pending.
+    // Parsing is async: the new report appears under Sources as queued.
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
       toast.success('Report uploaded', {

@@ -33,7 +33,6 @@ class LabDraftItemRead(BaseModel):
     reference_low: Decimal | None
     reference_high: Decimal | None
     source_name: str | None
-    skip_reason: str | None
     included: bool
 
 
@@ -49,7 +48,7 @@ class LabUploadDetail(BaseModel):
     status: UploadStatus
     measured_at: date | None
     parsed_at: datetime | None
-    committed_at: datetime | None
+    confirmed_at: datetime | None
     created_at: datetime
     error_message: str | None
     # Present only while awaiting review.

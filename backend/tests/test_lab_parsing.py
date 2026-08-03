@@ -36,9 +36,9 @@ def test_known_slug_maps_to_row() -> None:
         ],
         unmatched=[],
     )
-    mapped, skipped = map_extraction(extraction, _catalogue())
+    mapped, unmatched = map_extraction(extraction, _catalogue())
     assert len(mapped) == 1
-    assert not skipped
+    assert not unmatched
     row = mapped[0]
     assert row.biomarker.slug == "ldl_cholesterol"
     assert row.measurement.value == Decimal("3.1")
@@ -46,7 +46,7 @@ def test_known_slug_maps_to_row() -> None:
     assert row.measurement.reference_high == Decimal("3.0")
 
 
-def test_unknown_slug_is_demoted_to_skipped() -> None:
+def test_unknown_slug_is_demoted_to_unmatched() -> None:
     extraction = LabExtraction(
         measured_at=None,
         measurements=[
@@ -60,11 +60,11 @@ def test_unknown_slug_is_demoted_to_skipped() -> None:
         ],
         unmatched=[],
     )
-    mapped, skipped = map_extraction(extraction, _catalogue())
+    mapped, unmatched = map_extraction(extraction, _catalogue())
     assert not mapped
-    assert len(skipped) == 1
-    assert skipped[0].reason == "unknown_slug"
-    assert skipped[0].name == "not_a_real_slug"
+    assert len(unmatched) == 1
+    # A hallucinated slug is carried under its own name for the user to map.
+    assert unmatched[0].name == "not_a_real_slug"
 
 
 def test_unmatched_markers_pass_through() -> None:
@@ -81,11 +81,10 @@ def test_unmatched_markers_pass_through() -> None:
             )
         ],
     )
-    mapped, skipped = map_extraction(extraction, _catalogue())
+    mapped, unmatched = map_extraction(extraction, _catalogue())
     assert not mapped
-    assert len(skipped) == 1
-    assert skipped[0].reason == "unmatched"
-    assert skipped[0].name == "Exotic Marker"
+    assert len(unmatched) == 1
+    assert unmatched[0].name == "Exotic Marker"
     # The reference range is carried through so the user can keep it on mapping.
-    assert skipped[0].reference_low == Decimal("10")
-    assert skipped[0].reference_high == Decimal("50")
+    assert unmatched[0].reference_low == Decimal("10")
+    assert unmatched[0].reference_high == Decimal("50")

@@ -9,7 +9,7 @@ import pytest
 
 from conftest import TEST_USER_ID
 from mirai_api.core.enums import UploadStatus
-from mirai_api.models import Biomarker, DraftBiomarkerMeasurement, LabUpload
+from mirai_api.models import Biomarker, LabResult, LabUpload
 from mirai_api.schemas.lab_uploads import LabDraftItemUpdate, LabDraftUpdate
 from mirai_api.services import lab_uploads, storage
 from mirai_api.services.biomarkers import UnknownBiomarkersError
@@ -112,15 +112,15 @@ class FakeLabUploadRepository:
 
     def claim_for_processing(self, upload_id: uuid.UUID) -> bool:
         upload = self.uploads.get(upload_id)
-        if upload is not None and upload.status == UploadStatus.PENDING:
+        if upload is not None and upload.status == UploadStatus.QUEUED:
             upload.status = UploadStatus.PROCESSING
             return True
         return False
 
-    def reset_to_pending(self, upload_id: uuid.UUID) -> None:
+    def reset_to_queued(self, upload_id: uuid.UUID) -> None:
         upload = self.uploads.get(upload_id)
         if upload is not None and upload.status == UploadStatus.PROCESSING:
-            upload.status = UploadStatus.PENDING
+            upload.status = UploadStatus.QUEUED
 
     def add(self, upload: LabUpload) -> None:
         # Mimic the DB server_default that stamps created_at on insert.
@@ -136,29 +136,29 @@ class FakeLabUploadRepository:
         self.deleted_measurements.append(upload_id)
 
 
-class FakeDraftBiomarkerMeasurementRepository:
-    def __init__(self, drafts: list[DraftBiomarkerMeasurement] | None = None) -> None:
-        self.drafts = list(drafts or [])
+class FakeLabResultRepository:
+    def __init__(self, results: list[LabResult] | None = None) -> None:
+        self.results = list(results or [])
 
-    def add_all(self, drafts: list[DraftBiomarkerMeasurement]) -> None:
-        for d in drafts:
-            if d.id is None:
-                d.id = uuid.uuid7()
-        self.drafts.extend(drafts)
+    def add_all(self, results: list[LabResult]) -> None:
+        for r in results:
+            if r.id is None:
+                r.id = uuid.uuid7()
+        self.results.extend(results)
 
-    def list_for_upload(self, upload_id: uuid.UUID) -> list[DraftBiomarkerMeasurement]:
-        return [d for d in self.drafts if d.lab_upload_id == upload_id]
+    def list_for_upload(self, upload_id: uuid.UUID) -> list[LabResult]:
+        return [r for r in self.results if r.lab_upload_id == upload_id]
 
     def get_for_upload(
         self,
         upload_id: uuid.UUID,
         ids: list[uuid.UUID],
-    ) -> list[DraftBiomarkerMeasurement]:
+    ) -> list[LabResult]:
         wanted = set(ids)
-        return [d for d in self.drafts if d.lab_upload_id == upload_id and d.id in wanted]
+        return [r for r in self.results if r.lab_upload_id == upload_id and r.id in wanted]
 
     def delete_for_upload(self, upload_id: uuid.UUID) -> None:
-        self.drafts = [d for d in self.drafts if d.lab_upload_id != upload_id]
+        self.results = [r for r in self.results if r.lab_upload_id != upload_id]
 
 
 class FakeBiomarkerRepository:
@@ -179,7 +179,7 @@ def _upload(**overrides: object) -> LabUpload:
         "id": uuid.uuid7(),
         "user_id": TEST_USER_ID,
         "filename": "report.pdf",
-        "status": UploadStatus.PENDING,
+        "status": UploadStatus.QUEUED,
         "created_at": datetime.now(UTC),
     }
     fields.update(overrides)
@@ -188,12 +188,12 @@ def _upload(**overrides: object) -> LabUpload:
 
 def _service(
     lab_repo: FakeLabUploadRepository,
-    draft_repo: FakeDraftBiomarkerMeasurementRepository,
+    result_repo: FakeLabResultRepository,
     biomarker_repo: FakeBiomarkerRepository | None = None,
 ) -> LabUploadService:
     return LabUploadService(
         lab_repo,  # type: ignore[arg-type]
-        draft_repo,  # type: ignore[arg-type]
+        result_repo,  # type: ignore[arg-type]
         biomarker_repo or FakeBiomarkerRepository(),  # type: ignore[arg-type]
         FakeSession(),  # type: ignore[arg-type]
     )
@@ -219,25 +219,25 @@ def pipeline(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     return holder
 
 
-def test_process_writes_drafts_and_awaits_review(pipeline: SimpleNamespace) -> None:
+def test_process_writes_results_and_awaits_review(pipeline: SimpleNamespace) -> None:
     upload = _upload()
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
-    asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+    asyncio.run(_service(lab_repo, result_repo).process(upload.id))
 
     assert upload.status == UploadStatus.AWAITING_REVIEW
     assert upload.measured_at == date(2026, 7, 12)
     assert upload.parsed_at is not None
+
     # One mapped (kept) and one unmatched (carried, not kept).
-    mapped = [d for d in draft_repo.drafts if d.biomarker_id is not None]
-    skipped = [d for d in draft_repo.drafts if d.biomarker_id is None]
+    mapped = [r for r in result_repo.results if r.biomarker_id is not None]
+    skipped = [r for r in result_repo.results if r.biomarker_id is None]
     assert len(mapped) == 1
     assert mapped[0].included is True
     assert mapped[0].value == Decimal("5.4")
     assert len(skipped) == 1
     assert skipped[0].included is False
-    assert skipped[0].skip_reason == "unmatched"
     assert skipped[0].source_name == "Exotic Marker"
 
 
@@ -245,33 +245,33 @@ def test_process_is_idempotent_on_redelivery(pipeline: SimpleNamespace) -> None:
     # Already past the claimable state: a redelivered task must be a no-op.
     upload = _upload(status=UploadStatus.AWAITING_REVIEW)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
-    asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+    asyncio.run(_service(lab_repo, result_repo).process(upload.id))
 
     assert pipeline.parse_calls == 0
-    assert draft_repo.drafts == []
+    assert result_repo.results == []
     assert upload.status == UploadStatus.AWAITING_REVIEW
 
 
-def test_process_reparse_clears_prior_drafts(pipeline: SimpleNamespace) -> None:
+def test_process_reparse_clears_prior_results(pipeline: SimpleNamespace) -> None:
     upload = _upload()
-    stale = DraftBiomarkerMeasurement(
+    stale = LabResult(
         id=uuid.uuid7(),
         lab_upload_id=upload.id,
         biomarker_id=GLUCOSE.id,
         included=True,
     )
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([stale])
+    result_repo = FakeLabResultRepository([stale])
 
-    asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+    asyncio.run(_service(lab_repo, result_repo).process(upload.id))
 
-    assert stale not in draft_repo.drafts
-    assert len(draft_repo.drafts) == 2
+    assert stale not in result_repo.results
+    assert len(result_repo.results) == 2
 
 
-def test_process_infra_failure_resets_to_pending(
+def test_process_infra_failure_resets_to_queued(
     pipeline: SimpleNamespace,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -282,31 +282,31 @@ def test_process_infra_failure_resets_to_pending(
     monkeypatch.setattr(storage, "download", boom)
     upload = _upload()
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
     with pytest.raises(RuntimeError):
-        asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+        asyncio.run(_service(lab_repo, result_repo).process(upload.id))
 
-    assert upload.status == UploadStatus.PENDING
-    assert draft_repo.drafts == []
+    assert upload.status == UploadStatus.QUEUED
+    assert result_repo.results == []
 
 
 def test_process_parse_failure_marks_failed(pipeline: SimpleNamespace) -> None:
     pipeline.error = RuntimeError("model exploded")
     upload = _upload()
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
-    asyncio.run(_service(lab_repo, draft_repo).process(upload.id))
+    asyncio.run(_service(lab_repo, result_repo).process(upload.id))
 
     assert upload.status == UploadStatus.FAILED
     assert upload.error_message == "Failed to parse the lab report."
-    assert draft_repo.drafts == []
+    assert result_repo.results == []
 
 
 def test_get_returns_split_draft_when_awaiting_review() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=date(2026, 7, 12))
-    mapped = DraftBiomarkerMeasurement(
+    mapped = LabResult(
         id=uuid.uuid7(),
         lab_upload_id=upload.id,
         biomarker_id=GLUCOSE.id,
@@ -315,18 +315,17 @@ def test_get_returns_split_draft_when_awaiting_review() -> None:
         unit="mmol/L",
         included=True,
     )
-    skipped = DraftBiomarkerMeasurement(
+    skipped = LabResult(
         id=uuid.uuid7(),
         lab_upload_id=upload.id,
         raw_value="42",
         source_name="Exotic Marker",
-        skip_reason="unmatched",
         included=False,
     )
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([mapped, skipped])
+    result_repo = FakeLabResultRepository([mapped, skipped])
 
-    detail = _service(lab_repo, draft_repo).get(TEST_USER_ID, upload.id)
+    detail = _service(lab_repo, result_repo).get(TEST_USER_ID, upload.id)
 
     assert detail.status == UploadStatus.AWAITING_REVIEW
     assert detail.draft is not None
@@ -339,22 +338,22 @@ def test_get_returns_split_draft_when_awaiting_review() -> None:
     assert skip.source_name == "Exotic Marker"
 
 
-def test_get_committed_upload_has_no_draft() -> None:
-    upload = _upload(status=UploadStatus.COMMITTED)
+def test_get_confirmed_upload_has_no_draft() -> None:
+    upload = _upload(status=UploadStatus.CONFIRMED)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
-    detail = _service(lab_repo, draft_repo).get(TEST_USER_ID, upload.id)
+    detail = _service(lab_repo, result_repo).get(TEST_USER_ID, upload.id)
 
-    assert detail.status == UploadStatus.COMMITTED
+    assert detail.status == UploadStatus.CONFIRMED
     assert detail.draft is None
 
 
 def test_get_unknown_upload_raises_not_found() -> None:
     lab_repo = FakeLabUploadRepository()
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     with pytest.raises(LabUploadNotFoundError):
-        _service(lab_repo, draft_repo).get(TEST_USER_ID, uuid.uuid7())
+        _service(lab_repo, result_repo).get(TEST_USER_ID, uuid.uuid7())
 
 
 def test_get_stuck_processing_reports_failed_without_mutating() -> None:
@@ -363,9 +362,9 @@ def test_get_stuck_processing_reports_failed_without_mutating() -> None:
         created_at=datetime(2020, 1, 1, tzinfo=UTC),
     )
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
-    detail = _service(lab_repo, draft_repo).get(TEST_USER_ID, upload.id)
+    detail = _service(lab_repo, result_repo).get(TEST_USER_ID, upload.id)
 
     assert detail.status == UploadStatus.FAILED
     # The stored row is untouched; only the read is reinterpreted.
@@ -374,31 +373,31 @@ def test_get_stuck_processing_reports_failed_without_mutating() -> None:
 
 def test_list_reports_stuck_upload_as_failed() -> None:
     stuck = _upload(
-        status=UploadStatus.PENDING,
+        status=UploadStatus.QUEUED,
         created_at=datetime(2020, 1, 1, tzinfo=UTC),
     )
     recent = _upload(status=UploadStatus.PROCESSING, created_at=datetime.now(UTC))
-    committed = _upload(status=UploadStatus.COMMITTED, created_at=datetime.now(UTC))
-    lab_repo = FakeLabUploadRepository([stuck, recent, committed])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    confirmed = _upload(status=UploadStatus.CONFIRMED, created_at=datetime.now(UTC))
+    lab_repo = FakeLabUploadRepository([stuck, recent, confirmed])
+    result_repo = FakeLabResultRepository()
 
-    by_id = {s.id: s.status for s in _service(lab_repo, draft_repo).list(TEST_USER_ID)}
+    by_id = {s.id: s.status for s in _service(lab_repo, result_repo).list(TEST_USER_ID)}
 
     # The stuck row reads as failed; a recent one and terminal states pass through.
     assert by_id[stuck.id] == UploadStatus.FAILED
     assert by_id[recent.id] == UploadStatus.PROCESSING
-    assert by_id[committed.id] == UploadStatus.COMMITTED
+    assert by_id[confirmed.id] == UploadStatus.CONFIRMED
     # The stored row is untouched; only the read is reinterpreted.
-    assert stuck.status == UploadStatus.PENDING
+    assert stuck.status == UploadStatus.QUEUED
 
 
-def test_delete_committed_removes_upload(monkeypatch: pytest.MonkeyPatch) -> None:
-    upload = _upload(status=UploadStatus.COMMITTED)
+def test_delete_confirmed_removes_upload(monkeypatch: pytest.MonkeyPatch) -> None:
+    upload = _upload(status=UploadStatus.CONFIRMED)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     monkeypatch.setattr(storage, "delete_blob", lambda name: None)
 
-    _service(lab_repo, draft_repo).delete(TEST_USER_ID, upload.id, delete_measurements=True)
+    _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=True)
 
     assert lab_repo.deleted == [upload]
     assert lab_repo.deleted_measurements == [upload.id]
@@ -407,19 +406,21 @@ def test_delete_committed_removes_upload(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_delete_processing_upload_is_rejected() -> None:
     upload = _upload(status=UploadStatus.PROCESSING, created_at=datetime.now(UTC))
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     with pytest.raises(LabUploadNotDeletableError):
-        _service(lab_repo, draft_repo).delete(TEST_USER_ID, upload.id, delete_measurements=False)
+        _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=False)
 
 
 def test_delete_unknown_upload_raises_not_found() -> None:
     lab_repo = FakeLabUploadRepository()
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     with pytest.raises(LabUploadNotFoundError):
-        _service(lab_repo, draft_repo).delete(TEST_USER_ID, uuid.uuid7(), delete_measurements=False)
+        _service(lab_repo, result_repo).delete(
+            TEST_USER_ID, uuid.uuid7(), delete_measurements=False
+        )
 
 
-def _mapped_draft(upload_id: uuid.UUID, **overrides: object) -> DraftBiomarkerMeasurement:
+def _mapped_result(upload_id: uuid.UUID, **overrides: object) -> LabResult:
     fields: dict = {
         "id": uuid.uuid7(),
         "lab_upload_id": upload_id,
@@ -430,28 +431,27 @@ def _mapped_draft(upload_id: uuid.UUID, **overrides: object) -> DraftBiomarkerMe
         "included": True,
     }
     fields.update(overrides)
-    return DraftBiomarkerMeasurement(**fields)
+    return LabResult(**fields)
 
 
-def _skipped_draft(upload_id: uuid.UUID, **overrides: object) -> DraftBiomarkerMeasurement:
+def _unmatched_result(upload_id: uuid.UUID, **overrides: object) -> LabResult:
     fields: dict = {
         "id": uuid.uuid7(),
         "lab_upload_id": upload_id,
         "raw_value": "42",
         "source_name": "Exotic Marker",
-        "skip_reason": "unmatched",
         "included": False,
     }
     fields.update(overrides)
-    return DraftBiomarkerMeasurement(**fields)
+    return LabResult(**fields)
 
 
 def test_update_draft_applies_edits_and_maps_skipped() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW)
-    mapped = _mapped_draft(upload.id)
-    skipped = _skipped_draft(upload.id)
+    mapped = _mapped_result(upload.id)
+    skipped = _unmatched_result(upload.id)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([mapped, skipped])
+    result_repo = FakeLabResultRepository([mapped, skipped])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE, LDL])
 
     payload = LabDraftUpdate(
@@ -466,15 +466,15 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
             ),
         ],
     )
-    detail = _service(lab_repo, draft_repo, biomarker_repo).update_draft(
+    detail = _service(lab_repo, result_repo, biomarker_repo).update_draft(
         TEST_USER_ID, upload.id, payload
     )
 
     assert mapped.value == Decimal("6.0")
     assert skipped.biomarker_id == LDL.id
-    assert skipped.skip_reason is None
     assert skipped.included is True
     assert upload.measured_at == date(2026, 7, 13)
+
     # Both rows are now mapped, so nothing is left in the skipped section.
     assert detail.draft is not None
     assert len(detail.draft.items) == 2
@@ -484,89 +484,89 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
 def test_update_draft_unknown_item_raises_not_found() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     payload = LabDraftUpdate(items=[LabDraftItemUpdate(id=uuid.uuid7())])
     with pytest.raises(DraftItemsNotFoundError):
-        _service(lab_repo, draft_repo).update_draft(TEST_USER_ID, upload.id, payload)
+        _service(lab_repo, result_repo).update_draft(TEST_USER_ID, upload.id, payload)
 
 
 def test_update_draft_unknown_slug_raises() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW)
-    skipped = _skipped_draft(upload.id)
+    skipped = _unmatched_result(upload.id)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([skipped])
+    result_repo = FakeLabResultRepository([skipped])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
     payload = LabDraftUpdate(items=[LabDraftItemUpdate(id=skipped.id, biomarker_slug="nope")])
     with pytest.raises(UnknownBiomarkersError):
-        _service(lab_repo, draft_repo, biomarker_repo).update_draft(
+        _service(lab_repo, result_repo, biomarker_repo).update_draft(
             TEST_USER_ID, upload.id, payload
         )
 
 
 def test_update_draft_wrong_state_is_rejected() -> None:
-    upload = _upload(status=UploadStatus.COMMITTED)
+    upload = _upload(status=UploadStatus.CONFIRMED)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     with pytest.raises(LabUploadNotReviewableError):
-        _service(lab_repo, draft_repo).update_draft(TEST_USER_ID, upload.id, LabDraftUpdate())
+        _service(lab_repo, result_repo).update_draft(TEST_USER_ID, upload.id, LabDraftUpdate())
 
 
 def test_confirm_commits_only_kept_mapped_rows() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=date(2026, 7, 12))
-    kept = _mapped_draft(upload.id, unit=None)  # unit falls back to canonical.
-    dropped = _mapped_draft(upload.id, included=False)
-    unmapped = _skipped_draft(upload.id, included=True)  # kept but never mapped.
+    kept = _mapped_result(upload.id, unit=None)  # unit falls back to canonical.
+    dropped = _mapped_result(upload.id, included=False)
+    unmapped = _unmatched_result(upload.id, included=True)  # kept but never mapped.
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([kept, dropped, unmapped])
+    result_repo = FakeLabResultRepository([kept, dropped, unmapped])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
 
-    detail = _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+    detail = _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
-    assert upload.status == UploadStatus.COMMITTED
-    assert upload.committed_at is not None
-    assert detail.status == UploadStatus.COMMITTED
+    assert upload.status == UploadStatus.CONFIRMED
+    assert upload.confirmed_at is not None
+    assert detail.status == UploadStatus.CONFIRMED
     (measurement,) = biomarker_repo.added
     assert measurement.biomarker_id == GLUCOSE.id
     assert measurement.unit == "mmol/L"
     assert measurement.measured_at == date(2026, 7, 12)
 
 
-def test_confirm_is_idempotent_when_committed() -> None:
-    upload = _upload(status=UploadStatus.COMMITTED)
+def test_confirm_is_idempotent_when_confirmed() -> None:
+    upload = _upload(status=UploadStatus.CONFIRMED)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
 
-    _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+    _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
     assert biomarker_repo.added == []
 
 
 def test_confirm_rejects_kept_row_without_value() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=date(2026, 7, 12))
-    incomplete = _mapped_draft(upload.id, value=None)
+    incomplete = _mapped_result(upload.id, value=None)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([incomplete])
+    result_repo = FakeLabResultRepository([incomplete])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
     with pytest.raises(DraftNotCommittableError):
-        _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+        _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
 
 def test_confirm_rejects_missing_collection_date() -> None:
     upload = _upload(status=UploadStatus.AWAITING_REVIEW, measured_at=None)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository([_mapped_draft(upload.id)])
+    result_repo = FakeLabResultRepository([_mapped_result(upload.id)])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
     with pytest.raises(MissingCollectionDateError):
-        _service(lab_repo, draft_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+        _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
 
 def test_confirm_wrong_state_is_rejected() -> None:
-    upload = _upload(status=UploadStatus.PENDING)
+    upload = _upload(status=UploadStatus.QUEUED)
     lab_repo = FakeLabUploadRepository([upload])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
     with pytest.raises(LabUploadNotReviewableError):
-        _service(lab_repo, draft_repo).confirm(TEST_USER_ID, upload.id)
+        _service(lab_repo, result_repo).confirm(TEST_USER_ID, upload.id)
 
 
 _PDF = b"%PDF-lab-report"
@@ -574,12 +574,12 @@ _PDF_SHA256 = hashlib.sha256(_PDF).hexdigest()
 
 
 def test_submit_rejects_byte_identical_reupload(pipeline: SimpleNamespace) -> None:
-    existing = _upload(status=UploadStatus.COMMITTED, content_sha256=_PDF_SHA256)
+    existing = _upload(status=UploadStatus.CONFIRMED, content_sha256=_PDF_SHA256)
     lab_repo = FakeLabUploadRepository([existing])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
     with pytest.raises(DuplicateUploadError):
-        asyncio.run(_service(lab_repo, draft_repo).submit(TEST_USER_ID, "again.pdf", _PDF))
+        asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "again.pdf", _PDF))
 
     # Nothing was stored or parsed.
     assert len(lab_repo.uploads) == 1
@@ -588,10 +588,10 @@ def test_submit_rejects_byte_identical_reupload(pipeline: SimpleNamespace) -> No
 
 def test_submit_stores_hash_and_parses_when_new(pipeline: SimpleNamespace) -> None:
     lab_repo = FakeLabUploadRepository()
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
     detail = asyncio.run(
-        _service(lab_repo, draft_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
+        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
             TEST_USER_ID, "report.pdf", _PDF
         )
     )
@@ -602,12 +602,12 @@ def test_submit_stores_hash_and_parses_when_new(pipeline: SimpleNamespace) -> No
 
 
 def test_submit_allows_reupload_of_differing_bytes(pipeline: SimpleNamespace) -> None:
-    existing = _upload(status=UploadStatus.COMMITTED, content_sha256="deadbeef")
+    existing = _upload(status=UploadStatus.CONFIRMED, content_sha256="deadbeef")
     lab_repo = FakeLabUploadRepository([existing])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
     detail = asyncio.run(
-        _service(lab_repo, draft_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
+        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
             TEST_USER_ID, "report.pdf", _PDF
         )
     )
@@ -620,10 +620,10 @@ def test_submit_allows_reupload_after_prior_failed(pipeline: SimpleNamespace) ->
     # A failed prior upload of the same file must not block a retry.
     failed = _upload(status=UploadStatus.FAILED, content_sha256=_PDF_SHA256)
     lab_repo = FakeLabUploadRepository([failed])
-    draft_repo = FakeDraftBiomarkerMeasurementRepository()
+    result_repo = FakeLabResultRepository()
 
     detail = asyncio.run(
-        _service(lab_repo, draft_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
+        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
             TEST_USER_ID, "report.pdf", _PDF
         )
     )

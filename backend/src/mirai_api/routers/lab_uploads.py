@@ -88,7 +88,7 @@ async def parse_lab_upload(
     upload_id: uuid.UUID,
     _auth: CloudTasksAuth,
 ) -> None:
-    """Cloud Tasks worker: parse a pending upload into a draft.
+    """Cloud Tasks worker: parse a queued upload into a draft.
 
     OIDC-authed, not user-facing. Returns 200 on success or a no-op redelivery;
     an infrastructure failure propagates as 500 so the queue retries.

@@ -29,7 +29,7 @@ UPLOAD_ID = uuid.UUID("00000000-0000-7000-8000-000000000010")
 SUMMARY = LabUploadSummary(
     id=UPLOAD_ID,
     filename="report.pdf",
-    status=UploadStatus.COMMITTED,
+    status=UploadStatus.CONFIRMED,
     parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
     created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
     measurement_count=12,
@@ -41,7 +41,7 @@ DETAIL = LabUploadDetail(
     status=UploadStatus.AWAITING_REVIEW,
     measured_at=date(2026, 7, 12),
     parsed_at=datetime(2026, 7, 12, 10, 0, tzinfo=UTC),
-    committed_at=None,
+    confirmed_at=None,
     created_at=datetime(2026, 7, 12, 9, 59, tzinfo=UTC),
     error_message=None,
     draft=LabDraft(
@@ -57,7 +57,6 @@ DETAIL = LabUploadDetail(
                 reference_low=None,
                 reference_high=None,
                 source_name=None,
-                skip_reason=None,
                 included=True,
             )
         ],
@@ -206,7 +205,7 @@ def test_list_uploads_delegates(
     assert response.status_code == 200
     (summary,) = response.json()
     assert summary["id"] == str(UPLOAD_ID)
-    assert summary["status"] == "committed"
+    assert summary["status"] == "confirmed"
     assert summary["measurement_count"] == 12
     assert stub_service.calls == [("list", TEST_USER_ID)]
 

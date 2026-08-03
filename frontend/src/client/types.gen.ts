@@ -267,10 +267,6 @@ export type LabDraftItemRead = {
      */
     source_name: string | null;
     /**
-     * Skip Reason
-     */
-    skip_reason: string | null;
-    /**
      * Included
      */
     included: boolean;
@@ -346,9 +342,9 @@ export type LabUploadDetail = {
      */
     parsed_at: string | null;
     /**
-     * Committed At
+     * Confirmed At
      */
-    committed_at: string | null;
+    confirmed_at: string | null;
     /**
      * Created At
      */
@@ -404,12 +400,12 @@ export type MeResponse = {
 /**
  * UploadStatus
  *
- * Lifecycle of a user-uploaded file, from receipt to committed record.
+ * Lifecycle of a user-uploaded file, from receipt to confirmed record.
  *
- * pending → processing → awaiting_review → committed is the happy path;
+ * queued → processing → awaiting_review → confirmed is the happy path;
  * failed is the terminal error branch from processing.
  */
-export type UploadStatus = 'pending' | 'processing' | 'awaiting_review' | 'committed' | 'failed';
+export type UploadStatus = 'queued' | 'processing' | 'awaiting_review' | 'confirmed' | 'failed';
 
 /**
  * ValidationError

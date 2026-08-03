@@ -63,8 +63,8 @@ function ReviewBody({ detail }: { detail: LabUploadDetail }) {
   if (detail.status === 'failed') {
     return <ApiErrorAlert message={detail.error_message ?? 'Parsing failed.'} />
   }
-  if (detail.status === 'committed') {
-    return <p className="text-sm text-muted-foreground">This report has been committed.</p>
+  if (detail.status === 'confirmed') {
+    return <p className="text-sm text-muted-foreground">This report has been confirmed.</p>
   }
   if (detail.draft === null) {
     return <p className="text-sm text-muted-foreground">Nothing to review.</p>

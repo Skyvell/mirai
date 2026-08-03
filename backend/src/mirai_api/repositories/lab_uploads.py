@@ -66,31 +66,31 @@ class LabUploadRepository:
         )
 
     def claim_for_processing(self, upload_id: uuid.UUID) -> bool:
-        """Atomically move a pending upload to processing; True if this call won it.
+        """Atomically move a queued upload to processing; True if this call won it.
 
         The CAS on status is the idempotency key: a redelivered parse task finds
-        the row already non-pending, claims nothing, and is a safe no-op.
+        the row already non-queued, claims nothing, and is a safe no-op.
         """
         claimed = self._session.execute(
             update(LabUpload)
             .where(
                 LabUpload.id == upload_id,
-                LabUpload.status == UploadStatus.PENDING,
+                LabUpload.status == UploadStatus.QUEUED,
             )
             .values(status=UploadStatus.PROCESSING)
             .returning(LabUpload.id)
         )
         return claimed.scalar_one_or_none() is not None
 
-    def reset_to_pending(self, upload_id: uuid.UUID) -> None:
-        """Return a processing upload to pending so its parse task can be retried."""
+    def reset_to_queued(self, upload_id: uuid.UUID) -> None:
+        """Return a processing upload to queued so its parse task can be retried."""
         self._session.execute(
             update(LabUpload)
             .where(
                 LabUpload.id == upload_id,
                 LabUpload.status == UploadStatus.PROCESSING,
             )
-            .values(status=UploadStatus.PENDING)
+            .values(status=UploadStatus.QUEUED)
         )
 
     def add(self, upload: LabUpload) -> None:

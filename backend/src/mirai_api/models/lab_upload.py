@@ -44,7 +44,7 @@ class LabUpload(Base):
     # Human-readable reason set when status is failed.
     error_message: Mapped[str | None] = mapped_column(Text)
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    committed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
