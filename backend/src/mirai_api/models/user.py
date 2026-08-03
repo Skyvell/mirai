@@ -34,6 +34,7 @@ class User(Base):
             Sex,
             name="sex",
             native_enum=False,
+            create_constraint=True,
             values_callable=lambda e: [m.value for m in e],
         ),
     )

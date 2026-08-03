@@ -113,7 +113,7 @@ def upgrade() -> None:
         sa.Column("clerk_user_id", sa.Text(), nullable=False),
         sa.Column(
             "sex",
-            sa.Enum("male", "female", name="sex", native_enum=False),
+            sa.Enum("male", "female", name="sex", native_enum=False, create_constraint=True),
             nullable=True,
         ),
         sa.Column("date_of_birth", sa.Date(), nullable=True),
@@ -143,6 +143,7 @@ def upgrade() -> None:
                 "failed",
                 name="lab_upload_status",
                 native_enum=False,
+                create_constraint=True,
             ),
             nullable=False,
         ),
@@ -267,13 +268,19 @@ def upgrade() -> None:
         sa.Column("biomarker_id", sa.Uuid(), nullable=False),
         sa.Column(
             "type",
-            sa.Enum("reference", "optimal", name="biomarker_interval_type", native_enum=False),
+            sa.Enum(
+                "reference",
+                "optimal",
+                name="biomarker_interval_type",
+                native_enum=False,
+                create_constraint=True,
+            ),
             server_default="reference",
             nullable=False,
         ),
         sa.Column(
             "sex",
-            sa.Enum("male", "female", name="sex", native_enum=False),
+            sa.Enum("male", "female", name="sex", native_enum=False, create_constraint=True),
             nullable=True,
         ),
         sa.Column("age_min_days", sa.Integer(), nullable=True),

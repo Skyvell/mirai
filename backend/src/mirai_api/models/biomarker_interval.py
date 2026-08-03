@@ -46,6 +46,7 @@ class BiomarkerInterval(Base):
             IntervalType,
             name="biomarker_interval_type",
             native_enum=False,
+            create_constraint=True,
             values_callable=lambda e: [m.value for m in e],
         ),
         server_default=IntervalType.REFERENCE.value,
@@ -57,6 +58,7 @@ class BiomarkerInterval(Base):
             Sex,
             name="sex",
             native_enum=False,
+            create_constraint=True,
             values_callable=lambda e: [m.value for m in e],
         ),
     )
