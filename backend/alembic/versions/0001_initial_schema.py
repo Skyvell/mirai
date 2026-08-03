@@ -13,84 +13,12 @@ import sqlalchemy as sa
 from alembic import op
 
 from mirai_api.seed.biomarker_intervals import INTERVALS
+from mirai_api.seed.biomarkers import BIOMARKERS
 
 revision: str = "0001"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
-
-
-# Seed catalogue: (slug, display_name, loinc_code, canonical_unit, category).
-# canonical_unit is UCUM (SI/EU convention). loinc_code is best-effort and must
-# be verified against the official LOINC release before any real lab
-# integration relies on it — the column is nullable for exactly that backfill.
-_CATALOGUE: list[tuple[str, str, str | None, str, str]] = [
-    # Lipids.
-    ("total_cholesterol", "Total Cholesterol", "2093-3", "mmol/L", "lipids"),
-    ("ldl_cholesterol", "LDL Cholesterol", "18262-6", "mmol/L", "lipids"),
-    ("hdl_cholesterol", "HDL Cholesterol", "2085-9", "mmol/L", "lipids"),
-    ("triglycerides", "Triglycerides", "2571-8", "mmol/L", "lipids"),
-    ("apolipoprotein_b", "Apolipoprotein B", "1884-6", "g/L", "lipids"),
-    ("lipoprotein_a", "Lipoprotein(a)", "43583-4", "nmol/L", "lipids"),
-    # Metabolic.
-    ("glucose", "Glucose (Fasting)", "1558-6", "mmol/L", "metabolic"),
-    ("hba1c", "HbA1c", "59261-8", "mmol/mol", "metabolic"),
-    ("insulin", "Insulin (Fasting)", "20448-7", "m[IU]/L", "metabolic"),
-    # Hematology.
-    ("hemoglobin", "Hemoglobin", "718-7", "g/L", "hematology"),
-    ("hematocrit", "Hematocrit", "4544-3", "%", "hematology"),
-    ("wbc", "White Blood Cell Count", "6690-2", "10*9/L", "hematology"),
-    ("rbc", "Red Blood Cell Count", "789-8", "10*12/L", "hematology"),
-    ("platelets", "Platelet Count", "777-3", "10*9/L", "hematology"),
-    ("mcv", "Mean Corpuscular Volume", "787-2", "fL", "hematology"),
-    ("mch", "Mean Corpuscular Hemoglobin", "785-6", "pg", "hematology"),
-    ("mchc", "Mean Corpuscular Hemoglobin Concentration", "786-4", "g/L", "hematology"),
-    # Liver.
-    ("alt", "Alanine Aminotransferase (ALT)", "1742-6", "U/L", "liver"),
-    ("ast", "Aspartate Aminotransferase (AST)", "1920-8", "U/L", "liver"),
-    ("alp", "Alkaline Phosphatase", "6768-6", "U/L", "liver"),
-    ("ggt", "Gamma-Glutamyl Transferase", "2324-2", "U/L", "liver"),
-    ("total_bilirubin", "Total Bilirubin", "1975-2", "umol/L", "liver"),
-    ("albumin", "Albumin", "1751-7", "g/L", "liver"),
-    # Kidney.
-    ("creatinine", "Creatinine", "2160-0", "umol/L", "kidney"),
-    ("egfr", "Estimated GFR", "33914-3", "mL/min/{1.73_m2}", "kidney"),
-    ("urea", "Urea", "22664-7", "mmol/L", "kidney"),
-    ("cystatin_c", "Cystatin C", "33863-2", "mg/L", "kidney"),
-    ("uric_acid", "Uric Acid", "14933-6", "umol/L", "kidney"),
-    # Thyroid.
-    ("tsh", "Thyroid-Stimulating Hormone", "3016-3", "m[IU]/L", "thyroid"),
-    ("free_t4", "Free Thyroxine (fT4)", "3024-7", "pmol/L", "thyroid"),
-    ("free_t3", "Free Triiodothyronine (fT3)", "3051-0", "pmol/L", "thyroid"),
-    # Hormones.
-    ("testosterone", "Testosterone (Total)", "2986-8", "nmol/L", "hormones"),
-    ("free_testosterone", "Free Testosterone", "2991-8", "pmol/L", "hormones"),
-    ("estradiol", "Estradiol", "2243-4", "pmol/L", "hormones"),
-    ("cortisol", "Cortisol", "2143-6", "nmol/L", "hormones"),
-    ("shbg", "Sex Hormone-Binding Globulin", "13967-5", "nmol/L", "hormones"),
-    ("dhea_s", "DHEA-Sulfate", "2191-5", "umol/L", "hormones"),
-    # Inflammation.
-    ("hs_crp", "High-Sensitivity C-Reactive Protein", "30522-7", "mg/L", "inflammation"),
-    ("homocysteine", "Homocysteine", "13965-9", "umol/L", "inflammation"),
-    # Vitamins.
-    ("vitamin_d", "25-Hydroxyvitamin D", "62292-8", "nmol/L", "vitamins"),
-    ("vitamin_b12", "Vitamin B12", "2132-9", "pmol/L", "vitamins"),
-    ("folate", "Folate", "2284-8", "nmol/L", "vitamins"),
-    # Iron.
-    ("ferritin", "Ferritin", "2276-4", "ug/L", "iron"),
-    ("iron", "Iron", "2498-4", "umol/L", "iron"),
-    ("transferrin", "Transferrin", "3034-6", "g/L", "iron"),
-    ("transferrin_saturation", "Transferrin Saturation", "2502-3", "%", "iron"),
-    # Electrolytes.
-    ("sodium", "Sodium", "2951-2", "mmol/L", "electrolytes"),
-    ("potassium", "Potassium", "2823-3", "mmol/L", "electrolytes"),
-    ("chloride", "Chloride", "2075-0", "mmol/L", "electrolytes"),
-    ("bicarbonate", "Bicarbonate", "1963-8", "mmol/L", "electrolytes"),
-    ("calcium", "Calcium (Total)", "17861-6", "mmol/L", "electrolytes"),
-    ("magnesium", "Magnesium", "19123-9", "mmol/L", "electrolytes"),
-    ("phosphate", "Phosphate", "2777-1", "mmol/L", "electrolytes"),
-    ("zinc", "Zinc", "5763-8", "umol/L", "electrolytes"),
-]
 
 
 def upgrade() -> None:
@@ -331,7 +259,7 @@ def upgrade() -> None:
     )
 
     # Seed the read-only biomarker catalogue; keep the ids to link intervals below.
-    biomarker_ids = {slug: uuid.uuid7() for slug, *_ in _CATALOGUE}
+    biomarker_ids = {biomarker["slug"]: uuid.uuid7() for biomarker in BIOMARKERS}
     biomarkers = sa.table(
         "biomarkers",
         sa.column("id", sa.Uuid()),
@@ -345,14 +273,14 @@ def upgrade() -> None:
         biomarkers,
         [
             {
-                "id": biomarker_ids[slug],
-                "slug": slug,
-                "display_name": display_name,
-                "loinc_code": loinc_code,
-                "canonical_unit": canonical_unit,
-                "category": category,
+                "id": biomarker_ids[biomarker["slug"]],
+                "slug": biomarker["slug"],
+                "display_name": biomarker["display_name"],
+                "loinc_code": biomarker["loinc_code"],
+                "canonical_unit": biomarker["canonical_unit"],
+                "category": biomarker["category"],
             }
-            for slug, display_name, loinc_code, canonical_unit, category in _CATALOGUE
+            for biomarker in BIOMARKERS
         ],
     )
 
