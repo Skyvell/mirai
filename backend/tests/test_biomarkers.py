@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 
 from conftest import TEST_USER_ID
 from mirai_api.core.deps import get_biomarker_service
+from mirai_api.core.enums import IntervalType
 from mirai_api.main import app
+from mirai_api.schemas.biomarker_intervals import (
+    BiomarkerIntervalRead,
+    BiomarkerIntervalsRead,
+)
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementPoint,
     BiomarkerMeasurementRead,
@@ -57,6 +62,7 @@ class StubBiomarkerService:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
         self.biomarkers: list[BiomarkerRead] = []
+        self.intervals: list[BiomarkerIntervalsRead] = []
         self.series: list[BiomarkerSeries] = []
         self.reads: list[BiomarkerMeasurementRead] = []
         self.error: Exception | None = None
@@ -69,6 +75,14 @@ class StubBiomarkerService:
     def list_biomarkers(self) -> list[BiomarkerRead]:
         self._record("list_biomarkers")
         return self.biomarkers
+
+    def list_intervals(
+        self,
+        slugs: list[str] | None = None,
+        interval_type: IntervalType | None = None,
+    ) -> list[BiomarkerIntervalsRead]:
+        self._record("list_intervals", slugs, interval_type)
+        return self.intervals
 
     def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
         self._record("list_series", user_id)
@@ -113,6 +127,58 @@ def test_list_biomarkers_returns_catalogue(
             "canonical_unit": "mmol/L",
         }
     ]
+
+
+def test_list_biomarker_intervals_returns_grouped_bands(
+    client: TestClient,
+    stub_service: StubBiomarkerService,
+) -> None:
+    stub_service.intervals = [
+        BiomarkerIntervalsRead(
+            slug="glucose",
+            display_name="Glucose",
+            category="metabolic",
+            canonical_unit="mmol/L",
+            intervals=[
+                BiomarkerIntervalRead(
+                    type=IntervalType.REFERENCE,
+                    sex=None,
+                    age_min_days=None,
+                    age_max_days=None,
+                    low=Decimal("3.9"),
+                    high=Decimal("5.6"),
+                )
+            ],
+        )
+    ]
+    (group,) = client.get("/biomarker-intervals").json()
+    assert group["slug"] == "glucose"
+    assert group["canonical_unit"] == "mmol/L"
+    (band,) = group["intervals"]
+    assert band["type"] == "reference"
+    assert band["sex"] is None
+    assert band["low"] == "3.9"
+
+
+def test_list_biomarker_intervals_empty_and_unfiltered(
+    client: TestClient,
+    stub_service: StubBiomarkerService,
+) -> None:
+    response = client.get("/biomarker-intervals")
+    assert response.status_code == 200
+    assert response.json() == []
+    assert stub_service.calls == [("list_intervals", None, None)]
+
+
+def test_list_biomarker_intervals_passes_filters(
+    client: TestClient,
+    stub_service: StubBiomarkerService,
+) -> None:
+    client.get("/biomarker-intervals?slugs=glucose&slugs=hba1c&interval_type=optimal")
+    (name, slugs, interval_type) = stub_service.calls[0]
+    assert name == "list_intervals"
+    assert slugs == ["glucose", "hba1c"]
+    assert interval_type == IntervalType.OPTIMAL
 
 
 def test_no_measurements_gives_empty_series_list(

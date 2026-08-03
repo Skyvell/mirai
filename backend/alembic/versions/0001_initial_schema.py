@@ -110,6 +110,12 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("clerk_user_id", sa.Text(), nullable=False),
         sa.Column(
+            "sex",
+            sa.Enum("male", "female", name="sex", native_enum=False),
+            nullable=True,
+        ),
+        sa.Column("date_of_birth", sa.Date(), nullable=True),
+        sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
@@ -253,6 +259,68 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_lab_results_lab_upload_id"), "lab_results", ["lab_upload_id"])
 
+    op.create_table(
+        "biomarker_intervals",
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("biomarker_id", sa.Uuid(), nullable=False),
+        sa.Column(
+            "type",
+            sa.Enum("reference", "optimal", name="biomarker_interval_type", native_enum=False),
+            server_default="reference",
+            nullable=False,
+        ),
+        sa.Column(
+            "sex",
+            sa.Enum("male", "female", name="sex", native_enum=False),
+            nullable=True,
+        ),
+        sa.Column("age_min_days", sa.Integer(), nullable=True),
+        sa.Column("age_max_days", sa.Integer(), nullable=True),
+        sa.Column("interval_low", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("interval_high", sa.Numeric(precision=12, scale=4), nullable=True),
+        sa.Column("source", sa.Text(), nullable=False),
+        sa.Column("source_url", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(
+            ["biomarker_id"],
+            ["biomarkers.id"],
+            name=op.f("fk_biomarker_intervals_biomarkers_biomarker_id"),
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_biomarker_intervals")),
+        sa.UniqueConstraint(
+            "biomarker_id",
+            "type",
+            "sex",
+            "age_min_days",
+            "age_max_days",
+            name="uq_biomarker_intervals_stratum",
+        ),
+        sa.CheckConstraint(
+            "interval_low IS NOT NULL OR interval_high IS NOT NULL",
+            name=op.f("ck_biomarker_intervals_one_sided_or_bounded"),
+        ),
+        sa.CheckConstraint(
+            "interval_low IS NULL OR interval_high IS NULL OR interval_low <= interval_high",
+            name=op.f("ck_biomarker_intervals_low_not_above_high"),
+        ),
+        sa.CheckConstraint(
+            "age_min_days IS NULL OR age_max_days IS NULL OR age_min_days < age_max_days",
+            name=op.f("ck_biomarker_intervals_age_min_below_max"),
+        ),
+    )
+
     # Seed the read-only biomarker catalogue.
     biomarkers = sa.table(
         "biomarkers",
@@ -280,6 +348,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("biomarker_intervals")
     op.drop_index(op.f("ix_lab_results_lab_upload_id"), table_name="lab_results")
     op.drop_table("lab_results")
     op.drop_index("ix_biomarker_measurements_user_series", table_name="biomarker_measurements")

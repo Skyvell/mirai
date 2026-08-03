@@ -11,6 +11,7 @@ from mirai_api.core.config import Settings, get_settings
 from mirai_api.core.db import get_session
 from mirai_api.core.security import verify_clerk_token, verify_cloud_tasks_token
 from mirai_api.models import User
+from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.repositories.lab_results import LabResultRepository
 from mirai_api.repositories.lab_uploads import LabUploadRepository
@@ -26,6 +27,7 @@ AppSettings = Annotated[Settings, Depends(get_settings)]
 def get_biomarker_service(session: DbSession) -> BiomarkerService:
     return BiomarkerService(
         BiomarkerRepository(session),
+        BiomarkerIntervalRepository(session),
         session,
     )
 

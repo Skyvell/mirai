@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Text, func
+from sqlalchemy import Date, DateTime, Enum, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mirai_api.core.enums import Sex
 from mirai_api.models.base import Base
 
 
@@ -25,6 +26,19 @@ class User(Base):
         Text,
         unique=True,
     )
+
+    # Reference sex and birth date select which biomarker interval band applies;
+    # null until the user sets them. values_callable stores the lowercase values.
+    sex: Mapped[Sex | None] = mapped_column(
+        Enum(
+            Sex,
+            name="sex",
+            native_enum=False,
+            values_callable=lambda e: [m.value for m in e],
+        ),
+    )
+    date_of_birth: Mapped[date | None] = mapped_column(Date)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -3,8 +3,14 @@ from itertools import groupby
 
 from sqlalchemy.orm import Session
 
-from mirai_api.models import Biomarker, BiomarkerMeasurement
+from mirai_api.core.enums import IntervalType
+from mirai_api.models import Biomarker, BiomarkerInterval, BiomarkerMeasurement
+from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
 from mirai_api.repositories.biomarkers import BiomarkerRepository
+from mirai_api.schemas.biomarker_intervals import (
+    BiomarkerIntervalRead,
+    BiomarkerIntervalsRead,
+)
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
     BiomarkerMeasurementPoint,
@@ -41,15 +47,42 @@ class BiomarkerService:
     def __init__(
         self,
         biomarker_repository: BiomarkerRepository,
+        interval_repository: BiomarkerIntervalRepository,
         session: Session,
     ) -> None:
         self._biomarker_repository = biomarker_repository
+        self._interval_repository = interval_repository
+
         # Used for transaction control only; queries go through repositories.
         self._session = session
 
     def list_biomarkers(self) -> list[BiomarkerRead]:
         biomarkers = self._biomarker_repository.list_biomarkers()
         return [BiomarkerRead.model_validate(b) for b in biomarkers]
+
+    def list_intervals(
+        self,
+        slugs: list[str] | None = None,
+        interval_type: IntervalType | None = None,
+    ) -> list[BiomarkerIntervalsRead]:
+        """Return canonical intervals grouped by biomarker; read-only reference data."""
+        intervals = self._interval_repository.list_intervals(slugs, interval_type)
+
+        # Collect each biomarker's bands, preserving first-seen order.
+        bands_by_slug: dict[str, list[BiomarkerInterval]] = {}
+        for interval in intervals:
+            slug = interval.biomarker.slug
+            if slug not in bands_by_slug:
+                bands_by_slug[slug] = []
+            bands_by_slug[slug].append(interval)
+
+        # Build one grouped entry per biomarker from its collected bands.
+        biomarker_intervals: list[BiomarkerIntervalsRead] = []
+        for bands in bands_by_slug.values():
+            biomarker = bands[0].biomarker
+            biomarker_intervals.append(_to_interval_group(biomarker, bands))
+
+        return biomarker_intervals
 
     def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
         measurements = self._biomarker_repository.list_measurements(user_id)
@@ -157,4 +190,26 @@ def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurem
         **BiomarkerMeasurementPoint.model_validate(measurement).model_dump(),
         biomarker_slug=measurement.biomarker.slug,
         display_name=measurement.biomarker.display_name,
+    )
+
+
+def _to_interval_group(
+    biomarker: Biomarker,
+    intervals: list[BiomarkerInterval],
+) -> BiomarkerIntervalsRead:
+    bands = [_to_interval_read(interval) for interval in intervals]
+    return BiomarkerIntervalsRead(
+        **BiomarkerRead.model_validate(biomarker).model_dump(),
+        intervals=bands,
+    )
+
+
+def _to_interval_read(interval: BiomarkerInterval) -> BiomarkerIntervalRead:
+    return BiomarkerIntervalRead(
+        type=interval.type,
+        sex=interval.sex,
+        age_min_days=interval.age_min_days,
+        age_max_days=interval.age_max_days,
+        low=interval.interval_low,
+        high=interval.interval_high,
     )

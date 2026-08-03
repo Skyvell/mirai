@@ -5,6 +5,8 @@ from fastapi import APIRouter, Body, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from mirai_api.core.deps import BiomarkerServiceDep, CurrentUser
+from mirai_api.core.enums import IntervalType
+from mirai_api.schemas.biomarker_intervals import BiomarkerIntervalsRead
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
     BiomarkerMeasurementRead,
@@ -41,6 +43,21 @@ def list_biomarkers(
 ) -> list[BiomarkerRead]:
     """Return the full seeded biomarker catalogue, for manual-entry pickers."""
     return service.list_biomarkers()
+
+
+@router.get("/biomarker-intervals", operation_id="list_biomarker_intervals")
+def list_biomarker_intervals(
+    service: BiomarkerServiceDep,
+    user: CurrentUser,
+    slugs: Annotated[list[str] | None, Query()] = None,
+    interval_type: IntervalType | None = None,
+) -> list[BiomarkerIntervalsRead]:
+    """Return canonical biomarker intervals grouped by biomarker.
+
+    User-agnostic reference data; filter by slugs and/or interval_type, or omit
+    both for the whole set. Empty until the intervals are seeded.
+    """
+    return service.list_intervals(slugs, interval_type)
 
 
 @router.get("/biomarker-series", operation_id="list_biomarker_series")

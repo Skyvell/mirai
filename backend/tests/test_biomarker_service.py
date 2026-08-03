@@ -6,7 +6,8 @@ from decimal import Decimal
 import pytest
 
 from conftest import TEST_USER_ID
-from mirai_api.models import Biomarker, BiomarkerMeasurement
+from mirai_api.core.enums import IntervalType, Sex
+from mirai_api.models import Biomarker, BiomarkerInterval, BiomarkerMeasurement
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
     BiomarkerMeasurementUpdate,
@@ -122,8 +123,52 @@ class FakeBiomarkerRepository:
         return deleted
 
 
-def _service(repo: FakeBiomarkerRepository) -> BiomarkerService:
-    return BiomarkerService(repo, repo.session)  # type: ignore[arg-type]
+class FakeBiomarkerIntervalRepository:
+    """Interval repository fake: in-memory list with the same filters."""
+
+    def __init__(self, intervals: list[BiomarkerInterval] | None = None) -> None:
+        self.intervals = intervals or []
+
+    def list_intervals(
+        self,
+        slugs: list[str] | None = None,
+        interval_type: IntervalType | None = None,
+    ) -> list[BiomarkerInterval]:
+        result = list(self.intervals)
+        if slugs is not None:
+            wanted = set(slugs)
+            result = [i for i in result if i.biomarker.slug in wanted]
+        if interval_type is not None:
+            result = [i for i in result if i.type == interval_type]
+        return result
+
+
+def _interval(biomarker: Biomarker, **overrides: object) -> BiomarkerInterval:
+    fields: dict = {
+        "id": uuid.uuid7(),
+        "biomarker": biomarker,
+        "type": IntervalType.REFERENCE,
+        "sex": None,
+        "age_min_days": None,
+        "age_max_days": None,
+        "interval_low": Decimal("3.9"),
+        "interval_high": Decimal("5.6"),
+        "source": "Karolinska",
+        "source_url": None,
+    }
+    fields.update(overrides)
+    return BiomarkerInterval(**fields)
+
+
+def _service(
+    repo: FakeBiomarkerRepository,
+    interval_repo: FakeBiomarkerIntervalRepository | None = None,
+) -> BiomarkerService:
+    return BiomarkerService(
+        repo,
+        interval_repo or FakeBiomarkerIntervalRepository(),
+        repo.session,
+    )  # type: ignore[arg-type]
 
 
 def test_create_defaults_unit_to_canonical() -> None:
@@ -278,3 +323,41 @@ def test_delete_partial_match_raises_before_commit() -> None:
             [measurement.id, uuid.uuid7()],
         )
     assert repo.session.commits == 0
+
+
+def test_list_intervals_groups_by_biomarker() -> None:
+    interval_repo = FakeBiomarkerIntervalRepository(
+        intervals=[
+            _interval(GLUCOSE),
+            _interval(LDL, interval_low=None, interval_high=Decimal("3.0")),
+        ]
+    )
+    groups = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
+
+    assert {group.slug for group in groups} == {"glucose", "ldl_cholesterol"}
+    glucose = next(group for group in groups if group.slug == "glucose")
+    assert glucose.canonical_unit == "mmol/L"
+    (band,) = glucose.intervals
+    assert band.low == Decimal("3.9")
+    assert band.high == Decimal("5.6")
+    assert band.sex is None
+
+
+def test_list_intervals_dimorphic_marker_keeps_both_bands() -> None:
+    interval_repo = FakeBiomarkerIntervalRepository(
+        intervals=[
+            _interval(GLUCOSE, sex=Sex.MALE),
+            _interval(GLUCOSE, sex=Sex.FEMALE),
+        ]
+    )
+    (group,) = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
+
+    assert group.slug == "glucose"
+    assert {band.sex for band in group.intervals} == {Sex.MALE, Sex.FEMALE}
+
+
+def test_list_intervals_filters_by_slug() -> None:
+    interval_repo = FakeBiomarkerIntervalRepository(intervals=[_interval(GLUCOSE), _interval(LDL)])
+    groups = _service(FakeBiomarkerRepository(), interval_repo).list_intervals(slugs=["glucose"])
+
+    assert [group.slug for group in groups] == ["glucose"]

@@ -13,3 +13,20 @@ class UploadStatus(StrEnum):
     AWAITING_REVIEW = "awaiting_review"
     CONFIRMED = "confirmed"
     FAILED = "failed"
+
+
+class Sex(StrEnum):
+    """Reference sex — the biological partition a lab stratifies its intervals by.
+
+    Distinct from gender identity; a null column value means "any sex".
+    """
+
+    MALE = "male"
+    FEMALE = "female"
+
+
+class IntervalType(StrEnum):
+    """Kind of biomarker interval: a population reference range or an optimal target."""
+
+    REFERENCE = "reference"
+    OPTIMAL = "optimal"
