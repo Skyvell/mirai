@@ -79,8 +79,7 @@ class BiomarkerService:
         # Build one grouped entry per biomarker from its collected bands.
         biomarker_intervals: list[BiomarkerIntervalsRead] = []
         for bands in bands_by_slug.values():
-            biomarker = bands[0].biomarker
-            biomarker_intervals.append(_to_interval_group(biomarker, bands))
+            biomarker_intervals.append(_to_interval_group(bands))
 
         return biomarker_intervals
 
@@ -193,10 +192,10 @@ def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurem
     )
 
 
-def _to_interval_group(
-    biomarker: Biomarker,
-    intervals: list[BiomarkerInterval],
-) -> BiomarkerIntervalsRead:
+def _to_interval_group(intervals: list[BiomarkerInterval]) -> BiomarkerIntervalsRead:
+    # Every band in the group shares one biomarker.
+    biomarker = intervals[0].biomarker
+
     bands = [_to_interval_read(interval) for interval in intervals]
     return BiomarkerIntervalsRead(
         **BiomarkerRead.model_validate(biomarker).model_dump(),

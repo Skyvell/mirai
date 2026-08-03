@@ -16,10 +16,10 @@ class BiomarkerIntervalRepository:
         slugs: list[str] | None = None,
         interval_type: IntervalType | None = None,
     ) -> list[BiomarkerInterval]:
-        """Return intervals with their biomarker eager-loaded, ordered for grouping.
+        """Return intervals with their biomarker eager-loaded, in output order.
 
-        The ORDER BY is the grouping contract: slug first makes each biomarker's
-        rows contiguous, then age orders each series into step segments.
+        The ORDER BY gives a deterministic biomarker order (slug) and, within each
+        biomarker, orders the bands by age into step segments.
         """
         stmt = (
             select(BiomarkerInterval)
