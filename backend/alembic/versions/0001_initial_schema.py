@@ -12,6 +12,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
+from mirai_api.seed.biomarker_intervals import INTERVALS
+
 revision: str = "0001"
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
@@ -321,7 +323,8 @@ def upgrade() -> None:
         ),
     )
 
-    # Seed the read-only biomarker catalogue.
+    # Seed the read-only biomarker catalogue; keep the ids to link intervals below.
+    biomarker_ids = {slug: uuid.uuid7() for slug, *_ in _CATALOGUE}
     biomarkers = sa.table(
         "biomarkers",
         sa.column("id", sa.Uuid()),
@@ -335,7 +338,7 @@ def upgrade() -> None:
         biomarkers,
         [
             {
-                "id": uuid.uuid7(),
+                "id": biomarker_ids[slug],
                 "slug": slug,
                 "display_name": display_name,
                 "loinc_code": loinc_code,
@@ -343,6 +346,39 @@ def upgrade() -> None:
                 "category": category,
             }
             for slug, display_name, loinc_code, canonical_unit, category in _CATALOGUE
+        ],
+    )
+
+    # Seed the canonical reference intervals (Karolinska); INTERVALS is keyed by slug.
+    biomarker_intervals = sa.table(
+        "biomarker_intervals",
+        sa.column("id", sa.Uuid()),
+        sa.column("biomarker_id", sa.Uuid()),
+        sa.column("type", sa.Text()),
+        sa.column("sex", sa.Text()),
+        sa.column("age_min_days", sa.Integer()),
+        sa.column("age_max_days", sa.Integer()),
+        sa.column("interval_low", sa.Numeric(precision=12, scale=4)),
+        sa.column("interval_high", sa.Numeric(precision=12, scale=4)),
+        sa.column("source", sa.Text()),
+        sa.column("source_url", sa.Text()),
+    )
+    op.bulk_insert(
+        biomarker_intervals,
+        [
+            {
+                "id": uuid.uuid7(),
+                "biomarker_id": biomarker_ids[band["slug"]],
+                "type": "reference",
+                "sex": band["sex"],
+                "age_min_days": band["age_min_days"],
+                "age_max_days": band["age_max_days"],
+                "interval_low": band["low"],
+                "interval_high": band["high"],
+                "source": band["source"],
+                "source_url": band["source_url"],
+            }
+            for band in INTERVALS
         ],
     )
 
