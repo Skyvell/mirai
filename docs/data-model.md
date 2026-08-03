@@ -20,9 +20,20 @@ docker rm -f erd
 ## Notes
 
 - **`users`** anchors a Clerk identity; JIT-created on first authenticated
-  request. Profile/identity stay in Clerk.
+  request. Profile/identity stay in Clerk; `sex` and `date_of_birth` (both
+  nullable; `sex` is a `VARCHAR` + `CHECK` enum) are held locally to select the
+  applicable biomarker interval band.
 - **`biomarkers`** is a seeded, read-only reference catalogue. `slug` is the
   stable internal key; `loinc_code` is for future lab/FHIR integration.
+- **`biomarker_intervals`** holds the canonical, platform-owned low/high bands
+  plotted behind a biomarker — population `reference` ranges now, `optimal`
+  targets later (`type` discriminates; a `VARCHAR` + `CHECK` enum, as is `sex`).
+  One row per (biomarker, `type`, `sex`, age band); `NULL` on any axis means "no
+  constraint" (any sex, unbounded age). Age is half-open
+  `[age_min_days, age_max_days)` in canonical days; either `interval_low`/`_high`
+  may be null for a one-sided band. `RESTRICT` on `biomarker_id`. Sourced from
+  Karolinska (`source`/`source_url`); the read API projects the biomarker's
+  `canonical_unit` rather than storing it.
 - **`lab_uploads`** tracks one PDF through its parse lifecycle. `status`
   (`VARCHAR(15)`, non-native enum) moves `queued → processing → awaiting_review
   → confirmed`, with `failed` terminal. The stored object path is derived
