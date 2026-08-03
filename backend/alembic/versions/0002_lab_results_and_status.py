@@ -57,6 +57,14 @@ def upgrade() -> None:
             ),
         )
 
+    # Drop the legacy CHECK constraint pinning status to the old values (created by
+    # an older SQLAlchemy default when 0001 first ran; current models emit none).
+    # IF EXISTS keeps this a no-op on databases that never had it.
+    op.execute(
+        "ALTER TABLE lab_uploads DROP CONSTRAINT IF EXISTS "
+        "ck_lab_uploads_ck_lab_uploads_lab_upload_status"
+    )
+
     # Rebrand the stored status values (non-native enum, so plain data updates).
     op.execute("UPDATE lab_uploads SET status = 'confirmed' WHERE status = 'committed'")
     op.execute("UPDATE lab_uploads SET status = 'queued' WHERE status = 'pending'")
