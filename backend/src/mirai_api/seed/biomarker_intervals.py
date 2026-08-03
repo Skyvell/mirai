@@ -28,7 +28,7 @@ def months(n: float) -> int:
 
 
 def weeks(n: float) -> int:
-    return n * 7
+    return round(n * 7)
 
 
 def days(n: int) -> int:
