@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmLabUploadData, ConfirmLabUploadErrors, ConfirmLabUploadResponses, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, GetLabUploadData, GetLabUploadErrors, GetLabUploadResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UpdateLabDraftData, UpdateLabDraftErrors, UpdateLabDraftResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadErrors, ConfirmLabUploadResponses, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, GetLabUploadData, GetLabUploadErrors, GetLabUploadResponses, ListBiomarkerIntervalsData, ListBiomarkerIntervalsErrors, ListBiomarkerIntervalsResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UpdateLabDraftData, UpdateLabDraftErrors, UpdateLabDraftResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -132,6 +132,20 @@ export const confirmLabUpload = <ThrowOnError extends boolean = false>(options: 
 export const listBiomarkers = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkersData, ThrowOnError>): RequestResult<ListBiomarkersResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkersResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/biomarkers',
+    ...options
+});
+
+/**
+ * List Biomarker Intervals
+ *
+ * Return canonical biomarker intervals grouped by biomarker.
+ *
+ * User-agnostic reference data; filter by slugs and/or interval_type, or omit
+ * both for the whole set. Empty until the intervals are seeded.
+ */
+export const listBiomarkerIntervals = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerIntervalsData, ThrowOnError>): RequestResult<ListBiomarkerIntervalsResponses, ListBiomarkerIntervalsErrors, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerIntervalsResponses, ListBiomarkerIntervalsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/biomarker-intervals',
     ...options
 });
 

@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { confirmLabUpload, createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, getLabUpload, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, updateLabDraft, uploadLab } from '../sdk.gen';
-import type { ConfirmLabUploadData, ConfirmLabUploadError, ConfirmLabUploadResponse, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, GetLabUploadData, GetLabUploadError, GetLabUploadResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UpdateLabDraftData, UpdateLabDraftError, UpdateLabDraftResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
+import { confirmLabUpload, createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, getLabUpload, listBiomarkerIntervals, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, updateLabDraft, uploadLab } from '../sdk.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadError, ConfirmLabUploadResponse, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, GetLabUploadData, GetLabUploadError, GetLabUploadResponse, ListBiomarkerIntervalsData, ListBiomarkerIntervalsError, ListBiomarkerIntervalsResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UpdateLabDraftData, UpdateLabDraftError, UpdateLabDraftResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -239,6 +239,29 @@ export const listBiomarkersOptions = (options?: Options<ListBiomarkersData>) => 
         return data;
     },
     queryKey: listBiomarkersQueryKey(options)
+});
+
+export const listBiomarkerIntervalsQueryKey = (options?: Options<ListBiomarkerIntervalsData>) => createQueryKey('listBiomarkerIntervals', options);
+
+/**
+ * List Biomarker Intervals
+ *
+ * Return canonical biomarker intervals grouped by biomarker.
+ *
+ * User-agnostic reference data; filter by slugs and/or interval_type, or omit
+ * both for the whole set. Empty until the intervals are seeded.
+ */
+export const listBiomarkerIntervalsOptions = (options?: Options<ListBiomarkerIntervalsData>) => queryOptions<ListBiomarkerIntervalsResponse, ListBiomarkerIntervalsError, ListBiomarkerIntervalsResponse, ReturnType<typeof listBiomarkerIntervalsQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listBiomarkerIntervals({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listBiomarkerIntervalsQueryKey(options)
 });
 
 export const listBiomarkerSeriesQueryKey = (options?: Options<ListBiomarkerSeriesData>) => createQueryKey('listBiomarkerSeries', options);

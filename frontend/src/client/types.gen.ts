@@ -5,6 +5,56 @@ export type ClientOptions = {
 };
 
 /**
+ * BiomarkerIntervalRead
+ */
+export type BiomarkerIntervalRead = {
+    type: IntervalType;
+    sex: Sex | null;
+    /**
+     * Age Min Days
+     */
+    age_min_days: number | null;
+    /**
+     * Age Max Days
+     */
+    age_max_days: number | null;
+    /**
+     * Low
+     */
+    low: string | null;
+    /**
+     * High
+     */
+    high: string | null;
+};
+
+/**
+ * BiomarkerIntervalsRead
+ */
+export type BiomarkerIntervalsRead = {
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Canonical Unit
+     */
+    canonical_unit: string;
+    /**
+     * Intervals
+     */
+    intervals: Array<BiomarkerIntervalRead>;
+};
+
+/**
  * BiomarkerMeasurementCreate
  */
 export type BiomarkerMeasurementCreate = {
@@ -209,6 +259,13 @@ export type HttpValidationError = {
 };
 
 /**
+ * IntervalType
+ *
+ * Kind of biomarker interval: a population reference range or an optimal target.
+ */
+export type IntervalType = 'reference' | 'optimal';
+
+/**
  * LabDraft
  */
 export type LabDraft = {
@@ -396,6 +453,15 @@ export type MeResponse = {
      */
     clerk_user_id: string;
 };
+
+/**
+ * Sex
+ *
+ * Reference sex — the biological partition a lab stratifies its intervals by.
+ *
+ * Distinct from gender identity; a null column value means "any sex".
+ */
+export type Sex = 'male' | 'female';
 
 /**
  * UploadStatus
@@ -676,6 +742,42 @@ export type ListBiomarkersResponses = {
 };
 
 export type ListBiomarkersResponse = ListBiomarkersResponses[keyof ListBiomarkersResponses];
+
+export type ListBiomarkerIntervalsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Slugs
+         */
+        slugs?: Array<string> | null;
+        /**
+         * Interval Type
+         */
+        interval_type?: IntervalType | null;
+    };
+    url: '/biomarker-intervals';
+};
+
+export type ListBiomarkerIntervalsErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListBiomarkerIntervalsError = ListBiomarkerIntervalsErrors[keyof ListBiomarkerIntervalsErrors];
+
+export type ListBiomarkerIntervalsResponses = {
+    /**
+     * Response List Biomarker Intervals
+     *
+     * Successful Response
+     */
+    200: Array<BiomarkerIntervalsRead>;
+};
+
+export type ListBiomarkerIntervalsResponse = ListBiomarkerIntervalsResponses[keyof ListBiomarkerIntervalsResponses];
 
 export type ListBiomarkerSeriesData = {
     body?: never;
