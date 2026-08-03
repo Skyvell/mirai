@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises:
-Create Date: 2026-07-16 23:10:00.000000
+Create Date: 2026-08-03 00:00:00.000000
 
 """
 
@@ -103,7 +103,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_biomarkers")),
         sa.UniqueConstraint("slug", name=op.f("uq_biomarkers_slug")),
     )
-    op.create_index(op.f("ix_biomarkers_loinc_code"), "biomarkers", ["loinc_code"])
+    op.create_index(op.f("ix_biomarkers_loinc_code"), "biomarkers", ["loinc_code"], unique=False)
 
     op.create_table(
         "users",
@@ -128,10 +128,10 @@ def upgrade() -> None:
         sa.Column(
             "status",
             sa.Enum(
-                "pending",
+                "queued",
                 "processing",
                 "awaiting_review",
-                "committed",
+                "confirmed",
                 "failed",
                 name="lab_upload_status",
                 native_enum=False,
@@ -141,7 +141,7 @@ def upgrade() -> None:
         sa.Column("measured_at", sa.Date(), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column("parsed_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("committed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -172,6 +172,12 @@ def upgrade() -> None:
         sa.Column("measured_at", sa.Date(), nullable=False),
         sa.Column(
             "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
@@ -208,7 +214,7 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "draft_biomarker_measurements",
+        "lab_results",
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("lab_upload_id", sa.Uuid(), nullable=False),
         sa.Column("biomarker_id", sa.Uuid(), nullable=True),
@@ -218,7 +224,6 @@ def upgrade() -> None:
         sa.Column("reference_low", sa.Numeric(precision=12, scale=4), nullable=True),
         sa.Column("reference_high", sa.Numeric(precision=12, scale=4), nullable=True),
         sa.Column("source_name", sa.Text(), nullable=True),
-        sa.Column("skip_reason", sa.Text(), nullable=True),
         sa.Column("included", sa.Boolean(), nullable=False),
         sa.Column(
             "created_at",
@@ -226,26 +231,29 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(
             ["biomarker_id"],
             ["biomarkers.id"],
-            name=op.f("fk_draft_biomarker_measurements_biomarkers_biomarker_id"),
+            name=op.f("fk_lab_results_biomarkers_biomarker_id"),
             ondelete="RESTRICT",
         ),
         sa.ForeignKeyConstraint(
             ["lab_upload_id"],
             ["lab_uploads.id"],
-            name=op.f("fk_draft_biomarker_measurements_lab_uploads_lab_upload_id"),
+            name=op.f("fk_lab_results_lab_uploads_lab_upload_id"),
             ondelete="CASCADE",
         ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_draft_biomarker_measurements")),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_lab_results")),
     )
-    op.create_index(
-        op.f("ix_draft_biomarker_measurements_lab_upload_id"),
-        "draft_biomarker_measurements",
-        ["lab_upload_id"],
-    )
+    op.create_index(op.f("ix_lab_results_lab_upload_id"), "lab_results", ["lab_upload_id"])
 
+    # Seed the read-only biomarker catalogue.
     biomarkers = sa.table(
         "biomarkers",
         sa.column("id", sa.Uuid()),
@@ -272,11 +280,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index(
-        op.f("ix_draft_biomarker_measurements_lab_upload_id"),
-        table_name="draft_biomarker_measurements",
-    )
-    op.drop_table("draft_biomarker_measurements")
+    op.drop_index(op.f("ix_lab_results_lab_upload_id"), table_name="lab_results")
+    op.drop_table("lab_results")
     op.drop_index("ix_biomarker_measurements_user_series", table_name="biomarker_measurements")
     op.drop_index(
         op.f("ix_biomarker_measurements_lab_upload_id"),
