@@ -10,7 +10,7 @@ export function Onboarding({ current }: { current: MeResponse }) {
     <div className="grid min-h-svh place-items-center bg-background p-6">
       <div className="w-full max-w-md">
         <div className="mb-10 flex items-center justify-between">
-          <span className="text-sm font-medium tracking-tight">Mirai</span>
+          <span className="text-lg font-semibold tracking-tight">Mirai</span>
           <UserButton />
         </div>
 
