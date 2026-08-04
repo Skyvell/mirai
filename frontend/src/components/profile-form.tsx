@@ -12,7 +12,7 @@ import {
   updateCurrentUserMutation,
 } from '@/client/@tanstack/react-query.gen'
 import { profileSchema, type ProfileFormValues } from '@/lib/profile-schema'
-import { cn, localIsoDate } from '@/lib/utils'
+import { ageInYears, cn, localIsoDate, parseIsoDate } from '@/lib/utils'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -34,32 +34,16 @@ const SEX_OPTIONS = [
   { value: 'male', label: 'Male' },
 ] as const
 
-// Local-midnight Date from a YYYY-MM-DD string; new Date(str) would parse as UTC
-// and shift a day in negative offsets.
-function parseIsoDate(value: string | null | undefined): Date | undefined {
-  if (!value) return undefined
-  const [year, month, day] = value.split('-').map(Number)
-  return new Date(year, month - 1, day)
-}
-
-function ageInYears(birth: Date): number {
-  const now = new Date()
-  let age = now.getFullYear() - birth.getFullYear()
-  const beforeBirthday =
-    now.getMonth() < birth.getMonth() ||
-    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
-  if (beforeBirthday) age -= 1
-  return age
-}
+// Fixed calendar bounds; the upper bound ("today") stays inline as it is time-dependent.
+const MIN_MONTH = new Date(1900, 0)
+const DEFAULT_MONTH = new Date(1990, 0)
 
 export function ProfileForm({
   current,
   submitLabel = 'Save',
-  onSaved,
 }: {
-  current?: MeResponse | null
+  current: MeResponse
   submitLabel?: string
-  onSaved?: () => void
 }) {
   const queryClient = useQueryClient()
   const [dobOpen, setDobOpen] = useState(false)
@@ -68,20 +52,19 @@ export function ProfileForm({
     resolver: zodResolver(profileSchema),
     mode: 'onTouched',
     defaultValues: {
-      sex: current?.sex ?? undefined,
-      dateOfBirth: parseIsoDate(current?.date_of_birth),
+      sex: current.sex ?? undefined,
+      dateOfBirth: parseIsoDate(current.date_of_birth),
     },
   })
 
   const update = useMutation({
     ...updateCurrentUserMutation(),
     onSuccess: (data) => {
-      // Seed the cache so the gate flips immediately, then invalidate to reconcile.
+      // The PATCH response is the authoritative MeResponse; seeding the cache
+      // flips the onboarding gate without a redundant refetch.
       queryClient.setQueryData(currentUserQueryKey(), data)
-      queryClient.invalidateQueries({ queryKey: currentUserQueryKey() })
 
       toast.success('Profile saved')
-      onSaved?.()
     },
   })
 
@@ -166,10 +149,10 @@ export function ProfileForm({
                       field.onChange(date)
                       if (date) setDobOpen(false)
                     }}
-                    startMonth={new Date(1900, 0)}
+                    startMonth={MIN_MONTH}
                     endMonth={new Date()}
                     disabled={{ after: new Date() }}
-                    defaultMonth={field.value ?? new Date(1990, 0)}
+                    defaultMonth={field.value ?? DEFAULT_MONTH}
                     autoFocus
                   />
                 </PopoverContent>
