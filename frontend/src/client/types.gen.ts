@@ -29,29 +29,12 @@ export type BiomarkerIntervalRead = {
 };
 
 /**
- * BiomarkerIntervalsRead
+ * BiomarkerIntervalsBySlug
+ *
+ * Canonical interval bands keyed by biomarker slug; the GET /biomarker-intervals payload.
  */
-export type BiomarkerIntervalsRead = {
-    /**
-     * Slug
-     */
-    slug: string;
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Category
-     */
-    category: string;
-    /**
-     * Canonical Unit
-     */
-    canonical_unit: string;
-    /**
-     * Intervals
-     */
-    intervals: Array<BiomarkerIntervalRead>;
+export type BiomarkerIntervalsBySlug = {
+    [key: string]: Array<BiomarkerIntervalRead>;
 };
 
 /**
@@ -770,11 +753,9 @@ export type ListBiomarkerIntervalsError = ListBiomarkerIntervalsErrors[keyof Lis
 
 export type ListBiomarkerIntervalsResponses = {
     /**
-     * Response List Biomarker Intervals
-     *
      * Successful Response
      */
-    200: Array<BiomarkerIntervalsRead>;
+    200: BiomarkerIntervalsBySlug;
 };
 
 export type ListBiomarkerIntervalsResponse = ListBiomarkerIntervalsResponses[keyof ListBiomarkerIntervalsResponses];

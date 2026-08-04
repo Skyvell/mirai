@@ -332,12 +332,10 @@ def test_list_intervals_groups_by_biomarker() -> None:
             _interval(LDL, interval_low=None, interval_high=Decimal("3.0")),
         ]
     )
-    groups = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
+    result = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
 
-    assert {group.slug for group in groups} == {"glucose", "ldl_cholesterol"}
-    glucose = next(group for group in groups if group.slug == "glucose")
-    assert glucose.canonical_unit == "mmol/L"
-    (band,) = glucose.intervals
+    assert set(result.root.keys()) == {"glucose", "ldl_cholesterol"}
+    (band,) = result.root["glucose"]
     assert band.low == Decimal("3.9")
     assert band.high == Decimal("5.6")
     assert band.sex is None
@@ -350,14 +348,14 @@ def test_list_intervals_dimorphic_marker_keeps_both_bands() -> None:
             _interval(GLUCOSE, sex=Sex.FEMALE),
         ]
     )
-    (group,) = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
+    result = _service(FakeBiomarkerRepository(), interval_repo).list_intervals()
 
-    assert group.slug == "glucose"
-    assert {band.sex for band in group.intervals} == {Sex.MALE, Sex.FEMALE}
+    assert list(result.root.keys()) == ["glucose"]
+    assert {band.sex for band in result.root["glucose"]} == {Sex.MALE, Sex.FEMALE}
 
 
 def test_list_intervals_filters_by_slug() -> None:
     interval_repo = FakeBiomarkerIntervalRepository(intervals=[_interval(GLUCOSE), _interval(LDL)])
-    groups = _service(FakeBiomarkerRepository(), interval_repo).list_intervals(slugs=["glucose"])
+    result = _service(FakeBiomarkerRepository(), interval_repo).list_intervals(slugs=["glucose"])
 
-    assert [group.slug for group in groups] == ["glucose"]
+    assert list(result.root.keys()) == ["glucose"]

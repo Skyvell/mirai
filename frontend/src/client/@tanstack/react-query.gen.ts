@@ -246,10 +246,7 @@ export const listBiomarkerIntervalsQueryKey = (options?: Options<ListBiomarkerIn
 /**
  * List Biomarker Intervals
  *
- * Return canonical biomarker intervals grouped by biomarker.
- *
- * User-agnostic reference data; filter by slugs and/or interval_type, or omit
- * both for the whole set. Empty until the intervals are seeded.
+ * Return canonical interval bands keyed by biomarker slug; user-agnostic reference data.
  */
 export const listBiomarkerIntervalsOptions = (options?: Options<ListBiomarkerIntervalsData>) => queryOptions<ListBiomarkerIntervalsResponse, ListBiomarkerIntervalsError, ListBiomarkerIntervalsResponse, ReturnType<typeof listBiomarkerIntervalsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

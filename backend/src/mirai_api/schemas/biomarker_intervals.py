@@ -1,9 +1,8 @@
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from mirai_api.core.enums import IntervalType, Sex
-from mirai_api.schemas.biomarkers import BiomarkerRead
 
 
 class BiomarkerIntervalRead(BaseModel):
@@ -15,5 +14,5 @@ class BiomarkerIntervalRead(BaseModel):
     high: Decimal | None
 
 
-class BiomarkerIntervalsRead(BiomarkerRead):
-    intervals: list[BiomarkerIntervalRead]
+class BiomarkerIntervalsBySlug(RootModel[dict[str, list[BiomarkerIntervalRead]]]):
+    """Canonical interval bands keyed by biomarker slug; the GET /biomarker-intervals payload."""

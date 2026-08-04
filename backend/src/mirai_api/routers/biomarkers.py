@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from mirai_api.core.deps import BiomarkerServiceDep, CurrentUser
 from mirai_api.core.enums import IntervalType
-from mirai_api.schemas.biomarker_intervals import BiomarkerIntervalsRead
+from mirai_api.schemas.biomarker_intervals import BiomarkerIntervalsBySlug
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
     BiomarkerMeasurementRead,
@@ -51,12 +51,8 @@ def list_biomarker_intervals(
     user: CurrentUser,
     slugs: Annotated[list[str] | None, Query()] = None,
     interval_type: IntervalType | None = None,
-) -> list[BiomarkerIntervalsRead]:
-    """Return canonical biomarker intervals grouped by biomarker.
-
-    User-agnostic reference data; filter by slugs and/or interval_type, or omit
-    both for the whole set. Empty until the intervals are seeded.
-    """
+) -> BiomarkerIntervalsBySlug:
+    """Return canonical interval bands keyed by biomarker slug; user-agnostic reference data."""
     return service.list_intervals(slugs, interval_type)
 
 

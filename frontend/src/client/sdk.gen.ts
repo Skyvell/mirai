@@ -138,10 +138,7 @@ export const listBiomarkers = <ThrowOnError extends boolean = false>(options?: O
 /**
  * List Biomarker Intervals
  *
- * Return canonical biomarker intervals grouped by biomarker.
- *
- * User-agnostic reference data; filter by slugs and/or interval_type, or omit
- * both for the whole set. Empty until the intervals are seeded.
+ * Return canonical interval bands keyed by biomarker slug; user-agnostic reference data.
  */
 export const listBiomarkerIntervals = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerIntervalsData, ThrowOnError>): RequestResult<ListBiomarkerIntervalsResponses, ListBiomarkerIntervalsErrors, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerIntervalsResponses, ListBiomarkerIntervalsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

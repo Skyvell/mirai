@@ -11,7 +11,7 @@ from mirai_api.core.enums import IntervalType
 from mirai_api.main import app
 from mirai_api.schemas.biomarker_intervals import (
     BiomarkerIntervalRead,
-    BiomarkerIntervalsRead,
+    BiomarkerIntervalsBySlug,
 )
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementPoint,
@@ -62,7 +62,7 @@ class StubBiomarkerService:
     def __init__(self) -> None:
         self.calls: list[tuple] = []
         self.biomarkers: list[BiomarkerRead] = []
-        self.intervals: list[BiomarkerIntervalsRead] = []
+        self.intervals: BiomarkerIntervalsBySlug = BiomarkerIntervalsBySlug({})
         self.series: list[BiomarkerSeries] = []
         self.reads: list[BiomarkerMeasurementRead] = []
         self.error: Exception | None = None
@@ -80,7 +80,7 @@ class StubBiomarkerService:
         self,
         slugs: list[str] | None = None,
         interval_type: IntervalType | None = None,
-    ) -> list[BiomarkerIntervalsRead]:
+    ) -> BiomarkerIntervalsBySlug:
         self._record("list_intervals", slugs, interval_type)
         return self.intervals
 
@@ -133,13 +133,9 @@ def test_list_biomarker_intervals_returns_grouped_bands(
     client: TestClient,
     stub_service: StubBiomarkerService,
 ) -> None:
-    stub_service.intervals = [
-        BiomarkerIntervalsRead(
-            slug="glucose",
-            display_name="Glucose",
-            category="metabolic",
-            canonical_unit="mmol/L",
-            intervals=[
+    stub_service.intervals = BiomarkerIntervalsBySlug(
+        {
+            "glucose": [
                 BiomarkerIntervalRead(
                     type=IntervalType.REFERENCE,
                     sex=None,
@@ -148,16 +144,17 @@ def test_list_biomarker_intervals_returns_grouped_bands(
                     low=Decimal("3.9"),
                     high=Decimal("5.6"),
                 )
-            ],
-        )
-    ]
-    (group,) = client.get("/biomarker-intervals").json()
-    assert group["slug"] == "glucose"
-    assert group["canonical_unit"] == "mmol/L"
-    (band,) = group["intervals"]
+            ]
+        }
+    )
+    body = client.get("/biomarker-intervals").json()
+    assert list(body.keys()) == ["glucose"]
+    (band,) = body["glucose"]
     assert band["type"] == "reference"
     assert band["sex"] is None
     assert band["low"] == "3.9"
+    assert "display_name" not in band
+    assert "canonical_unit" not in band
 
 
 def test_list_biomarker_intervals_empty_and_unfiltered(
@@ -166,7 +163,7 @@ def test_list_biomarker_intervals_empty_and_unfiltered(
 ) -> None:
     response = client.get("/biomarker-intervals")
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {}
     assert stub_service.calls == [("list_intervals", None, None)]
 
 

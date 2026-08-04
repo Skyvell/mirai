@@ -9,7 +9,7 @@ from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalReposito
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.schemas.biomarker_intervals import (
     BiomarkerIntervalRead,
-    BiomarkerIntervalsRead,
+    BiomarkerIntervalsBySlug,
 )
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
@@ -64,24 +64,19 @@ class BiomarkerService:
         self,
         slugs: list[str] | None = None,
         interval_type: IntervalType | None = None,
-    ) -> list[BiomarkerIntervalsRead]:
-        """Return canonical intervals grouped by biomarker; read-only reference data."""
+    ) -> BiomarkerIntervalsBySlug:
+        """Return canonical interval bands keyed by biomarker slug; read-only reference data."""
         intervals = self._interval_repository.list_intervals(slugs, interval_type)
 
-        # Collect each biomarker's bands, preserving first-seen order.
-        bands_by_slug: dict[str, list[BiomarkerInterval]] = {}
+        # Group each biomarker's bands under its slug.
+        bands_by_slug: dict[str, list[BiomarkerIntervalRead]] = {}
         for interval in intervals:
             slug = interval.biomarker.slug
             if slug not in bands_by_slug:
                 bands_by_slug[slug] = []
-            bands_by_slug[slug].append(interval)
+            bands_by_slug[slug].append(_to_interval_read(interval))
 
-        # Build one grouped entry per biomarker from its collected bands.
-        biomarker_intervals: list[BiomarkerIntervalsRead] = []
-        for bands in bands_by_slug.values():
-            biomarker_intervals.append(_to_interval_group(bands))
-
-        return biomarker_intervals
+        return BiomarkerIntervalsBySlug(bands_by_slug)
 
     def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
         measurements = self._biomarker_repository.list_measurements(user_id)
@@ -189,17 +184,6 @@ def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurem
         **BiomarkerMeasurementPoint.model_validate(measurement).model_dump(),
         biomarker_slug=measurement.biomarker.slug,
         display_name=measurement.biomarker.display_name,
-    )
-
-
-def _to_interval_group(intervals: list[BiomarkerInterval]) -> BiomarkerIntervalsRead:
-    # Every band in the group shares one biomarker.
-    biomarker = intervals[0].biomarker
-
-    bands = [_to_interval_read(interval) for interval in intervals]
-    return BiomarkerIntervalsRead(
-        **BiomarkerRead.model_validate(biomarker).model_dump(),
-        intervals=bands,
     )
 
 
