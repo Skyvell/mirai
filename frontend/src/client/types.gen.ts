@@ -196,29 +196,12 @@ export type BiomarkerRead = {
 };
 
 /**
- * BiomarkerSeries
+ * BiomarkerSeriesBySlug
+ *
+ * Measurement time series keyed by biomarker slug; the GET /biomarker-series payload.
  */
-export type BiomarkerSeries = {
-    /**
-     * Slug
-     */
-    slug: string;
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Category
-     */
-    category: string;
-    /**
-     * Canonical Unit
-     */
-    canonical_unit: string;
-    /**
-     * Measurements
-     */
-    measurements: Array<BiomarkerMeasurementPoint>;
+export type BiomarkerSeriesBySlug = {
+    [key: string]: Array<BiomarkerMeasurementPoint>;
 };
 
 /**
@@ -769,11 +752,9 @@ export type ListBiomarkerSeriesData = {
 
 export type ListBiomarkerSeriesResponses = {
     /**
-     * Response List Biomarker Series
-     *
      * Successful Response
      */
-    200: Array<BiomarkerSeries>;
+    200: BiomarkerSeriesBySlug;
 };
 
 export type ListBiomarkerSeriesResponse = ListBiomarkerSeriesResponses[keyof ListBiomarkerSeriesResponses];
@@ -801,9 +782,11 @@ export type GetBiomarkerSeriesError = GetBiomarkerSeriesErrors[keyof GetBiomarke
 
 export type GetBiomarkerSeriesResponses = {
     /**
+     * Response Get Biomarker Series
+     *
      * Successful Response
      */
-    200: BiomarkerSeries;
+    200: Array<BiomarkerMeasurementPoint>;
 };
 
 export type GetBiomarkerSeriesResponse = GetBiomarkerSeriesResponses[keyof GetBiomarkerSeriesResponses];

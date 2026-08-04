@@ -9,10 +9,11 @@ from mirai_api.core.enums import IntervalType
 from mirai_api.schemas.biomarker_intervals import BiomarkerIntervalsBySlug
 from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementCreate,
+    BiomarkerMeasurementPoint,
     BiomarkerMeasurementRead,
     BiomarkerMeasurementUpdates,
     BiomarkerRead,
-    BiomarkerSeries,
+    BiomarkerSeriesBySlug,
 )
 from mirai_api.services.biomarkers import (
     BiomarkerServiceError,
@@ -60,12 +61,12 @@ def list_biomarker_intervals(
 def list_biomarker_series(
     service: BiomarkerServiceDep,
     user: CurrentUser,
-) -> list[BiomarkerSeries]:
-    """Return each biomarker the caller has measurements for, with its time series.
+) -> BiomarkerSeriesBySlug:
+    """Return the caller's measurement time series keyed by biomarker slug.
 
-    Values, units, and reference ranges are verbatim from the lab report;
-    canonical_unit is catalogue context. Series are sorted by measurement date
-    ascending, so the latest value is the last element.
+    Values, units, and reference ranges are verbatim from the lab report. Points
+    are sorted by measurement date ascending, so the latest value is last. Join
+    to GET /biomarkers by slug for display name, category, and canonical unit.
     """
     return service.list_series(user.id)
 
@@ -75,7 +76,7 @@ def get_biomarker_series(
     service: BiomarkerServiceDep,
     user: CurrentUser,
     slug: str,
-) -> BiomarkerSeries:
+) -> list[BiomarkerMeasurementPoint]:
     """Return one biomarker's time series; empty for a known slug with no data."""
     return service.get_series(user.id, slug)
 

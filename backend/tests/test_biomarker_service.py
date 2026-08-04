@@ -236,13 +236,13 @@ def test_list_series_groups_contiguous_measurements() -> None:
         ]
     )
     series = _service(repo).list_series(TEST_USER_ID)
-    assert [s.slug for s in series] == ["ldl_cholesterol", "glucose"]
-    assert [m.measured_at for m in series[0].measurements] == [
+    assert list(series.root.keys()) == ["ldl_cholesterol", "glucose"]
+    assert [m.measured_at for m in series.root["ldl_cholesterol"]] == [
         date(2026, 1, 2),
         date(2026, 3, 2),
     ]
-    assert len(series[1].measurements) == 1
-    assert series[1].measurements[0].id is not None
+    assert len(series.root["glucose"]) == 1
+    assert series.root["glucose"][0].id is not None
 
 
 def test_get_series_unknown_slug_raises() -> None:
@@ -253,9 +253,7 @@ def test_get_series_unknown_slug_raises() -> None:
 
 def test_get_series_known_slug_without_data_is_empty() -> None:
     repo = FakeBiomarkerRepository(biomarkers=[GLUCOSE])
-    series = _service(repo).get_series(TEST_USER_ID, "glucose")
-    assert series.slug == "glucose"
-    assert series.measurements == []
+    assert _service(repo).get_series(TEST_USER_ID, "glucose") == []
 
 
 def test_update_applies_only_set_fields() -> None:

@@ -1,10 +1,9 @@
 import uuid
-from itertools import groupby
 
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import IntervalType
-from mirai_api.models import Biomarker, BiomarkerInterval, BiomarkerMeasurement
+from mirai_api.models import BiomarkerInterval, BiomarkerMeasurement
 from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.schemas.biomarker_intervals import (
@@ -17,7 +16,7 @@ from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementRead,
     BiomarkerMeasurementUpdate,
     BiomarkerRead,
-    BiomarkerSeries,
+    BiomarkerSeriesBySlug,
 )
 
 
@@ -78,25 +77,32 @@ class BiomarkerService:
 
         return BiomarkerIntervalsBySlug(bands_by_slug)
 
-    def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
+    def list_series(self, user_id: uuid.UUID) -> BiomarkerSeriesBySlug:
+        """Return the caller's measurement time series keyed by biomarker slug."""
         measurements = self._biomarker_repository.list_measurements(user_id)
-        return [
-            _to_series(biomarker, list(points))
-            for biomarker, points in groupby(measurements, key=lambda m: m.biomarker)
-        ]
 
-    def get_series(self, user_id: uuid.UUID, slug: str) -> BiomarkerSeries:
-        # Common case: data exists and already carries its biomarker.
+        # Group each biomarker's points under its slug.
+        series_by_slug: dict[str, list[BiomarkerMeasurementPoint]] = {}
+        for measurement in measurements:
+            slug = measurement.biomarker.slug
+            if slug not in series_by_slug:
+                series_by_slug[slug] = []
+            series_by_slug[slug].append(BiomarkerMeasurementPoint.model_validate(measurement))
+
+        return BiomarkerSeriesBySlug(series_by_slug)
+
+    def get_series(self, user_id: uuid.UUID, slug: str) -> list[BiomarkerMeasurementPoint]:
+        """Return one biomarker's time series; empty for a known slug with no data."""
         measurements = self._biomarker_repository.list_measurements(user_id, slug)
         if measurements:
-            return _to_series(measurements[0].biomarker, measurements)
+            return [BiomarkerMeasurementPoint.model_validate(m) for m in measurements]
 
         # No data: distinguish a known slug (empty series) from an unknown one.
         biomarkers = self._biomarker_repository.get_biomarkers([slug])
         if not biomarkers:
             raise UnknownBiomarkersError([slug])
 
-        return _to_series(biomarkers[0], [])
+        return []
 
     def create_measurements(
         self,
@@ -167,16 +173,6 @@ class BiomarkerService:
             raise MeasurementsNotFoundError(sorted(requested - deleted))
 
         self._session.commit()
-
-
-def _to_series(
-    biomarker: Biomarker,
-    measurements: list[BiomarkerMeasurement],
-) -> BiomarkerSeries:
-    return BiomarkerSeries(
-        **BiomarkerRead.model_validate(biomarker).model_dump(),
-        measurements=[BiomarkerMeasurementPoint.model_validate(m) for m in measurements],
-    )
 
 
 def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:

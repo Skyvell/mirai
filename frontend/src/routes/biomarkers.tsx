@@ -1,8 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Activity } from 'lucide-react'
-import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
-import type { BiomarkerSeries } from '@/client'
+import {
+  listBiomarkerSeriesOptions,
+  listBiomarkersOptions,
+} from '@/client/@tanstack/react-query.gen'
+import type { BiomarkerMeasurementPoint } from '@/client'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
 import { QueryPane } from '@/components/query-pane'
@@ -26,14 +29,18 @@ function referenceRange(low: string | null, high: string | null): string {
   return '—'
 }
 
-function history(series: BiomarkerSeries): string {
-  return series.measurements
+function history(measurements: BiomarkerMeasurementPoint[]): string {
+  return measurements
     .map((m) => (m.measured_at ? `${m.value} (${m.measured_at})` : m.value))
     .join(' → ')
 }
 
 function BiomarkersComponent() {
-  const biomarkers = useQuery(listBiomarkerSeriesOptions())
+  const series = useQuery(listBiomarkerSeriesOptions())
+
+  // Catalogue is the single source of truth for display names, joined by slug.
+  const catalogue = useQuery(listBiomarkersOptions())
+  const nameBySlug = new Map((catalogue.data ?? []).map((b) => [b.slug, b.display_name]))
 
   return (
     <Page
@@ -41,7 +48,7 @@ function BiomarkersComponent() {
       description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
       <QueryPane
-        query={biomarkers}
+        query={series}
         empty={
           <EmptyState
             icon={<Activity />}
@@ -50,7 +57,7 @@ function BiomarkersComponent() {
           />
         }
       >
-        {(series) => (
+        {(seriesBySlug) => (
           <Table>
             <TableHeader>
               <TableRow>
@@ -61,12 +68,12 @@ function BiomarkersComponent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {series.map((b) => {
-                const latest = b.measurements.at(-1)
+              {Object.entries(seriesBySlug).map(([slug, measurements]) => {
+                const latest = measurements.at(-1)
                 if (!latest) return null
                 return (
-                  <TableRow key={b.slug}>
-                    <TableCell>{b.display_name}</TableCell>
+                  <TableRow key={slug}>
+                    <TableCell>{nameBySlug.get(slug) ?? slug}</TableCell>
                     <TableCell>
                       <span className="font-mono">{latest.value}</span> {latest.unit}
                     </TableCell>
@@ -74,7 +81,7 @@ function BiomarkersComponent() {
                       {referenceRange(latest.reference_low, latest.reference_high)}
                     </TableCell>
                     <TableCell className="text-xs whitespace-normal text-muted-foreground">
-                      {history(b)}
+                      {history(measurements)}
                     </TableCell>
                   </TableRow>
                 )

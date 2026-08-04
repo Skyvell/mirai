@@ -149,11 +149,11 @@ export const listBiomarkerIntervals = <ThrowOnError extends boolean = false>(opt
 /**
  * List Biomarker Series
  *
- * Return each biomarker the caller has measurements for, with its time series.
+ * Return the caller's measurement time series keyed by biomarker slug.
  *
- * Values, units, and reference ranges are verbatim from the lab report;
- * canonical_unit is catalogue context. Series are sorted by measurement date
- * ascending, so the latest value is the last element.
+ * Values, units, and reference ranges are verbatim from the lab report. Points
+ * are sorted by measurement date ascending, so the latest value is last. Join
+ * to GET /biomarkers by slug for display name, category, and canonical unit.
  */
 export const listBiomarkerSeries = <ThrowOnError extends boolean = false>(options?: Options<ListBiomarkerSeriesData, ThrowOnError>): RequestResult<ListBiomarkerSeriesResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListBiomarkerSeriesResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

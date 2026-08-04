@@ -266,11 +266,11 @@ export const listBiomarkerSeriesQueryKey = (options?: Options<ListBiomarkerSerie
 /**
  * List Biomarker Series
  *
- * Return each biomarker the caller has measurements for, with its time series.
+ * Return the caller's measurement time series keyed by biomarker slug.
  *
- * Values, units, and reference ranges are verbatim from the lab report;
- * canonical_unit is catalogue context. Series are sorted by measurement date
- * ascending, so the latest value is the last element.
+ * Values, units, and reference ranges are verbatim from the lab report. Points
+ * are sorted by measurement date ascending, so the latest value is last. Join
+ * to GET /biomarkers by slug for display name, category, and canonical unit.
  */
 export const listBiomarkerSeriesOptions = (options?: Options<ListBiomarkerSeriesData>) => queryOptions<ListBiomarkerSeriesResponse, DefaultError, ListBiomarkerSeriesResponse, ReturnType<typeof listBiomarkerSeriesQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

@@ -17,7 +17,7 @@ from mirai_api.schemas.biomarkers import (
     BiomarkerMeasurementPoint,
     BiomarkerMeasurementRead,
     BiomarkerRead,
-    BiomarkerSeries,
+    BiomarkerSeriesBySlug,
 )
 from mirai_api.services.biomarkers import (
     MeasurementsNotFoundError,
@@ -63,7 +63,7 @@ class StubBiomarkerService:
         self.calls: list[tuple] = []
         self.biomarkers: list[BiomarkerRead] = []
         self.intervals: BiomarkerIntervalsBySlug = BiomarkerIntervalsBySlug({})
-        self.series: list[BiomarkerSeries] = []
+        self.series: BiomarkerSeriesBySlug = BiomarkerSeriesBySlug({})
         self.reads: list[BiomarkerMeasurementRead] = []
         self.error: Exception | None = None
 
@@ -84,13 +84,13 @@ class StubBiomarkerService:
         self._record("list_intervals", slugs, interval_type)
         return self.intervals
 
-    def list_series(self, user_id: uuid.UUID) -> list[BiomarkerSeries]:
+    def list_series(self, user_id: uuid.UUID) -> BiomarkerSeriesBySlug:
         self._record("list_series", user_id)
         return self.series
 
-    def get_series(self, user_id: uuid.UUID, slug: str) -> BiomarkerSeries:
+    def get_series(self, user_id: uuid.UUID, slug: str) -> list[BiomarkerMeasurementPoint]:
         self._record("get_series", user_id, slug)
-        return self.series[0]
+        return self.series.root.get(slug, [])
 
     def create_measurements(self, user_id: uuid.UUID, items: list) -> list:
         self._record("create_measurements", user_id, items)
@@ -184,7 +184,7 @@ def test_no_measurements_gives_empty_series_list(
 ) -> None:
     response = client.get("/biomarker-series")
     assert response.status_code == 200
-    assert response.json() == []
+    assert response.json() == {}
     assert stub_service.calls == [("list_series", TEST_USER_ID)]
 
 
@@ -193,14 +193,8 @@ def test_series_points_expose_ids_and_string_decimals(
     stub_service: StubBiomarkerService,
 ) -> None:
     # The generated frontend client types value as string; pin that contract.
-    stub_service.series = [
-        BiomarkerSeries(
-            **GLUCOSE.model_dump(),
-            measurements=[GLUCOSE_POINT],
-        )
-    ]
-    (series,) = client.get("/biomarker-series").json()
-    (point,) = series["measurements"]
+    stub_service.series = BiomarkerSeriesBySlug({"glucose": [GLUCOSE_POINT]})
+    (point,) = client.get("/biomarker-series").json()["glucose"]
     assert point["id"] == str(MEASUREMENT_ID)
     assert point["value"] == "3.1"
     assert point["reference_high"] == "3.0"

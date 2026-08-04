@@ -3,7 +3,14 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Self
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    model_validator,
+)
 
 from mirai_api.models import BiomarkerMeasurement
 
@@ -33,8 +40,8 @@ class BiomarkerMeasurementPoint(BaseModel):
     lab_upload_id: uuid.UUID | None
 
 
-class BiomarkerSeries(BiomarkerRead):
-    measurements: list[BiomarkerMeasurementPoint]
+class BiomarkerSeriesBySlug(RootModel[dict[str, list[BiomarkerMeasurementPoint]]]):
+    """Measurement time series keyed by biomarker slug; the GET /biomarker-series payload."""
 
 
 class BiomarkerMeasurementCreate(BaseModel):
