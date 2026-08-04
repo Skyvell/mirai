@@ -1,0 +1,193 @@
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
+import { CalendarIcon, Check } from 'lucide-react'
+
+import type { MeResponse } from '@/client'
+import {
+  currentUserQueryKey,
+  updateCurrentUserMutation,
+} from '@/client/@tanstack/react-query.gen'
+import { profileSchema, type ProfileFormValues } from '@/lib/profile-schema'
+import { cn, localIsoDate } from '@/lib/utils'
+import { ApiErrorAlert } from '@/components/api-error-alert'
+import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+
+const SEX_OPTIONS = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+] as const
+
+// Local-midnight Date from a YYYY-MM-DD string; new Date(str) would parse as UTC
+// and shift a day in negative offsets.
+function parseIsoDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function ageInYears(birth: Date): number {
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const beforeBirthday =
+    now.getMonth() < birth.getMonth() ||
+    (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())
+  if (beforeBirthday) age -= 1
+  return age
+}
+
+export function ProfileForm({
+  current,
+  submitLabel = 'Save',
+  onSaved,
+}: {
+  current?: MeResponse | null
+  submitLabel?: string
+  onSaved?: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [dobOpen, setDobOpen] = useState(false)
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      sex: current?.sex ?? undefined,
+      dateOfBirth: parseIsoDate(current?.date_of_birth),
+    },
+  })
+
+  const update = useMutation({
+    ...updateCurrentUserMutation(),
+    onSuccess: (data) => {
+      // Seed the cache so the gate flips immediately, then invalidate to reconcile.
+      queryClient.setQueryData(currentUserQueryKey(), data)
+      queryClient.invalidateQueries({ queryKey: currentUserQueryKey() })
+
+      toast.success('Profile saved')
+      onSaved?.()
+    },
+  })
+
+  function onSubmit(values: ProfileFormValues) {
+    update.mutate({
+      body: {
+        sex: values.sex,
+        date_of_birth: localIsoDate(values.dateOfBirth),
+      },
+    })
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
+        <FormField
+          control={form.control}
+          name="sex"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Biological sex</FormLabel>
+              <FormControl>
+                <RadioGroup
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  {SEX_OPTIONS.map((option) => (
+                    <Label
+                      key={option.value}
+                      htmlFor={`sex-${option.value}`}
+                      className="flex cursor-pointer items-center justify-between rounded-lg border border-input bg-background px-4 py-3 font-medium transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+                    >
+                      <span>{option.label}</span>
+                      <RadioGroupItem
+                        id={`sex-${option.value}`}
+                        value={option.value}
+                        className="sr-only"
+                      />
+                      {field.value === option.value && (
+                        <Check className="size-4 text-primary" />
+                      )}
+                    </Label>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="dateOfBirth"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Date of birth</FormLabel>
+              <Popover open={dobOpen} onOpenChange={setDobOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start gap-2 font-normal',
+                        !field.value && 'text-muted-foreground',
+                      )}
+                    >
+                      <CalendarIcon className="size-4" />
+                      {field.value
+                        ? format(field.value, 'd MMMM yyyy')
+                        : 'Select your date of birth'}
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    captionLayout="dropdown"
+                    selected={field.value}
+                    onSelect={(date) => {
+                      field.onChange(date)
+                      if (date) setDobOpen(false)
+                    }}
+                    startMonth={new Date(1900, 0)}
+                    endMonth={new Date()}
+                    disabled={{ after: new Date() }}
+                    defaultMonth={field.value ?? new Date(1990, 0)}
+                    autoFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {field.value ? (
+                <FormDescription>{ageInYears(field.value)} years old</FormDescription>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {update.isError && <ApiErrorAlert error={update.error} />}
+
+        <Button type="submit" className="w-full" disabled={update.isPending}>
+          {update.isPending ? 'Saving…' : submitLabel}
+        </Button>
+      </form>
+    </Form>
+  )
+}

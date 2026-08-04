@@ -418,6 +418,22 @@ export type MeResponse = {
      * Clerk User Id
      */
     clerk_user_id: string;
+    sex: Sex | null;
+    /**
+     * Date Of Birth
+     */
+    date_of_birth: string | null;
+};
+
+/**
+ * MeUpdate
+ */
+export type MeUpdate = {
+    sex: Sex;
+    /**
+     * Date Of Birth
+     */
+    date_of_birth: string;
 };
 
 /**
@@ -522,6 +538,31 @@ export type CurrentUserResponses = {
 };
 
 export type CurrentUserResponse = CurrentUserResponses[keyof CurrentUserResponses];
+
+export type UpdateCurrentUserData = {
+    body: MeUpdate;
+    path?: never;
+    query?: never;
+    url: '/me';
+};
+
+export type UpdateCurrentUserErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateCurrentUserError = UpdateCurrentUserErrors[keyof UpdateCurrentUserErrors];
+
+export type UpdateCurrentUserResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeResponse;
+};
+
+export type UpdateCurrentUserResponse = UpdateCurrentUserResponses[keyof UpdateCurrentUserResponses];
 
 export type ListLabUploadsData = {
     body?: never;

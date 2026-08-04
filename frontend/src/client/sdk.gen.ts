@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmLabUploadData, ConfirmLabUploadErrors, ConfirmLabUploadResponses, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, GetLabUploadData, GetLabUploadErrors, GetLabUploadResponses, ListBiomarkerIntervalsData, ListBiomarkerIntervalsErrors, ListBiomarkerIntervalsResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UpdateLabDraftData, UpdateLabDraftErrors, UpdateLabDraftResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadErrors, ConfirmLabUploadResponses, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsErrors, CreateBiomarkerMeasurementsResponses, CurrentUserData, CurrentUserResponses, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsErrors, DeleteBiomarkerMeasurementsResponses, DeleteLabUploadData, DeleteLabUploadErrors, DeleteLabUploadResponses, GetBiomarkerSeriesData, GetBiomarkerSeriesErrors, GetBiomarkerSeriesResponses, GetLabUploadData, GetLabUploadErrors, GetLabUploadResponses, ListBiomarkerIntervalsData, ListBiomarkerIntervalsErrors, ListBiomarkerIntervalsResponses, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponses, ListBiomarkersResponses, ListLabUploadsData, ListLabUploadsResponses, LivenessData, LivenessResponses, ReadinessData, ReadinessResponses, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsErrors, UpdateBiomarkerMeasurementsResponses, UpdateCurrentUserData, UpdateCurrentUserErrors, UpdateCurrentUserResponses, UpdateLabDraftData, UpdateLabDraftErrors, UpdateLabDraftResponses, UploadLabData, UploadLabErrors, UploadLabResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -35,7 +35,7 @@ export const readiness = <ThrowOnError extends boolean = false>(options?: Option
 /**
  * Read Current User
  *
- * Return the authenticated caller's identity.
+ * Return the authenticated caller's identity and profile.
  *
  * Proves the full loop: the Bearer token is verified against Clerk's JWKS
  * and the caller is resolved to (or JIT-created as) a local users row.
@@ -44,6 +44,21 @@ export const currentUser = <ThrowOnError extends boolean = false>(options?: Opti
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/me',
     ...options
+});
+
+/**
+ * Update Current User
+ *
+ * Set the caller's profile: biological sex and date of birth.
+ */
+export const updateCurrentUser = <ThrowOnError extends boolean = false>(options: Options<UpdateCurrentUserData, ThrowOnError>): RequestResult<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError> => (options.client ?? client).patch<UpdateCurrentUserResponses, UpdateCurrentUserErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/me',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**

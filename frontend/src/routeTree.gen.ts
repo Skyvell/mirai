@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WearablesRouteImport } from './routes/wearables'
 import { Route as SourcesRouteImport } from './routes/sources'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as OmicsRouteImport } from './routes/omics'
 import { Route as InterventionsRouteImport } from './routes/interventions'
 import { Route as InsightsRouteImport } from './routes/insights'
@@ -27,6 +28,11 @@ const WearablesRoute = WearablesRouteImport.update({
 const SourcesRoute = SourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OmicsRoute = OmicsRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
+  '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRouteWithChildren
   '/wearables': typeof WearablesRoute
   '/sources/': typeof SourcesIndexRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
+  '/settings': typeof SettingsRoute
   '/wearables': typeof WearablesRoute
   '/sources': typeof SourcesIndexRoute
   '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/interventions': typeof InterventionsRoute
   '/omics': typeof OmicsRoute
+  '/settings': typeof SettingsRoute
   '/sources': typeof SourcesRouteWithChildren
   '/wearables': typeof WearablesRoute
   '/sources/': typeof SourcesIndexRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
+    | '/settings'
     | '/sources'
     | '/wearables'
     | '/sources/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
+    | '/settings'
     | '/wearables'
     | '/sources'
     | '/sources/$uploadId/review'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/interventions'
     | '/omics'
+    | '/settings'
     | '/sources'
     | '/wearables'
     | '/sources/'
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   InterventionsRoute: typeof InterventionsRoute
   OmicsRoute: typeof OmicsRoute
+  SettingsRoute: typeof SettingsRoute
   SourcesRoute: typeof SourcesRouteWithChildren
   WearablesRoute: typeof WearablesRoute
 }
@@ -157,6 +170,13 @@ declare module '@tanstack/react-router' {
       path: '/sources'
       fullPath: '/sources'
       preLoaderRoute: typeof SourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/omics': {
@@ -230,6 +250,7 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   InterventionsRoute: InterventionsRoute,
   OmicsRoute: OmicsRoute,
+  SettingsRoute: SettingsRoute,
   SourcesRoute: SourcesRouteWithChildren,
   WearablesRoute: WearablesRoute,
 }

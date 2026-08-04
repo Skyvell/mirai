@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { confirmLabUpload, createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, getLabUpload, listBiomarkerIntervals, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, updateLabDraft, uploadLab } from '../sdk.gen';
-import type { ConfirmLabUploadData, ConfirmLabUploadError, ConfirmLabUploadResponse, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, GetLabUploadData, GetLabUploadError, GetLabUploadResponse, ListBiomarkerIntervalsData, ListBiomarkerIntervalsError, ListBiomarkerIntervalsResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UpdateLabDraftData, UpdateLabDraftError, UpdateLabDraftResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
+import { confirmLabUpload, createBiomarkerMeasurements, currentUser, deleteBiomarkerMeasurements, deleteLabUpload, getBiomarkerSeries, getLabUpload, listBiomarkerIntervals, listBiomarkers, listBiomarkerSeries, listLabUploads, liveness, type Options, readiness, updateBiomarkerMeasurements, updateCurrentUser, updateLabDraft, uploadLab } from '../sdk.gen';
+import type { ConfirmLabUploadData, ConfirmLabUploadError, ConfirmLabUploadResponse, CreateBiomarkerMeasurementsData, CreateBiomarkerMeasurementsError, CreateBiomarkerMeasurementsResponse, CurrentUserData, CurrentUserResponse, DeleteBiomarkerMeasurementsData, DeleteBiomarkerMeasurementsError, DeleteBiomarkerMeasurementsResponse, DeleteLabUploadData, DeleteLabUploadError, DeleteLabUploadResponse, GetBiomarkerSeriesData, GetBiomarkerSeriesError, GetBiomarkerSeriesResponse, GetLabUploadData, GetLabUploadError, GetLabUploadResponse, ListBiomarkerIntervalsData, ListBiomarkerIntervalsError, ListBiomarkerIntervalsResponse, ListBiomarkersData, ListBiomarkerSeriesData, ListBiomarkerSeriesResponse, ListBiomarkersResponse, ListLabUploadsData, ListLabUploadsResponse, LivenessData, LivenessResponse, ReadinessData, ReadinessResponse, UpdateBiomarkerMeasurementsData, UpdateBiomarkerMeasurementsError, UpdateBiomarkerMeasurementsResponse, UpdateCurrentUserData, UpdateCurrentUserError, UpdateCurrentUserResponse, UpdateLabDraftData, UpdateLabDraftError, UpdateLabDraftResponse, UploadLabData, UploadLabError, UploadLabResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -84,7 +84,7 @@ export const currentUserQueryKey = (options?: Options<CurrentUserData>) => creat
 /**
  * Read Current User
  *
- * Return the authenticated caller's identity.
+ * Return the authenticated caller's identity and profile.
  *
  * Proves the full loop: the Bearer token is verified against Clerk's JWKS
  * and the caller is resolved to (or JIT-created as) a local users row.
@@ -101,6 +101,25 @@ export const currentUserOptions = (options?: Options<CurrentUserData>) => queryO
     },
     queryKey: currentUserQueryKey(options)
 });
+
+/**
+ * Update Current User
+ *
+ * Set the caller's profile: biological sex and date of birth.
+ */
+export const updateCurrentUserMutation = (options?: Partial<Options<UpdateCurrentUserData>>): UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> => {
+    const mutationOptions: UseMutationOptions<UpdateCurrentUserResponse, UpdateCurrentUserError, Options<UpdateCurrentUserData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await updateCurrentUser({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 export const listLabUploadsQueryKey = (options?: Options<ListLabUploadsData>) => createQueryKey('listLabUploads', options);
 
