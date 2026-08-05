@@ -15,10 +15,10 @@ from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalReposito
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.repositories.lab_results import LabResultRepository
 from mirai_api.repositories.lab_uploads import LabUploadRepository
-from mirai_api.repositories.user import UserRepository
+from mirai_api.repositories.users import UserRepository
 from mirai_api.services.biomarkers import BiomarkerService
 from mirai_api.services.lab_uploads import LabUploadService
-from mirai_api.services.user import UserService
+from mirai_api.services.users import UserService
 
 _bearer = HTTPBearer(auto_error=True)
 
