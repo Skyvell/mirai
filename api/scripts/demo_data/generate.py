@@ -1,8 +1,8 @@
-"""Generate the demo biomarker measurement dataset to fixtures/biomarker_measurements.csv.
+"""Generate the demo biomarker measurement dataset to testdata/biomarker_measurements.csv.
 
 One synthetic subject — male, born 1991-08-18 — sampled roughly every four months from
 birth to 2026-08-04, across all ten catalogue markers. Reference bounds are resolved from
-the catalogue's own seed data, so the fixture cannot drift from the shipped intervals.
+the catalogue's own seed data, so the dataset cannot drift from the shipped intervals.
 
 Values follow an age-dependent center plus AR(1) noise, so consecutive points correlate the
 way repeated measurements of one person do. Out-of-range values are clustered into coherent
@@ -11,7 +11,7 @@ render path meaningful to look at.
 
 Deterministic: same seed, byte-identical CSV. Run rarely; the CSV is the committed artifact.
 
-    uv run python scripts/generate_demo_measurements.py
+    uv run python scripts/demo_data/generate.py
 """
 
 import csv
@@ -23,14 +23,14 @@ from decimal import Decimal
 from itertools import pairwise
 from pathlib import Path
 
-import demo_subject
+import subject
 from mirai_api.core.enums import IntervalType
 from mirai_api.seed.biomarker_intervals import INTERVALS
 from mirai_api.seed.biomarkers import BIOMARKERS
 
 # Sampling starts at birth, so the series walks the full pediatric band ladder before
 # reaching the adult intervals.
-FIRST_MEASUREMENT = demo_subject.DATE_OF_BIRTH
+FIRST_MEASUREMENT = subject.DATE_OF_BIRTH
 LAST_MEASUREMENT = date(2026, 8, 4)
 
 # Roughly four months apart, jittered because real draws are not on a metronome.
@@ -44,7 +44,7 @@ SEED = 19910818
 # AR(1) persistence: how strongly a point is pulled toward the previous one.
 NOISE_PERSISTENCE = 0.55
 
-OUTPUT_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "biomarker_measurements.csv"
+OUTPUT_PATH = Path(__file__).resolve().parents[2] / "testdata" / "biomarker_measurements.csv"
 
 # Rows follow catalogue order; the sort below is the guard that keeps MARKERS aligned with it.
 CATALOGUE_ORDER = {biomarker["slug"]: index for index, biomarker in enumerate(BIOMARKERS)}
@@ -399,7 +399,7 @@ def build_rows(dates: list[date]) -> list[dict[str, str]]:
 
     rows: list[dict[str, str]] = []
     for index, on in enumerate(dates):
-        age_days = (on - demo_subject.DATE_OF_BIRTH).days
+        age_days = (on - subject.DATE_OF_BIRTH).days
         age_years = age_days / 365.25
 
         for marker in ordered_markers:
@@ -411,7 +411,7 @@ def build_rows(dates: list[date]) -> list[dict[str, str]]:
                 value *= episode_factor(episode, marker.slug, on)
             value *= spikes.get((marker.slug, on), 1.0)
 
-            band = reference_band(marker.slug, demo_subject.SEX, age_days)
+            band = reference_band(marker.slug, subject.SEX, age_days)
             low, high = band if band is not None else (None, None)
             rows.append(
                 {

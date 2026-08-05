@@ -1,6 +1,6 @@
 """Load the demo biomarker measurement dataset onto one user's record.
 
-Writes fixtures/biomarker_measurements.csv through BiomarkerService — the same validated
+Writes testdata/biomarker_measurements.csv through BiomarkerService — the same validated
 path POST /biomarker-measurements takes, differing only in skipping the router and Clerk
 auth. Unknown slugs reject the whole batch and the rows land in a single transaction. The
 subject's sex and date of birth are set too, since reference bands are stratified by both.
@@ -8,7 +8,7 @@ subject's sex and date of birth are set too, since reference bands are stratifie
 Talks to the dev database over the connector in core/db.py, so it needs the ADC login from
 the repository README and the Cloud SQL settings in api/.env. Nothing here runs DDL.
 
-    uv run python scripts/load_demo_measurements.py --clerk-user-id user_2abc... --replace
+    uv run python scripts/demo_data/load.py --clerk-user-id user_2abc... --replace
 
 The user row must already exist — it is provisioned just-in-time on the first authenticated
 request, so sign in once before loading. Read the id off GET /me.
@@ -20,7 +20,7 @@ from typing import Annotated
 
 import typer
 
-import demo_subject
+import subject
 from mirai_api.core.db import session_scope
 from mirai_api.core.deps import get_biomarker_service, get_user_service
 from mirai_api.core.enums import Sex
@@ -28,9 +28,9 @@ from mirai_api.repositories.users import UserRepository
 from mirai_api.schemas.biomarkers import BiomarkerMeasurementCreate
 from mirai_api.schemas.me import MeUpdate
 
-CSV_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "biomarker_measurements.csv"
+CSV_PATH = Path(__file__).resolve().parents[2] / "testdata" / "biomarker_measurements.csv"
 
-SUBJECT = MeUpdate(sex=Sex(demo_subject.SEX), date_of_birth=demo_subject.DATE_OF_BIRTH)
+SUBJECT = MeUpdate(sex=Sex(subject.SEX), date_of_birth=subject.DATE_OF_BIRTH)
 
 
 def read_measurements() -> list[BiomarkerMeasurementCreate]:
