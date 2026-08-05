@@ -63,7 +63,7 @@ EXTRACTION = LabExtraction(
 )
 
 
-class FakeSession:
+class CommitCountingSession:
     """Session double: counts commits, holds no state."""
 
     def __init__(self) -> None:
@@ -196,7 +196,7 @@ def _service(
         lab_repo,  # type: ignore[arg-type]
         result_repo,  # type: ignore[arg-type]
         biomarker_repo or FakeBiomarkerRepository(),  # type: ignore[arg-type]
-        FakeSession(),  # type: ignore[arg-type]
+        CommitCountingSession(),  # type: ignore[arg-type]
     )
 
 
