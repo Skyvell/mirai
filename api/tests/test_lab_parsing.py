@@ -1,13 +1,13 @@
 from datetime import date
 from decimal import Decimal
 
-from mirai_api.models import Biomarker
-from mirai_api.services.lab_parsing import (
+from mirai_api.integrations.lab_parsing import (
     ExtractedMeasurement,
     LabExtraction,
     UnmatchedMarker,
-    map_extraction,
 )
+from mirai_api.models import Biomarker
+from mirai_api.services.lab_extraction import map_extraction
 
 
 def _catalogue() -> list[Biomarker]:

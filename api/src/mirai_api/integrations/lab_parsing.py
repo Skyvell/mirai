@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from functools import lru_cache
@@ -7,12 +6,8 @@ from pydantic import BaseModel
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from mirai_api.core.config import get_settings
-from mirai_api.core.db import get_engine
-from mirai_api.models import Biomarker
 
 _SYSTEM_PROMPT = """\
 You extract blood biomarker results from a lab report PDF.
@@ -55,50 +50,6 @@ class LabExtraction(BaseModel):
     unmatched: list[UnmatchedMarker]
 
 
-@dataclass
-class MappedMeasurement:
-    """An extracted measurement resolved to its catalogue biomarker."""
-
-    biomarker: Biomarker
-    measurement: ExtractedMeasurement
-
-
-def map_extraction(
-    extraction: LabExtraction,
-    catalogue: list[Biomarker],
-) -> tuple[list[MappedMeasurement], list[UnmatchedMarker]]:
-    """Resolve extracted measurements against the catalogue.
-
-    Pure and DB-free. A measurement whose slug is not in the catalogue (a model
-    hallucination) is demoted to unmatched rather than raising; the unmatched
-    list also carries the model's own unmatched markers.
-    """
-    by_slug = {b.slug: b for b in catalogue}
-    mapped: list[MappedMeasurement] = []
-    unmatched: list[UnmatchedMarker] = list(extraction.unmatched)
-
-    for m in extraction.measurements:
-        biomarker = by_slug.get(m.biomarker_slug)
-        if biomarker is None:
-            unmatched.append(
-                UnmatchedMarker(
-                    name=m.biomarker_slug,
-                    value=str(m.value),
-                    unit=m.unit,
-                    reference_low=m.reference_low,
-                    reference_high=m.reference_high,
-                )
-            )
-            continue
-        mapped.append(
-            MappedMeasurement(
-                biomarker=biomarker,
-                measurement=m,
-            )
-        )
-    return mapped, unmatched
-
-
 @lru_cache
 def _agent() -> Agent[None, LabExtraction]:
     """Cached Pydantic AI agent over Claude, built lazily so import needs no key."""
@@ -112,24 +63,6 @@ def _agent() -> Agent[None, LabExtraction]:
         output_type=LabExtraction,
         system_prompt=_SYSTEM_PROMPT,
     )
-
-
-def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
-    lines = "\n".join(f"{b.slug} — {b.display_name} — {b.canonical_unit}" for b in catalogue)
-    return f"Catalogue of known biomarkers:\n{lines}"
-
-
-@lru_cache
-def cached_catalogue() -> tuple[list[Biomarker], str]:
-    """The seeded, read-only biomarker catalogue and its prompt, loaded once.
-
-    Detached instances are safe to reuse: only column values are read. Catalogue
-    changes ship as migrations, which redeploy the process and reset this cache.
-    """
-    with Session(get_engine()) as session:
-        catalogue = list(session.scalars(select(Biomarker)))
-        session.expunge_all()
-    return catalogue, _catalogue_prompt(catalogue)
 
 
 async def parse_lab_pdf(pdf_bytes: bytes, catalogue_prompt_text: str) -> LabExtraction:

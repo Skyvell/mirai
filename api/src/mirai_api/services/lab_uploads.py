@@ -8,6 +8,8 @@ from sqlalchemy import Row
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
+from mirai_api.integrations import storage, tasks
+from mirai_api.integrations.lab_parsing import UnmatchedMarker, parse_lab_pdf
 from mirai_api.models import BiomarkerMeasurement, LabResult, LabUpload
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.repositories.lab_results import LabResultRepository
@@ -19,14 +21,11 @@ from mirai_api.schemas.lab_uploads import (
     LabUploadDetail,
     LabUploadSummary,
 )
-from mirai_api.services import storage, tasks
 from mirai_api.services.biomarkers import UnknownBiomarkersError
-from mirai_api.services.lab_parsing import (
+from mirai_api.services.lab_extraction import (
     MappedMeasurement,
-    UnmatchedMarker,
     cached_catalogue,
     map_extraction,
-    parse_lab_pdf,
 )
 
 logger = logging.getLogger(__name__)
