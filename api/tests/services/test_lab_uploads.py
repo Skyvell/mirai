@@ -48,6 +48,8 @@ LDL = Biomarker(
 
 CATALOGUE = [GLUCOSE]
 
+_BIOMARKERS_BY_ID = {b.id: b for b in (GLUCOSE, LDL)}
+
 EXTRACTION = LabExtraction(
     measured_at=date(2026, 7, 12),
     measurements=[
@@ -148,7 +150,15 @@ class FakeLabResultRepository:
         self.results.extend(results)
 
     def list_for_upload(self, upload_id: uuid.UUID) -> list[LabResult]:
-        return [r for r in self.results if r.lab_upload_id == upload_id]
+        rows = [r for r in self.results if r.lab_upload_id == upload_id]
+
+        # Stand in for the real repository's joinedload(LabResult.biomarker):
+        # writers set only biomarker_id, the read resolves the relationship.
+        for r in rows:
+            if r.biomarker_id is not None and r.biomarker is None:
+                r.biomarker = _BIOMARKERS_BY_ID[r.biomarker_id]
+
+        return rows
 
     def get_for_upload(
         self,
@@ -166,6 +176,9 @@ class FakeBiomarkerRepository:
     def __init__(self, biomarkers: list[Biomarker] | None = None) -> None:
         self.biomarkers = biomarkers or []
         self.added: list = []
+
+    def list_biomarkers(self) -> list[Biomarker]:
+        return list(self.biomarkers)
 
     def get_biomarkers(self, slugs: list[str]) -> list[Biomarker]:
         wanted = set(slugs)
@@ -195,7 +208,7 @@ def _service(
     return LabUploadService(
         lab_repo,  # type: ignore[arg-type]
         result_repo,  # type: ignore[arg-type]
-        biomarker_repo or FakeBiomarkerRepository(),  # type: ignore[arg-type]
+        biomarker_repo or FakeBiomarkerRepository(CATALOGUE),  # type: ignore[arg-type]
         CommitCountingSession(),  # type: ignore[arg-type]
     )
 
@@ -205,7 +218,6 @@ def pipeline(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Patch the blocking parse pipeline; expose parse call count and failure toggle."""
     holder = SimpleNamespace(parse_calls=0, error=None)
 
-    monkeypatch.setattr(lab_uploads, "cached_catalogue", lambda: (CATALOGUE, "prompt"))
     monkeypatch.setattr(storage, "upload", lambda *a, **k: None)
     monkeypatch.setattr(storage, "download", lambda name: b"%PDF")
     monkeypatch.setattr(storage, "delete_blob", lambda name: None)
@@ -591,11 +603,7 @@ def test_submit_stores_hash_and_parses_when_new(pipeline: SimpleNamespace) -> No
     lab_repo = FakeLabUploadRepository()
     result_repo = FakeLabResultRepository()
 
-    detail = asyncio.run(
-        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
-            TEST_USER_ID, "report.pdf", _PDF
-        )
-    )
+    detail = asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "report.pdf", _PDF))
 
     stored = lab_repo.uploads[detail.id]
     assert stored.content_sha256 == _PDF_SHA256
@@ -607,11 +615,7 @@ def test_submit_allows_reupload_of_differing_bytes(pipeline: SimpleNamespace) ->
     lab_repo = FakeLabUploadRepository([existing])
     result_repo = FakeLabResultRepository()
 
-    detail = asyncio.run(
-        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
-            TEST_USER_ID, "report.pdf", _PDF
-        )
-    )
+    detail = asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "report.pdf", _PDF))
 
     assert detail.status == UploadStatus.AWAITING_REVIEW
     assert len(lab_repo.uploads) == 2
@@ -623,11 +627,7 @@ def test_submit_allows_reupload_after_prior_failed(pipeline: SimpleNamespace) ->
     lab_repo = FakeLabUploadRepository([failed])
     result_repo = FakeLabResultRepository()
 
-    detail = asyncio.run(
-        _service(lab_repo, result_repo, FakeBiomarkerRepository(CATALOGUE)).submit(
-            TEST_USER_ID, "report.pdf", _PDF
-        )
-    )
+    detail = asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "report.pdf", _PDF))
 
     assert detail.status == UploadStatus.AWAITING_REVIEW
     assert len(lab_repo.uploads) == 2

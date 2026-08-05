@@ -1,10 +1,5 @@
 from dataclasses import dataclass
-from functools import lru_cache
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from mirai_api.core.db import get_engine
 from mirai_api.integrations.lab_parsing import (
     ExtractedMeasurement,
     LabExtraction,
@@ -57,19 +52,7 @@ def map_extraction(
     return mapped, unmatched
 
 
-def _catalogue_prompt(catalogue: list[Biomarker]) -> str:
+def catalogue_prompt(catalogue: list[Biomarker]) -> str:
+    """Render the catalogue as the slug vocabulary the extraction prompt needs."""
     lines = "\n".join(f"{b.slug} — {b.display_name} — {b.canonical_unit}" for b in catalogue)
     return f"Catalogue of known biomarkers:\n{lines}"
-
-
-@lru_cache
-def cached_catalogue() -> tuple[list[Biomarker], str]:
-    """The seeded, read-only biomarker catalogue and its prompt, loaded once.
-
-    Detached instances are safe to reuse: only column values are read. Catalogue
-    changes ship as migrations, which redeploy the process and reset this cache.
-    """
-    with Session(get_engine()) as session:
-        catalogue = list(session.scalars(select(Biomarker)))
-        session.expunge_all()
-    return catalogue, _catalogue_prompt(catalogue)
