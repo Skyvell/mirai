@@ -9,15 +9,16 @@ import pytest
 
 from conftest import TEST_USER_ID
 from mirai_api.core.enums import UploadStatus
-from mirai_api.models import Biomarker, LabResult, LabUpload
-from mirai_api.schemas.lab_uploads import LabDraftItemUpdate, LabDraftUpdate
-from mirai_api.services import lab_uploads, storage
-from mirai_api.services.biomarkers import UnknownBiomarkersError
-from mirai_api.services.lab_parsing import (
+from mirai_api.integrations import storage
+from mirai_api.integrations.lab_parsing import (
     ExtractedMeasurement,
     LabExtraction,
     UnmatchedMarker,
 )
+from mirai_api.models import Biomarker, LabResult, LabUpload
+from mirai_api.schemas.lab_uploads import LabDraftItemUpdate, LabDraftUpdate
+from mirai_api.services import lab_uploads
+from mirai_api.services.biomarkers import UnknownBiomarkersError
 from mirai_api.services.lab_uploads import (
     DraftItemsNotFoundError,
     DraftNotCommittableError,
