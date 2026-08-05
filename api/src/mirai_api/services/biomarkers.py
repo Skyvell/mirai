@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import IntervalType
-from mirai_api.models import BiomarkerInterval, BiomarkerMeasurement
+from mirai_api.models import BiomarkerMeasurement
 from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.schemas.biomarker_intervals import (
@@ -73,7 +73,7 @@ class BiomarkerService:
             slug = interval.biomarker.slug
             if slug not in bands_by_slug:
                 bands_by_slug[slug] = []
-            bands_by_slug[slug].append(_to_interval_read(interval))
+            bands_by_slug[slug].append(BiomarkerIntervalRead.from_interval(interval))
 
         return BiomarkerIntervalsBySlug(bands_by_slug)
 
@@ -136,7 +136,7 @@ class BiomarkerService:
         # Persist as one transaction; the flush gives the rows their ids.
         self._biomarker_repository.add_measurements(measurements)
         self._session.commit()
-        return [_to_measurement_read(m) for m in measurements]
+        return [BiomarkerMeasurementRead.from_measurement(m) for m in measurements]
 
     def update_measurements(
         self,
@@ -157,7 +157,7 @@ class BiomarkerService:
 
         # Commit once; return the updated rows in request order.
         self._session.commit()
-        return [_to_measurement_read(by_id[item.id]) for item in items]
+        return [BiomarkerMeasurementRead.from_measurement(by_id[item.id]) for item in items]
 
     def delete_measurements(
         self,
@@ -173,22 +173,3 @@ class BiomarkerService:
             raise MeasurementsNotFoundError(sorted(requested - deleted))
 
         self._session.commit()
-
-
-def _to_measurement_read(measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:
-    return BiomarkerMeasurementRead(
-        **BiomarkerMeasurementPoint.model_validate(measurement).model_dump(),
-        biomarker_slug=measurement.biomarker.slug,
-        display_name=measurement.biomarker.display_name,
-    )
-
-
-def _to_interval_read(interval: BiomarkerInterval) -> BiomarkerIntervalRead:
-    return BiomarkerIntervalRead(
-        type=interval.type,
-        sex=interval.sex,
-        age_min_days=interval.age_min_days,
-        age_max_days=interval.age_max_days,
-        low=interval.interval_low,
-        high=interval.interval_high,
-    )

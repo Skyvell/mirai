@@ -4,7 +4,6 @@ import uuid
 from datetime import UTC, date, datetime
 
 from fastapi.concurrency import run_in_threadpool
-from sqlalchemy import Row
 from sqlalchemy.orm import Session
 
 from mirai_api.core.enums import UploadStatus
@@ -16,7 +15,6 @@ from mirai_api.repositories.lab_results import LabResultRepository
 from mirai_api.repositories.lab_uploads import LabUploadRepository
 from mirai_api.schemas.lab_uploads import (
     LabDraft,
-    LabDraftItemRead,
     LabDraftUpdate,
     LabUploadDetail,
     LabUploadSummary,
@@ -107,7 +105,14 @@ class LabUploadService:
 
     def list(self, user_id: uuid.UUID) -> list[LabUploadSummary]:
         rows = self._lab_upload_repository.list_with_counts(user_id)
-        return [_to_summary(r) for r in rows]
+
+        # An upload that never progressed is reported as failed, not mutated.
+        summaries = []
+        for row in rows:
+            status = _effective_status(row.status, row.created_at)
+            summaries.append(LabUploadSummary.from_row(row, status=status))
+
+        return summaries
 
     def get(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
         # Resolve the upload scoped to the user; a miss is not-found and not-owned alike.
@@ -122,9 +127,9 @@ class LabUploadService:
         draft = None
         if status == UploadStatus.AWAITING_REVIEW:
             rows = self._lab_result_repository.list_for_upload(upload_id)
-            draft = _to_draft(upload.measured_at, rows)
+            draft = LabDraft.from_lab_results(rows, measured_at=upload.measured_at)
 
-        return _to_detail(upload, status, draft)
+        return LabUploadDetail.from_upload(upload, status=status, draft=draft)
 
     async def submit(
         self,
@@ -412,47 +417,3 @@ def _effective_status(status: UploadStatus, created_at: datetime) -> UploadStatu
 
     age = (datetime.now(UTC) - created_at).total_seconds()
     return UploadStatus.FAILED if age > _STUCK_AFTER else status
-
-
-def _to_summary(row: Row) -> LabUploadSummary:
-    summary = LabUploadSummary.model_validate(row)
-    return summary.model_copy(update={"status": _effective_status(row.status, row.created_at)})
-
-
-def _to_detail(
-    upload: LabUpload,
-    status: UploadStatus,
-    draft: LabDraft | None,
-) -> LabUploadDetail:
-    return LabUploadDetail(
-        id=upload.id,
-        filename=upload.filename,
-        status=status,
-        measured_at=upload.measured_at,
-        parsed_at=upload.parsed_at,
-        confirmed_at=upload.confirmed_at,
-        created_at=upload.created_at,
-        error_message=upload.error_message,
-        draft=draft,
-    )
-
-
-def _to_draft(measured_at: date | None, rows: list[LabResult]) -> LabDraft:
-    items = [_to_draft_item(r) for r in rows if r.biomarker_id is not None]
-    skipped = [_to_draft_item(r) for r in rows if r.biomarker_id is None]
-    return LabDraft(measured_at=measured_at, items=items, skipped=skipped)
-
-
-def _to_draft_item(row: LabResult) -> LabDraftItemRead:
-    return LabDraftItemRead(
-        id=row.id,
-        biomarker_slug=row.biomarker.slug if row.biomarker_id else None,
-        display_name=row.biomarker.display_name if row.biomarker_id else None,
-        value=row.value,
-        raw_value=row.raw_value,
-        unit=row.unit,
-        reference_low=row.reference_low,
-        reference_high=row.reference_high,
-        source_name=row.source_name,
-        included=row.included,
-    )

@@ -4,8 +4,10 @@ from decimal import Decimal
 from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict
+from sqlalchemy import Row
 
 from mirai_api.core.enums import UploadStatus
+from mirai_api.models import LabResult, LabUpload
 from mirai_api.schemas.biomarkers import BoundedDecimal
 
 
@@ -18,6 +20,16 @@ class LabUploadSummary(BaseModel):
     parsed_at: datetime | None
     created_at: datetime
     measurement_count: int
+
+    @classmethod
+    def from_row(cls, row: Row, *, status: UploadStatus) -> LabUploadSummary:
+        """Built from a listing row carrying measurement_count, not from an entity.
+
+        The status is the service's effective status, which can differ from the
+        stored one for an upload that never finished.
+        """
+        summary = cls.model_validate(row)
+        return summary.model_copy(update={"status": status})
 
 
 class LabDraftItemRead(BaseModel):
@@ -35,11 +47,35 @@ class LabDraftItemRead(BaseModel):
     source_name: str | None
     included: bool
 
+    @classmethod
+    def from_lab_result(cls, result: LabResult) -> LabDraftItemRead:
+        """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
+        mapped = result.biomarker_id is not None
+        return cls(
+            id=result.id,
+            biomarker_slug=result.biomarker.slug if mapped else None,
+            display_name=result.biomarker.display_name if mapped else None,
+            value=result.value,
+            raw_value=result.raw_value,
+            unit=result.unit,
+            reference_low=result.reference_low,
+            reference_high=result.reference_high,
+            source_name=result.source_name,
+            included=result.included,
+        )
+
 
 class LabDraft(BaseModel):
     measured_at: date | None
     items: list[LabDraftItemRead]
     skipped: list[LabDraftItemRead]
+
+    @classmethod
+    def from_lab_results(cls, results: list[LabResult], *, measured_at: date | None) -> LabDraft:
+        """Unmapped rows are split out as skipped; the date comes from the upload."""
+        items = [LabDraftItemRead.from_lab_result(r) for r in results if r.biomarker_id is not None]
+        skipped = [LabDraftItemRead.from_lab_result(r) for r in results if r.biomarker_id is None]
+        return cls(measured_at=measured_at, items=items, skipped=skipped)
 
 
 class LabUploadDetail(BaseModel):
@@ -53,6 +89,27 @@ class LabUploadDetail(BaseModel):
     error_message: str | None
     # Present only while awaiting review.
     draft: LabDraft | None
+
+    @classmethod
+    def from_upload(
+        cls,
+        upload: LabUpload,
+        *,
+        status: UploadStatus,
+        draft: LabDraft | None,
+    ) -> LabUploadDetail:
+        """Status is the service's effective status; draft is fetched separately."""
+        return cls(
+            id=upload.id,
+            filename=upload.filename,
+            status=status,
+            measured_at=upload.measured_at,
+            parsed_at=upload.parsed_at,
+            confirmed_at=upload.confirmed_at,
+            created_at=upload.created_at,
+            error_message=upload.error_message,
+            draft=draft,
+        )
 
 
 class LabDraftItemUpdate(BaseModel):

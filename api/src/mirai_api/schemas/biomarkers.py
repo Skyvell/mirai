@@ -91,3 +91,18 @@ BiomarkerMeasurementUpdates = Annotated[
 class BiomarkerMeasurementRead(BiomarkerMeasurementPoint):
     biomarker_slug: str
     display_name: str
+
+    @classmethod
+    def from_measurement(cls, measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:
+        """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
+        return cls(
+            id=measurement.id,
+            measured_at=measurement.measured_at,
+            value=measurement.value,
+            unit=measurement.unit,
+            reference_low=measurement.reference_low,
+            reference_high=measurement.reference_high,
+            lab_upload_id=measurement.lab_upload_id,
+            biomarker_slug=measurement.biomarker.slug,
+            display_name=measurement.biomarker.display_name,
+        )
