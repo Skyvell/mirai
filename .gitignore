@@ -6,3 +6,7 @@
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Tool caches from commands run at the repo root
+.pytest_cache/
+.ruff_cache/
