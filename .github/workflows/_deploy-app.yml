@@ -40,7 +40,7 @@ jobs:
 
       - name: Build and push
         run: |
-          docker build -t "$IMAGE" backend
+          docker build -t "$IMAGE" api
           docker push "$IMAGE"
 
       - uses: google-github-actions/setup-gcloud@v3

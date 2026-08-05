@@ -1,7 +1,7 @@
 # Data model
 
 Entity–relationship diagram of the MVP backend schema (blood biomarkers only).
-Rendered from the SQLAlchemy models (`backend/src/mirai_api/models/`) via a
+Rendered from the SQLAlchemy models (`api/src/mirai_api/models/`) via a
 migrated database, so it matches exactly what the migrations produce.
 
 ![Mirai data model](data-model.svg)
@@ -9,7 +9,7 @@ migrated database, so it matches exactly what the migrations produce.
 Regenerate after a schema change (needs the Graphviz `dot` binary):
 
 ```bash
-cd backend
+cd api
 docker run -d --name erd -e POSTGRES_PASSWORD=pw -e POSTGRES_DB=mirai -p 55433:5432 postgres:17
 export DATABASE_URL=postgresql+pg8000://postgres:pw@localhost:55433/mirai
 uv run alembic upgrade head
