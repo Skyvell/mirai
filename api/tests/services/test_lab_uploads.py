@@ -1,13 +1,13 @@
 import asyncio
 import hashlib
 import uuid
+from collections.abc import Iterator
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
 
-from conftest import TEST_USER_ID
 from mirai_api.core.enums import UploadStatus
 from mirai_api.integrations import storage
 from mirai_api.integrations.lab_parsing import (
@@ -29,26 +29,9 @@ from mirai_api.services.lab_uploads import (
     LabUploadService,
     MissingCollectionDateError,
 )
-
-GLUCOSE = Biomarker(
-    id=uuid.UUID("00000000-0000-7000-8000-000000000002"),
-    slug="glucose",
-    display_name="Glucose",
-    category="metabolic",
-    canonical_unit="mmol/L",
-)
-
-LDL = Biomarker(
-    id=uuid.UUID("00000000-0000-7000-8000-000000000003"),
-    slug="ldl_cholesterol",
-    display_name="LDL Cholesterol",
-    category="lipids",
-    canonical_unit="mmol/L",
-)
+from support import GLUCOSE, LDL, TEST_USER_ID, CommitCountingSession
 
 CATALOGUE = [GLUCOSE]
-
-_BIOMARKERS_BY_ID = {b.id: b for b in (GLUCOSE, LDL)}
 
 EXTRACTION = LabExtraction(
     measured_at=date(2026, 7, 12),
@@ -63,16 +46,6 @@ EXTRACTION = LabExtraction(
     ],
     unmatched=[UnmatchedMarker(name="Exotic Marker", value="42", unit="ng/mL")],
 )
-
-
-class CommitCountingSession:
-    """Session double: counts commits, holds no state."""
-
-    def __init__(self) -> None:
-        self.commits = 0
-
-    def commit(self) -> None:
-        self.commits += 1
 
 
 class FakeLabUploadRepository:
@@ -143,6 +116,10 @@ class FakeLabResultRepository:
     def __init__(self, results: list[LabResult] | None = None) -> None:
         self.results = list(results or [])
 
+        # Set by _service to the biomarker repository's rows, mirroring the real
+        # pair sharing one session; both reads resolve relationships from it.
+        self.catalogue: list[Biomarker] = []
+
     def add_all(self, results: list[LabResult]) -> None:
         for r in results:
             if r.id is None:
@@ -150,15 +127,7 @@ class FakeLabResultRepository:
         self.results.extend(results)
 
     def list_for_upload(self, upload_id: uuid.UUID) -> list[LabResult]:
-        rows = [r for r in self.results if r.lab_upload_id == upload_id]
-
-        # Stand in for the real repository's joinedload(LabResult.biomarker):
-        # writers set only biomarker_id, the read resolves the relationship.
-        for r in rows:
-            if r.biomarker_id is not None and r.biomarker is None:
-                r.biomarker = _BIOMARKERS_BY_ID[r.biomarker_id]
-
-        return rows
+        return self._loaded(r for r in self.results if r.lab_upload_id == upload_id)
 
     def get_for_upload(
         self,
@@ -166,10 +135,24 @@ class FakeLabResultRepository:
         ids: list[uuid.UUID],
     ) -> list[LabResult]:
         wanted = set(ids)
-        return [r for r in self.results if r.lab_upload_id == upload_id and r.id in wanted]
+        return self._loaded(
+            r for r in self.results if r.lab_upload_id == upload_id and r.id in wanted
+        )
 
     def delete_for_upload(self, upload_id: uuid.UUID) -> None:
         self.results = [r for r in self.results if r.lab_upload_id != upload_id]
+
+    def _loaded(self, rows: Iterator[LabResult]) -> list[LabResult]:
+        """Stand in for the real repository's joinedload(LabResult.biomarker).
+
+        Writers set biomarker_id only; reads attach the relationship.
+        """
+        by_id = {b.id: b for b in self.catalogue}
+        materialized = list(rows)
+        for r in materialized:
+            r.biomarker = by_id.get(r.biomarker_id)
+
+        return materialized
 
 
 class FakeBiomarkerRepository:
@@ -205,10 +188,13 @@ def _service(
     result_repo: FakeLabResultRepository,
     biomarker_repo: FakeBiomarkerRepository | None = None,
 ) -> LabUploadService:
+    biomarker_repo = biomarker_repo or FakeBiomarkerRepository(CATALOGUE)
+    result_repo.catalogue = biomarker_repo.biomarkers
+
     return LabUploadService(
         lab_repo,  # type: ignore[arg-type]
         result_repo,  # type: ignore[arg-type]
-        biomarker_repo or FakeBiomarkerRepository(CATALOGUE),  # type: ignore[arg-type]
+        biomarker_repo,  # type: ignore[arg-type]
         CommitCountingSession(),  # type: ignore[arg-type]
     )
 
@@ -323,7 +309,6 @@ def test_get_returns_split_draft_when_awaiting_review() -> None:
         id=uuid.uuid7(),
         lab_upload_id=upload.id,
         biomarker_id=GLUCOSE.id,
-        biomarker=GLUCOSE,
         value=Decimal("5.4"),
         unit="mmol/L",
         included=True,
@@ -438,7 +423,6 @@ def _mapped_result(upload_id: uuid.UUID, **overrides: object) -> LabResult:
         "id": uuid.uuid7(),
         "lab_upload_id": upload_id,
         "biomarker_id": GLUCOSE.id,
-        "biomarker": GLUCOSE,
         "value": Decimal("5.4"),
         "unit": "mmol/L",
         "included": True,

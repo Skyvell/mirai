@@ -5,7 +5,6 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import TEST_USER_ID
 from mirai_api.core.deps import get_biomarker_service
 from mirai_api.core.enums import IntervalType
 from mirai_api.main import app
@@ -23,6 +22,7 @@ from mirai_api.services.biomarkers import (
     MeasurementsNotFoundError,
     UnknownBiomarkersError,
 )
+from support import TEST_USER_ID
 
 MEASUREMENT_ID = uuid.UUID("00000000-0000-7000-8000-000000000020")
 

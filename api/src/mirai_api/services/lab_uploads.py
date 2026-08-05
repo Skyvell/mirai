@@ -233,9 +233,7 @@ class LabUploadService:
             for field, value in edits.items():
                 setattr(row, field, value)
             if item.biomarker_slug is not None:
-                biomarker = by_slug[item.biomarker_slug]
-                row.biomarker = biomarker
-                row.biomarker_id = biomarker.id
+                row.biomarker_id = by_slug[item.biomarker_slug].id
 
         upload.measured_at = payload.measured_at
         self._session.commit()

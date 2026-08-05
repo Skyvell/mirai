@@ -4,7 +4,6 @@ from datetime import UTC, date, datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from conftest import TEST_USER_ID
 from mirai_api.core.config import Settings, get_settings
 from mirai_api.core.deps import get_lab_upload_service, verify_cloud_tasks
 from mirai_api.core.enums import UploadStatus
@@ -23,6 +22,7 @@ from mirai_api.services.lab_uploads import (
     LabUploadNotFoundError,
     LabUploadNotReviewableError,
 )
+from support import TEST_USER_ID
 
 UPLOAD_ID = uuid.UUID("00000000-0000-7000-8000-000000000010")
 

@@ -5,7 +5,6 @@ from decimal import Decimal
 
 import pytest
 
-from conftest import TEST_USER_ID
 from mirai_api.core.enums import IntervalType, Sex
 from mirai_api.models import Biomarker, BiomarkerInterval, BiomarkerMeasurement
 from mirai_api.schemas.biomarkers import (
@@ -17,22 +16,7 @@ from mirai_api.services.biomarkers import (
     MeasurementsNotFoundError,
     UnknownBiomarkersError,
 )
-
-GLUCOSE = Biomarker(
-    id=uuid.UUID("00000000-0000-7000-8000-000000000002"),
-    slug="glucose",
-    display_name="Glucose",
-    category="metabolic",
-    canonical_unit="mmol/L",
-)
-
-LDL = Biomarker(
-    id=uuid.UUID("00000000-0000-7000-8000-000000000003"),
-    slug="ldl_cholesterol",
-    display_name="LDL Cholesterol",
-    category="lipids",
-    canonical_unit="mmol/L",
-)
+from support import GLUCOSE, LDL, TEST_USER_ID, CommitCountingSession
 
 
 def _measurement(
@@ -52,16 +36,6 @@ def _measurement(
     }
     fields.update(overrides)
     return BiomarkerMeasurement(**fields)
-
-
-class CommitCountingSession:
-    """Session double: counts commits, holds no state."""
-
-    def __init__(self) -> None:
-        self.commits = 0
-
-    def commit(self) -> None:
-        self.commits += 1
 
 
 class FakeBiomarkerRepository:

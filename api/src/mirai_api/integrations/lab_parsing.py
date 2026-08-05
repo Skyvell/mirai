@@ -65,11 +65,11 @@ def _agent() -> Agent[None, LabExtraction]:
     )
 
 
-async def parse_lab_pdf(pdf_bytes: bytes, catalogue_prompt_text: str) -> LabExtraction:
+async def parse_lab_pdf(pdf_bytes: bytes, catalogue_prompt: str) -> LabExtraction:
     """Run the LLM over a lab PDF and return the structured extraction."""
     result = await _agent().run(
         [
-            catalogue_prompt_text,
+            catalogue_prompt,
             BinaryContent(data=pdf_bytes, media_type="application/pdf"),
         ]
     )

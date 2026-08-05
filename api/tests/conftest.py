@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import Iterator
 
 import pytest
@@ -8,8 +7,7 @@ from mirai_api.core.db import get_session
 from mirai_api.core.deps import get_current_user
 from mirai_api.main import app
 from mirai_api.models import User
-
-TEST_USER_ID = uuid.UUID("00000000-0000-7000-8000-000000000001")
+from support import TEST_USER_ID
 
 
 class FakeResult:

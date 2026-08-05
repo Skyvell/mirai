@@ -7,13 +7,13 @@ router = APIRouter(tags=["me"])
 
 
 @router.get("/me", operation_id="current_user")
-def read_current_user(service: UserServiceDep, user: CurrentUser) -> MeResponse:
+def read_current_user(user: CurrentUser) -> MeResponse:
     """Return the authenticated caller's identity and profile.
 
     Proves the full loop: the Bearer token is verified against Clerk's JWKS
     and the caller is resolved to (or JIT-created as) a local users row.
     """
-    return service.get_profile(user)
+    return MeResponse.from_user(user)
 
 
 @router.patch("/me", operation_id="update_current_user")
