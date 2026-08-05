@@ -43,6 +43,18 @@ class BiomarkerMeasurementPoint(BaseModel):
 class BiomarkerSeriesBySlug(RootModel[dict[str, list[BiomarkerMeasurementPoint]]]):
     """Measurement time series keyed by biomarker slug; the GET /biomarker-series payload."""
 
+    @classmethod
+    def from_measurements(cls, measurements: list[BiomarkerMeasurement]) -> Self:
+        """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
+        series_by_slug: dict[str, list[BiomarkerMeasurementPoint]] = {}
+        for measurement in measurements:
+            slug = measurement.biomarker.slug
+            if slug not in series_by_slug:
+                series_by_slug[slug] = []
+            series_by_slug[slug].append(BiomarkerMeasurementPoint.model_validate(measurement))
+
+        return cls(series_by_slug)
+
 
 class BiomarkerMeasurementCreate(BaseModel):
     biomarker_slug: str
@@ -93,16 +105,12 @@ class BiomarkerMeasurementRead(BiomarkerMeasurementPoint):
     display_name: str
 
     @classmethod
-    def from_measurement(cls, measurement: BiomarkerMeasurement) -> BiomarkerMeasurementRead:
+    def from_measurement(cls, measurement: BiomarkerMeasurement) -> Self:
         """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
+        # Inherited fields come from the parent, so a new column cannot be missed here.
+        point = BiomarkerMeasurementPoint.model_validate(measurement)
         return cls(
-            id=measurement.id,
-            measured_at=measurement.measured_at,
-            value=measurement.value,
-            unit=measurement.unit,
-            reference_low=measurement.reference_low,
-            reference_high=measurement.reference_high,
-            lab_upload_id=measurement.lab_upload_id,
+            **point.model_dump(),
             biomarker_slug=measurement.biomarker.slug,
             display_name=measurement.biomarker.display_name,
         )

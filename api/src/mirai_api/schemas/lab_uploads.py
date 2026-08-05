@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Self
 
 from pydantic import AfterValidator, BaseModel, ConfigDict
 from sqlalchemy import Row
@@ -22,19 +22,12 @@ class LabUploadSummary(BaseModel):
     measurement_count: int
 
     @classmethod
-    def from_row(cls, row: Row, *, status: UploadStatus) -> LabUploadSummary:
-        """Built from a listing row carrying measurement_count, not from an entity.
-
-        The status is the service's effective status, which can differ from the
-        stored one for an upload that never finished.
-        """
-        summary = cls.model_validate(row)
-        return summary.model_copy(update={"status": status})
+    def from_row(cls, row: Row, *, status: UploadStatus) -> Self:
+        """Built from a listing row carrying measurement_count, not from an entity."""
+        return cls.model_validate(row).model_copy(update={"status": status})
 
 
 class LabDraftItemRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
     id: uuid.UUID
     # Null for a marker the parser could not map to the catalogue.
     biomarker_slug: str | None
@@ -48,7 +41,7 @@ class LabDraftItemRead(BaseModel):
     included: bool
 
     @classmethod
-    def from_lab_result(cls, result: LabResult) -> LabDraftItemRead:
+    def from_lab_result(cls, result: LabResult) -> Self:
         """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
         mapped = result.biomarker_id is not None
         return cls(
@@ -71,10 +64,17 @@ class LabDraft(BaseModel):
     skipped: list[LabDraftItemRead]
 
     @classmethod
-    def from_lab_results(cls, results: list[LabResult], *, measured_at: date | None) -> LabDraft:
-        """Unmapped rows are split out as skipped; the date comes from the upload."""
-        items = [LabDraftItemRead.from_lab_result(r) for r in results if r.biomarker_id is not None]
-        skipped = [LabDraftItemRead.from_lab_result(r) for r in results if r.biomarker_id is None]
+    def from_lab_results(cls, results: list[LabResult], *, measured_at: date | None) -> Self:
+        """Rows the parser could not map to the catalogue are split out as skipped."""
+        items = []
+        skipped = []
+        for result in results:
+            item = LabDraftItemRead.from_lab_result(result)
+            if result.biomarker_id is None:
+                skipped.append(item)
+            else:
+                items.append(item)
+
         return cls(measured_at=measured_at, items=items, skipped=skipped)
 
 
@@ -97,8 +97,7 @@ class LabUploadDetail(BaseModel):
         *,
         status: UploadStatus,
         draft: LabDraft | None,
-    ) -> LabUploadDetail:
-        """Status is the service's effective status; draft is fetched separately."""
+    ) -> Self:
         return cls(
             id=upload.id,
             filename=upload.filename,

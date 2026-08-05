@@ -7,7 +7,6 @@ from mirai_api.models import BiomarkerMeasurement
 from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
 from mirai_api.repositories.biomarkers import BiomarkerRepository
 from mirai_api.schemas.biomarker_intervals import (
-    BiomarkerIntervalRead,
     BiomarkerIntervalsBySlug,
 )
 from mirai_api.schemas.biomarkers import (
@@ -66,30 +65,12 @@ class BiomarkerService:
     ) -> BiomarkerIntervalsBySlug:
         """Return canonical interval bands keyed by biomarker slug; read-only reference data."""
         intervals = self._interval_repository.list_intervals(slugs, interval_type)
-
-        # Group each biomarker's bands under its slug.
-        bands_by_slug: dict[str, list[BiomarkerIntervalRead]] = {}
-        for interval in intervals:
-            slug = interval.biomarker.slug
-            if slug not in bands_by_slug:
-                bands_by_slug[slug] = []
-            bands_by_slug[slug].append(BiomarkerIntervalRead.from_interval(interval))
-
-        return BiomarkerIntervalsBySlug(bands_by_slug)
+        return BiomarkerIntervalsBySlug.from_intervals(intervals)
 
     def list_series(self, user_id: uuid.UUID) -> BiomarkerSeriesBySlug:
         """Return the caller's measurement time series keyed by biomarker slug."""
         measurements = self._biomarker_repository.list_measurements(user_id)
-
-        # Group each biomarker's points under its slug.
-        series_by_slug: dict[str, list[BiomarkerMeasurementPoint]] = {}
-        for measurement in measurements:
-            slug = measurement.biomarker.slug
-            if slug not in series_by_slug:
-                series_by_slug[slug] = []
-            series_by_slug[slug].append(BiomarkerMeasurementPoint.model_validate(measurement))
-
-        return BiomarkerSeriesBySlug(series_by_slug)
+        return BiomarkerSeriesBySlug.from_measurements(measurements)
 
     def get_series(self, user_id: uuid.UUID, slug: str) -> list[BiomarkerMeasurementPoint]:
         """Return one biomarker's time series; empty for a known slug with no data."""

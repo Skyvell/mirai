@@ -106,7 +106,6 @@ class LabUploadService:
     def list(self, user_id: uuid.UUID) -> list[LabUploadSummary]:
         rows = self._lab_upload_repository.list_with_counts(user_id)
 
-        # An upload that never progressed is reported as failed, not mutated.
         summaries = []
         for row in rows:
             status = _effective_status(row.status, row.created_at)

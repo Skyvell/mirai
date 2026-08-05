@@ -15,7 +15,7 @@ class MeResponse(BaseModel):
     date_of_birth: date | None
 
     @classmethod
-    def from_user(cls, user: User) -> MeResponse:
+    def from_user(cls, user: User) -> Self:
         return cls(
             user_id=user.id,
             clerk_user_id=user.clerk_user_id,
