@@ -34,6 +34,7 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.14",
     "httpx>=0.28",
+    "typer>=0.27.1",
 ]
 
 [tool.ruff]
