@@ -39,7 +39,7 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-src = ["src", "tests", "scripts"]
+src = ["src", "tests", "scripts/demo_data"]
 
 [tool.ruff.lint]
 select = [
