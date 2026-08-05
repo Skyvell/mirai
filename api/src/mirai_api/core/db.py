@@ -35,12 +35,13 @@ def get_engine() -> Engine:
 
 
 @lru_cache
-def _session_factory() -> sessionmaker[Session]:
+def session_factory() -> sessionmaker[Session]:
+    """The one session configuration; services rely on instances surviving a commit."""
     return sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
 
 
 def get_session() -> Generator[Session]:
-    factory = _session_factory()
+    factory = session_factory()
     with factory() as session:
         yield session
 
