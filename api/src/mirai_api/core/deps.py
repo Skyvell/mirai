@@ -3,7 +3,6 @@ from typing import Annotated
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -103,8 +102,8 @@ def get_current_user(
 
     # Token verified; map the Clerk identity to a local row, creating it on first sight.
     clerk_user_id = claims["sub"]
-    lookup = select(User).where(User.clerk_user_id == clerk_user_id)
-    user = session.scalar(lookup)
+    repository = UserRepository(session)
+    user = repository.get_user(clerk_user_id)
     if user is None:
         session.execute(
             insert(User)
@@ -112,7 +111,7 @@ def get_current_user(
             .on_conflict_do_nothing(index_elements=["clerk_user_id"])
         )
         session.commit()
-        user = session.scalar(lookup)
+        user = repository.get_user(clerk_user_id)
     if user is None:
         raise RuntimeError("User row missing after upsert.")
     return user

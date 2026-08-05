@@ -15,25 +15,22 @@ request, so sign in once before loading. Read the id off GET /me.
 """
 
 import csv
-from datetime import date
-from decimal import Decimal
 from pathlib import Path
 from typing import Annotated
 
 import typer
-from sqlalchemy import select
 
-from mirai_api.core.db import session_factory
+import demo_subject
+from mirai_api.core.db import session_scope
 from mirai_api.core.deps import get_biomarker_service, get_user_service
 from mirai_api.core.enums import Sex
-from mirai_api.models import User
+from mirai_api.repositories.users import UserRepository
 from mirai_api.schemas.biomarkers import BiomarkerMeasurementCreate
 from mirai_api.schemas.me import MeUpdate
 
 CSV_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "biomarker_measurements.csv"
 
-# The subject the dataset was generated for; see generate_demo_measurements.py.
-SUBJECT = MeUpdate(sex=Sex.MALE, date_of_birth=date(1991, 8, 18))
+SUBJECT = MeUpdate(sex=Sex(demo_subject.SEX), date_of_birth=demo_subject.DATE_OF_BIRTH)
 
 
 def read_measurements() -> list[BiomarkerMeasurementCreate]:
@@ -41,18 +38,11 @@ def read_measurements() -> list[BiomarkerMeasurementCreate]:
     with CSV_PATH.open(newline="") as handle:
         rows = list(csv.DictReader(handle))
 
+    # Column names match the schema's fields; blanks are absent values, not empty strings.
     measurements = []
     for row in rows:
-        measurements.append(
-            BiomarkerMeasurementCreate(
-                biomarker_slug=row["biomarker_slug"],
-                value=Decimal(row["value"]),
-                unit=row["unit"],
-                measured_at=date.fromisoformat(row["measured_at"]),
-                reference_low=Decimal(row["reference_low"]) if row["reference_low"] else None,
-                reference_high=Decimal(row["reference_high"]) if row["reference_high"] else None,
-            )
-        )
+        present = {field: value for field, value in row.items() if value != ""}
+        measurements.append(BiomarkerMeasurementCreate.model_validate(present))
 
     return measurements
 
@@ -67,14 +57,19 @@ def main(
     """Load the demo biomarker measurements onto a user's record."""
     measurements = read_measurements()
 
-    with session_factory()() as session:
+    with session_scope() as session:
         # Resolve the local row; it exists only once the user has authenticated once.
-        user = session.scalar(select(User).where(User.clerk_user_id == clerk_user_id))
+        user = UserRepository(session).get_user(clerk_user_id)
         if user is None:
             print(f"No user row for {clerk_user_id}. Sign in to the app once to provision it.")
             raise typer.Exit(code=1)
 
+        # The stored reference bounds only mean anything against the subject's profile, so
+        # report the overwrite — the previous values may have been real.
+        previous = f"{user.sex} {user.date_of_birth}"
         get_user_service(session).update_profile(user, SUBJECT)
+        print(f"profile set to {SUBJECT.sex} {SUBJECT.date_of_birth}, was {previous}")
+
         service = get_biomarker_service(session)
 
         # Reloading over an existing series would stack duplicate points on every date.

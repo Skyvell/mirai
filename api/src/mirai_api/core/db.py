@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from contextlib import contextmanager
 from functools import lru_cache
 
 from google.cloud.sql.connector import Connector, IPTypes
@@ -35,14 +36,21 @@ def get_engine() -> Engine:
 
 
 @lru_cache
-def session_factory() -> sessionmaker[Session]:
+def _session_factory() -> sessionmaker[Session]:
     """The one session configuration; services rely on instances surviving a commit."""
     return sessionmaker(bind=get_engine(), autoflush=False, expire_on_commit=False)
 
 
-def get_session() -> Generator[Session]:
-    factory = session_factory()
+@contextmanager
+def session_scope() -> Generator[Session]:
+    """Own a session for its lifetime only; the seam for callers outside a request."""
+    factory = _session_factory()
     with factory() as session:
+        yield session
+
+
+def get_session() -> Generator[Session]:
+    with session_scope() as session:
         yield session
 
 

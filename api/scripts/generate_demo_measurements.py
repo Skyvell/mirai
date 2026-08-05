@@ -17,33 +17,39 @@ Deterministic: same seed, byte-identical CSV. Run rarely; the CSV is the committ
 import csv
 import random
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from itertools import pairwise
 from pathlib import Path
 
+import demo_subject
+from mirai_api.core.enums import IntervalType
 from mirai_api.seed.biomarker_intervals import INTERVALS
 from mirai_api.seed.biomarkers import BIOMARKERS
 
-# The synthetic subject. Birth is the first measurement date, so the series walks the full
-# pediatric band ladder before reaching the adult intervals.
-SUBJECT_SEX = "male"
-SUBJECT_DATE_OF_BIRTH = date(1991, 8, 18)
-
-FIRST_MEASUREMENT = date(1991, 8, 18)
+# Sampling starts at birth, so the series walks the full pediatric band ladder before
+# reaching the adult intervals.
+FIRST_MEASUREMENT = demo_subject.DATE_OF_BIRTH
 LAST_MEASUREMENT = date(2026, 8, 4)
 
 # Roughly four months apart, jittered because real draws are not on a metronome.
 CADENCE_DAYS = 122
 JITTER_DAYS = 18
 
+# The sampling grid and the value noise draw from separate streams, so changing the cadence
+# does not perturb every value and vice versa.
 SEED = 19910818
 
 # AR(1) persistence: how strongly a point is pulled toward the previous one.
 NOISE_PERSISTENCE = 0.55
 
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "fixtures" / "biomarker_measurements.csv"
+
+# Rows follow catalogue order; the sort below is the guard that keeps MARKERS aligned with it.
+CATALOGUE_ORDER = {biomarker["slug"]: index for index, biomarker in enumerate(BIOMARKERS)}
+
+CANONICAL_UNITS = {biomarker["slug"]: biomarker["canonical_unit"] for biomarker in BIOMARKERS}
 
 FIELDNAMES = [
     "biomarker_slug",
@@ -94,7 +100,7 @@ class Episode:
     label: str = ""
 
 
-@dataclass
+@dataclass(frozen=True)
 class Spike:
     """A single-draw excursion applied to the first measurement on or after ``on_or_after``."""
 
@@ -102,8 +108,6 @@ class Spike:
     on_or_after: date
     factor: float
     label: str = ""
-
-    resolved_on: date | None = field(default=None, compare=False)
 
 
 MARKERS: tuple[Marker, ...] = (
@@ -292,12 +296,20 @@ def measurement_dates(rng: random.Random) -> list[date]:
     return dates
 
 
-def reference_band(slug: str, age_days: int) -> tuple[Decimal | None, Decimal | None] | None:
+def reference_band(
+    slug: str,
+    sex: str,
+    age_days: int,
+) -> tuple[Decimal | None, Decimal | None] | None:
     """Resolve the catalogue band for this marker at this age, or None when none applies."""
     for band in INTERVALS:
         if band["slug"] != slug:
             continue
-        if band["sex"] not in (None, SUBJECT_SEX):
+        if band["sex"] not in (None, sex):
+            continue
+
+        # The stratum key includes type; only population reference bands belong in a row.
+        if band.get("type", IntervalType.REFERENCE) != IntervalType.REFERENCE:
             continue
 
         # None on either bound means unbounded on that side.
@@ -321,12 +333,13 @@ def center(marker: Marker, age_years: float) -> float:
     if age_years >= knots[-1][0]:
         return knots[-1][1]
 
+    # The bounds above guarantee some pair brackets this age.
     for (left_age, left_value), (right_age, right_value) in pairwise(knots):
         if left_age <= age_years <= right_age:
             fraction = (age_years - left_age) / (right_age - left_age)
             return left_value + fraction * (right_value - left_value)
 
-    return knots[-1][1]
+    raise AssertionError(f"knots do not cover age {age_years}")
 
 
 def episode_factor(episode: Episode, slug: str, on: date) -> float:
@@ -347,13 +360,16 @@ def episode_factor(episode: Episode, slug: str, on: date) -> float:
     return 1.0 + (factor - 1.0) * ramp
 
 
-def resolve_spikes(dates: list[date]) -> None:
+def spike_factors(dates: list[date]) -> dict[tuple[str, date], float]:
     """Pin each spike to the first measurement on or after its target date."""
+    resolved: dict[tuple[str, date], float] = {}
     for spike in SPIKES:
         for on in dates:
             if on >= spike.on_or_after:
-                spike.resolved_on = on
+                resolved[(spike.slug, on)] = spike.factor
                 break
+
+    return resolved
 
 
 def noise_states(rng: random.Random, count: int) -> list[float]:
@@ -370,40 +386,39 @@ def noise_states(rng: random.Random, count: int) -> list[float]:
 def build_rows(dates: list[date]) -> list[dict[str, str]]:
     """Generate one row per marker per date, ordered by date then catalogue order."""
     rng = random.Random(SEED)
-    resolve_spikes(dates)
+    spikes = spike_factors(dates)
 
-    # One noise path per marker; correlated markers reuse another marker's path.
+    # One noise path per correlation group, so correlated markers co-move.
     paths: dict[str, list[float]] = {}
     for marker in MARKERS:
-        source = marker.correlates_with
-        paths[marker.slug] = paths[source] if source is not None else noise_states(rng, len(dates))
+        group = marker.correlates_with or marker.slug
+        if group not in paths:
+            paths[group] = noise_states(rng, len(dates))
 
-    units = {biomarker["slug"]: biomarker["canonical_unit"] for biomarker in BIOMARKERS}
-    ordered_markers = sorted(MARKERS, key=lambda m: [b["slug"] for b in BIOMARKERS].index(m.slug))
+    ordered_markers = sorted(MARKERS, key=lambda marker: CATALOGUE_ORDER[marker.slug])
 
     rows: list[dict[str, str]] = []
     for index, on in enumerate(dates):
-        age_days = (on - SUBJECT_DATE_OF_BIRTH).days
+        age_days = (on - demo_subject.DATE_OF_BIRTH).days
         age_years = age_days / 365.25
 
         for marker in ordered_markers:
-            value = center(marker, age_years) * (1.0 + marker.noise * paths[marker.slug][index])
+            path = paths[marker.correlates_with or marker.slug]
+            value = center(marker, age_years) * (1.0 + marker.noise * path[index])
 
             # Clinical episodes and single-draw excursions scale the point.
             for episode in EPISODES:
                 value *= episode_factor(episode, marker.slug, on)
-            for spike in SPIKES:
-                if spike.slug == marker.slug and spike.resolved_on == on:
-                    value *= spike.factor
+            value *= spikes.get((marker.slug, on), 1.0)
 
-            band = reference_band(marker.slug, age_days)
+            band = reference_band(marker.slug, demo_subject.SEX, age_days)
             low, high = band if band is not None else (None, None)
             rows.append(
                 {
                     "biomarker_slug": marker.slug,
                     "measured_at": on.isoformat(),
                     "value": f"{max(value, 0.01):.{marker.decimals}f}",
-                    "unit": units[marker.slug],
+                    "unit": CANONICAL_UNITS[marker.slug],
                     "reference_low": "" if low is None else str(low),
                     "reference_high": "" if high is None else str(high),
                 }
@@ -417,6 +432,7 @@ def summarize(rows: list[dict[str, str]], dates: list[date]) -> None:
     print(f"{len(rows)} measurements over {len(dates)} dates")
     print(f"span {dates[0].isoformat()} → {dates[-1].isoformat()}")
 
+    counted: Counter[str] = Counter()
     out_of_range: Counter[str] = Counter()
     no_band: Counter[str] = Counter()
     for row in rows:
@@ -424,6 +440,7 @@ def summarize(rows: list[dict[str, str]], dates: list[date]) -> None:
         low = Decimal(row["reference_low"]) if row["reference_low"] else None
         high = Decimal(row["reference_high"]) if row["reference_high"] else None
 
+        counted[row["biomarker_slug"]] += 1
         if low is None and high is None:
             no_band[row["biomarker_slug"]] += 1
         elif (low is not None and value < low) or (high is not None and value > high):
@@ -433,11 +450,18 @@ def summarize(rows: list[dict[str, str]], dates: list[date]) -> None:
     print(f"out of range: {total_out} ({total_out / len(rows):.1%})")
     for biomarker in BIOMARKERS:
         slug = biomarker["slug"]
-        counted = sum(1 for row in rows if row["biomarker_slug"] == slug)
         print(
-            f"  {slug:<18} {counted:>4} rows  "
+            f"  {slug:<18} {counted[slug]:>4} rows  "
             f"{out_of_range[slug]:>3} out of range  {no_band[slug]:>3} without a band"
         )
+
+    # Name the excursions, so the audit says what the out-of-range values represent.
+    print("episodes:")
+    for episode in EPISODES:
+        window = f"{episode.start.isoformat()} → {episode.end.isoformat()}"
+        print(f"  {window}  {episode.label}")
+    for spike in SPIKES:
+        print(f"  {spike.on_or_after.isoformat()} onwards  {spike.slug}: {spike.label}")
 
 
 def main() -> None:
