@@ -39,78 +39,6 @@ def lab_upload_error_handler(request: Request, exc: LabUploadServiceError) -> JS
     )
 
 
-@router.get("/lab-uploads", operation_id="list_lab_uploads")
-def list_lab_uploads(
-    service: LabUploadServiceDep,
-    user: CurrentUser,
-) -> list[LabUploadSummary]:
-    """Return the caller's uploaded lab reports, newest first."""
-    return service.list(user.id)
-
-
-@router.get("/lab-uploads/{upload_id}", operation_id="get_lab_upload")
-def get_lab_upload(
-    service: LabUploadServiceDep,
-    user: CurrentUser,
-    upload_id: uuid.UUID,
-) -> LabUploadDetail:
-    """Return one upload's status, and its reviewable draft while awaiting review."""
-    return service.get(user.id, upload_id)
-
-
-@router.patch("/lab-uploads/{upload_id}/draft", operation_id="update_lab_draft")
-def update_lab_draft(
-    service: LabUploadServiceDep,
-    user: CurrentUser,
-    upload_id: uuid.UUID,
-    payload: LabDraftUpdate,
-) -> LabUploadDetail:
-    """Apply the user's review edits to a draft; only while awaiting review."""
-    return service.update_draft(user.id, upload_id, payload)
-
-
-@router.post("/lab-uploads/{upload_id}/confirm", operation_id="confirm_lab_upload")
-def confirm_lab_upload(
-    service: LabUploadServiceDep,
-    user: CurrentUser,
-    upload_id: uuid.UUID,
-) -> LabUploadDetail:
-    """Commit the kept, mapped draft measurements into the biomarker record."""
-    return service.confirm(user.id, upload_id)
-
-
-@router.post(
-    "/internal/lab-uploads/{upload_id}/parse",
-    include_in_schema=False,
-)
-async def parse_lab_upload(
-    service: LabUploadServiceDep,
-    upload_id: uuid.UUID,
-    _auth: CloudTasksAuth,
-) -> None:
-    """Cloud Tasks worker: parse a queued upload into a draft.
-
-    OIDC-authed, not user-facing. Returns 200 on success or a no-op redelivery;
-    an infrastructure failure propagates as 500 so the queue retries.
-    """
-    await service.process(upload_id)
-
-
-@router.delete(
-    "/lab-uploads/{upload_id}",
-    operation_id="delete_lab_upload",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_lab_upload(
-    service: LabUploadServiceDep,
-    user: CurrentUser,
-    upload_id: uuid.UUID,
-    delete_measurements: bool = False,
-) -> None:
-    """Delete an uploaded report; optionally its measurements, else orphan them."""
-    service.delete(user.id, upload_id, delete_measurements)
-
-
 @router.post(
     "/lab-uploads",
     operation_id="upload_lab",
@@ -160,3 +88,76 @@ async def upload_lab(
     detail = await service.submit(user.id, file.filename or "upload.pdf", data)
     response.headers["Location"] = f"/lab-uploads/{detail.id}"
     return detail
+
+
+@router.get("/lab-uploads", operation_id="list_lab_uploads")
+def list_lab_uploads(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+) -> list[LabUploadSummary]:
+    """Return the caller's uploaded lab reports, newest first."""
+    return service.list(user.id)
+
+
+@router.get("/lab-uploads/{upload_id}", operation_id="get_lab_upload")
+def get_lab_upload(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+) -> LabUploadDetail:
+    """Return one upload's status, and its reviewable draft while awaiting review."""
+    return service.get(user.id, upload_id)
+
+
+@router.patch("/lab-uploads/{upload_id}/draft", operation_id="update_lab_draft")
+def update_lab_draft(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+    payload: LabDraftUpdate,
+) -> LabUploadDetail:
+    """Apply the user's review edits to a draft; only while awaiting review."""
+    return service.update_draft(user.id, upload_id, payload)
+
+
+@router.post("/lab-uploads/{upload_id}/confirm", operation_id="confirm_lab_upload")
+def confirm_lab_upload(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+) -> LabUploadDetail:
+    """Commit the kept, mapped draft measurements into the biomarker record."""
+    return service.confirm(user.id, upload_id)
+
+
+@router.delete(
+    "/lab-uploads/{upload_id}",
+    operation_id="delete_lab_upload",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_lab_upload(
+    service: LabUploadServiceDep,
+    user: CurrentUser,
+    upload_id: uuid.UUID,
+    delete_measurements: bool = False,
+) -> None:
+    """Delete an uploaded report; optionally its measurements, else orphan them."""
+    service.delete(user.id, upload_id, delete_measurements)
+
+
+# Internal, not user-facing: the Cloud Tasks worker target.
+@router.post(
+    "/internal/lab-uploads/{upload_id}/parse",
+    include_in_schema=False,
+)
+async def parse_lab_upload(
+    service: LabUploadServiceDep,
+    upload_id: uuid.UUID,
+    _auth: CloudTasksAuth,
+) -> None:
+    """Cloud Tasks worker: parse a queued upload into a draft.
+
+    OIDC-authed, not user-facing. Returns 200 on success or a no-op redelivery;
+    an infrastructure failure propagates as 500 so the queue retries.
+    """
+    await service.process(upload_id)
