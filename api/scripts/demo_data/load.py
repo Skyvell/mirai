@@ -1,6 +1,6 @@
 """Load the demo biomarker measurement dataset onto one user's record.
 
-Writes testdata/biomarker_measurements.csv through BiomarkerService — the same validated
+Writes test_data/biomarker_measurements.csv through BiomarkerService — the same validated
 path POST /biomarker-measurements takes, differing only in skipping the router and Clerk
 auth. Unknown slugs reject the whole batch and the rows land in a single transaction. The
 subject's sex and date of birth are set too, since reference bands are stratified by both.
@@ -28,7 +28,7 @@ from mirai_api.repositories.users import UserRepository
 from mirai_api.schemas.biomarkers import BiomarkerMeasurementCreate
 from mirai_api.schemas.me import MeUpdate
 
-CSV_PATH = Path(__file__).resolve().parents[2] / "testdata" / "biomarker_measurements.csv"
+CSV_PATH = Path(__file__).resolve().parents[2] / "test_data" / "biomarker_measurements.csv"
 
 SUBJECT = MeUpdate(sex=Sex(subject.SEX), date_of_birth=subject.DATE_OF_BIRTH)
 

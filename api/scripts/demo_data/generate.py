@@ -1,4 +1,4 @@
-"""Generate the demo biomarker measurement dataset to testdata/biomarker_measurements.csv.
+"""Generate the demo biomarker measurement dataset to test_data/biomarker_measurements.csv.
 
 One synthetic subject — male, born 1991-08-18 — sampled roughly every four months from
 birth to 2026-08-04, across all ten catalogue markers. Reference bounds are resolved from
@@ -44,7 +44,7 @@ SEED = 19910818
 # AR(1) persistence: how strongly a point is pulled toward the previous one.
 NOISE_PERSISTENCE = 0.55
 
-OUTPUT_PATH = Path(__file__).resolve().parents[2] / "testdata" / "biomarker_measurements.csv"
+OUTPUT_PATH = Path(__file__).resolve().parents[2] / "test_data" / "biomarker_measurements.csv"
 
 # Rows follow catalogue order; the sort below is the guard that keeps MARKERS aligned with it.
 CATALOGUE_ORDER = {biomarker["slug"]: index for index, biomarker in enumerate(BIOMARKERS)}
