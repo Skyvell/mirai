@@ -54,7 +54,7 @@ def _measurement(
     return BiomarkerMeasurement(**fields)
 
 
-class FakeSession:
+class CommitCountingSession:
     """Session double: counts commits, holds no state."""
 
     def __init__(self) -> None:
@@ -74,7 +74,7 @@ class FakeBiomarkerRepository:
     ) -> None:
         # The service commits this same session; the repository holds it too,
         # mirroring the real BiomarkerRepository(session) wiring.
-        self.session = FakeSession()
+        self.session = CommitCountingSession()
         self.biomarkers = biomarkers or []
         self.measurements = measurements or []
         self.added: list[BiomarkerMeasurement] = []
