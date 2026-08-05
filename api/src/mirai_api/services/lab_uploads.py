@@ -24,7 +24,7 @@ from mirai_api.schemas.lab_uploads import (
 from mirai_api.services.biomarkers import UnknownBiomarkersError
 from mirai_api.services.lab_extraction import (
     MappedMeasurement,
-    cached_catalogue,
+    catalogue_prompt,
     map_extraction,
 )
 
@@ -174,7 +174,8 @@ class LabUploadService:
         try:
             # Load the claimed row and the catalogue, and pull the PDF back from GCS.
             upload = await run_in_threadpool(self._lab_upload_repository.get, upload_id)
-            catalogue, prompt = await run_in_threadpool(cached_catalogue)
+            catalogue = await run_in_threadpool(self._biomarker_repository.list_biomarkers)
+            prompt = catalogue_prompt(catalogue)
             data = await run_in_threadpool(storage.download, upload.gcs_object_name)
 
             # A parse failure is terminal for this upload, never retried.
@@ -367,7 +368,6 @@ class LabUploadService:
             LabResult(
                 lab_upload_id=upload.id,
                 biomarker_id=m.biomarker.id,
-                biomarker=m.biomarker,
                 value=m.measurement.value,
                 unit=m.measurement.unit,
                 reference_low=m.measurement.reference_low,
