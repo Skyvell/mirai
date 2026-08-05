@@ -16,8 +16,7 @@ class UserRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def update_profile(self, user: User, *, sex: Sex, date_of_birth: date) -> User:
+    def update_profile(self, user: User, *, sex: Sex, date_of_birth: date) -> None:
         user.sex = sex
         user.date_of_birth = date_of_birth
         self._session.flush()
-        return user

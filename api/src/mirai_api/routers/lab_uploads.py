@@ -145,7 +145,6 @@ def delete_lab_upload(
     service.delete(user.id, upload_id, delete_measurements)
 
 
-# Internal, not user-facing: the Cloud Tasks worker target.
 @router.post(
     "/internal/lab-uploads/{upload_id}/parse",
     include_in_schema=False,

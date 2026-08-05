@@ -62,6 +62,6 @@ known-first-party = ["mirai_api"]
 testpaths = ["tests"]
 addopts = "-ra"
 
-# Makes `from conftest import ...` explicit rather than relying on pytest's
-# implicit sys.path insertion, now that tests sit in per-layer subpackages.
+# Puts tests/ on sys.path so every layer can import tests/support.py, rather
+# than relying on pytest's implicit insertion when it loads tests/conftest.py.
 pythonpath = ["tests"]

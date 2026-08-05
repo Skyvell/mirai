@@ -31,7 +31,7 @@ The app already degrades to a local-friendly path; only two externals need fakes
 |---|---|
 | Cloud SQL | Local Postgres (Docker Compose) via the `DATABASE_URL` seam |
 | Cloud Tasks | Already synchronous when `WORKER_BASE_URL` is empty (`submit` runs `process` in-request) |
-| GCS | Fake behind `services/storage.py` — emulator (`fake-gcs-server`) or a filesystem backend |
+| GCS | Fake behind `integrations/storage.py` — emulator (`fake-gcs-server`) or a filesystem backend |
 | Anthropic | Stubbed in tests (`parse_lab_pdf` seam); capped dev key for manual runs |
 
 Result: the full upload→review→confirm flow runs locally with no GCP — local
