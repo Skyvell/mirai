@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ferritin Biomarker Trend</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #152238;
+      --muted: #6b778c;
+      --line: #d9e1ec;
+      --blue: #1f6feb;
+      --green: #198754;
+      --green-soft: #eaf7ef;
+      --red: #d93025;
+      --red-soft: #fdeeee;
+      --purple: #7e57c2;
+      --shadow: 0 12px 30px rgba(27, 39, 65, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      background: #fbfcfe;
+      border-right: 1px solid var(--line);
+      padding: 28px 20px;
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 28px;
+    }
+
+    nav button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      color: #48566a;
+      cursor: pointer;
+    }
+
+    nav button.active {
+      background: #e9f1ff;
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    main {
+      padding: 28px;
+      max-width: 1500px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    select, button, input {
+      font: inherit;
+    }
+
+    .control, .primary {
+      border: 1px solid #cfd8e6;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 13px;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      font-weight: 700;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card, .panel {
+      background: var(--card);
+      border: 1px solid #e4e9f1;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card {
+      padding: 18px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .status {
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .panel {
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+
+    .panel-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .range-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .range-buttons button {
+      border: 1px solid #d5deea;
+      background: #fff;
+      border-radius: 9px;
+      padding: 7px 11px;
+      cursor: pointer;
+    }
+
+    .range-buttons button.active {
+      background: #eaf1ff;
+      color: var(--blue);
+      border-color: #b9cff9;
+      font-weight: 700;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 430px;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: #152238;
+      color: #fff;
+      padding: 9px 11px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translate(-50%, calc(-100% - 12px));
+      white-space: nowrap;
+      z-index: 4;
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #4b596d;
+      margin-top: 12px;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      margin-right: 7px;
+      vertical-align: -2px;
+      background: var(--line);
+    }
+
+    .legend .below::before { background: var(--red-soft); border: 1px solid #f4b7b2; }
+    .legend .normal::before { background: var(--green-soft); border: 1px solid #b9dfc7; }
+    .legend .result::before { background: var(--blue); border-radius: 50%; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e8edf4;
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.green { background: #2fb36d; }
+    .dot.red { background: var(--red); }
+
+    .note {
+      color: var(--purple);
+      font-weight: 600;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(19, 30, 49, .45);
+      display: none;
+      place-items: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .modal.open { display: grid; }
+
+    .modal-card {
+      width: min(480px, 100%);
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-row { margin-bottom: 14px; }
+    .form-row label {
+      display: block;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .form-row input {
+      width: 100%;
+      border: 1px solid #ced7e4;
+      border-radius: 9px;
+      padding: 10px 11px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      aside { display: none; }
+      main { padding: 18px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .header { flex-direction: column; }
+      .chart-wrap { height: 360px; }
+      table { min-width: 760px; }
+      .table-scroll { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">Health Trends</div>
+      <nav>
+        <button>Dashboard</button>
+        <button class="active">Biomarkers</button>
+        <button>Reports</button>
+        <button>Trends</button>
+        <button>Lab tests</button>
+        <button>Medications</button>
+        <button>Notes</button>
+      </nav>
+    </aside>
+
+    <main>
+      <div class="header">
+        <div>
+          <h1>Ferritin</h1>
+          <div class="subtitle">Iron storage protein · illustrative health data</div>
+        </div>
+        <div class="actions">
+          <select id="rangeSelect" class="control" aria-label="Select time range">
+            <option value="all">All time</option>
+            <option value="12">Last 12 months</option>
+            <option value="6">Last 6 months</option>
+            <option value="3">Last 3 months</option>
+          </select>
+          <button id="addAnnotation" class="primary">Add annotation</button>
+        </div>
+      </div>
+
+      <section class="summary-grid">
+        <div class="summary-card">
+          <div class="label">Latest result</div>
+          <div class="value">78 <span style="font-size:18px">µg/L</span></div>
+          <div class="subtitle">10 Jul 2026</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Reference range</div>
+          <div class="value" style="color:var(--green); font-size:24px">30–300 µg/L</div>
+          <div class="subtitle">Lab-specific range</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Status</div>
+          <div class="value status" style="font-size:24px">● Within range</div>
+          <div class="subtitle">Based on latest result</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Ferritin over time</div>
+          <div class="range-buttons" id="quickRanges">
+            <button data-range="3">3M</button>
+            <button data-range="6">6M</button>
+            <button data-range="12">1Y</button>
+            <button data-range="all" class="active">All</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap" id="chartWrap">
+          <svg id="chart" role="img" aria-label="Ferritin trend chart"></svg>
+          <div id="tooltip" class="tooltip"></div>
+        </div>
+
+        <div class="legend">
+          <span class="below">Below range (&lt;30)</span>
+          <span class="normal">Within range (30–300)</span>
+          <span class="result">Blood test result</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Results</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Result</th>
+                <th>Status</th>
+                <th>Reference range</th>
+                <th>Lab</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modal-card">
+      <h2 style="margin-top:0">Add annotation</h2>
+      <div class="form-row">
+        <label for="annotationDate">Date</label>
+        <input id="annotationDate" type="date" value="2026-07-10" />
+      </div>
+      <div class="form-row">
+        <label for="annotationText">Note</label>
+        <input id="annotationText" type="text" placeholder="e.g. Started iron supplement" />
+      </div>
+      <div class="modal-actions">
+        <button id="cancelModal" class="control">Cancel</button>
+        <button id="saveAnnotation" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const results = [
+      { date: "2025-01-14", value: 22, lab: "HealthyLab", note: "" },
+      { date: "2025-04-18", value: 28, lab: "HealthyLab", note: "Started iron supplement" },
+      { date: "2025-07-11", value: 46, lab: "HealthyLab", note: "" },
+      { date: "2025-10-20", value: 74, lab: "HealthyLab", note: "" },
+      { date: "2026-01-16", value: 91, lab: "HealthyLab", note: "Had flu" },
+      { date: "2026-04-17", value: 83, lab: "HealthyLab", note: "" },
+      { date: "2026-07-10", value: 78, lab: "HealthyLab", note: "" }
+    ];
+
+    const annotations = results
+      .filter(r => r.note)
+      .map(r => ({ date: r.date, text: r.note }));
+
+    const REF_LOW = 30;
+    const REF_HIGH = 300;
+
+    const svg = document.getElementById("chart");
+    const tooltip = document.getElementById("tooltip");
+    const chartWrap = document.getElementById("chartWrap");
+    const resultsBody = document.getElementById("resultsBody");
+    const rangeSelect = document.getElementById("rangeSelect");
+    const quickRanges = document.getElementById("quickRanges");
+
+    function fmtDate(date) {
+      return new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit", month: "short", year: "numeric"
+      }).format(new Date(date));
+    }
+
+    function statusFor(value) {
+      if (value < REF_LOW) return "Below range";
+      if (value > REF_HIGH) return "Above range";
+      return "Within range";
+    }
+
+    function renderTable(filtered) {
+      resultsBody.innerHTML = filtered.slice().reverse().map(r => {
+        const status = statusFor(r.value);
+        const ok = status === "Within range";
+        return `
+          <tr>
+            <td>${fmtDate(r.date)}</td>
+            <td><strong style="color:${ok ? '#1f6feb' : '#d93025'}">${r.value} µg/L</strong></td>
+            <td><span class="pill"><span class="dot ${ok ? 'green' : 'red'}"></span>${status}</span></td>
+            <td>30–300 µg/L</td>
+            <td>${r.lab}</td>
+            <td class="note">${r.note || "—"}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function getFiltered(range) {
+      if (range === "all") return results;
+      const months = Number(range);
+      const latest = new Date(results[results.length - 1].date);
+      const cutoff = new Date(latest);
+      cutoff.setMonth(cutoff.getMonth() - months);
+      return results.filter(r => new Date(r.date) >= cutoff);
+    }
+
+    function draw(range = "all") {
+      const data = getFiltered(range);
+      renderTable(data);
+
+      const width = chartWrap.clientWidth;
+      const height = chartWrap.clientHeight;
+      const margin = { top: 28, right: 72, bottom: 58, left: 58 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.innerHTML = "";
+
+      const dates = data.map(d => new Date(d.date).getTime());
+      const minX = Math.min(...dates);
+      const maxX = Math.max(...dates);
+      const minY = 0;
+      const maxY = 400;
+
+      const x = ms => margin.left + ((ms - minX) / Math.max(1, maxX - minX)) * innerW;
+      const y = val => margin.top + innerH - ((val - minY) / (maxY - minY)) * innerH;
+
+      function add(tag, attrs = {}, text = "") {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+        if (text) el.textContent = text;
+        svg.appendChild(el);
+        return el;
+      }
+
+      add("rect", {
+        x: margin.left, y: y(maxY), width: innerW, height: y(REF_HIGH)-y(maxY),
+        fill: "#fdeeee"
+      });
+      add("rect", {
+        x: margin.left, y: y(REF_HIGH), width: innerW, height: y(REF_LOW)-y(REF_HIGH),
+        fill: "#eaf7ef"
+      });
+      add("rect", {
+        x: margin.left, y: y(REF_LOW), width: innerW, height: y(0)-y(REF_LOW),
+        fill: "#fdeeee"
+      });
+
+      [0,100,200,300,400].forEach(tick => {
+        add("line", {
+          x1: margin.left, y1: y(tick), x2: width-margin.right, y2: y(tick),
+          stroke: "#dfe5ee", "stroke-width": 1
+        });
+        add("text", {
+          x: margin.left-12, y: y(tick)+4, "text-anchor": "end",
+          fill: "#68768a", "font-size": 12
+        }, tick);
+      });
+
+      add("text", {
+        x: width-margin.right+12, y: y(REF_HIGH)+4,
+        fill: "#198754", "font-size": 12, "font-weight": 700
+      }, "Upper 300");
+
+      add("text", {
+        x: width-margin.right+12, y: y(REF_LOW)+4,
+        fill: "#198754", "font-size": 12, "font-weight": 700
+      }, "Lower 30");
+
+      const points = data.map(d => [x(new Date(d.date).getTime()), y(d.value)]);
+      add("polyline", {
+        points: points.map(p => p.join(",")).join(" "),
+        fill: "none", stroke: "#1f6feb", "stroke-width": 3,
+        "stroke-linecap": "round", "stroke-linejoin": "round"
+      });
+
+      data.forEach((d, i) => {
+        const px = points[i][0], py = points[i][1];
+        const colour = d.value < REF_LOW || d.value > REF_HIGH ? "#d93025" : "#1f6feb";
+
+        const c = add("circle", {
+          cx: px, cy: py, r: 7, fill: colour, stroke: "#fff", "stroke-width": 3,
+          tabindex: 0, style: "cursor:pointer"
+        });
+
+        add("text", {
+          x: px, y: py-14, "text-anchor": "middle",
+          fill: d.value < REF_LOW ? "#d93025" : "#1f6feb",
+          "font-size": 13, "font-weight": 800
+        }, d.value);
+
+        const label = add("text", {
+          x: px, y: height-22, "text-anchor": "middle",
+          fill: "#68768a", "font-size": 12
+        }, fmtDate(d.date));
+
+        if (data.length > 5 && i % 2 === 1 && i !== data.length - 1) {
+          label.setAttribute("opacity", "0");
+        }
+
+        const showTip = () => {
+          tooltip.innerHTML = `<strong>${fmtDate(d.date)}</strong><br>${d.value} µg/L · ${statusFor(d.value)}`;
+          tooltip.style.left = `${px}px`;
+          tooltip.style.top = `${py}px`;
+          tooltip.style.opacity = 1;
+        };
+        const hideTip = () => tooltip.style.opacity = 0;
+
+        c.addEventListener("mouseenter", showTip);
+        c.addEventListener("mouseleave", hideTip);
+        c.addEventListener("focus", showTip);
+        c.addEventListener("blur", hideTip);
+      });
+
+      annotations.forEach((a, index) => {
+        if (!data.some(d => d.date === a.date)) return;
+        const ax = x(new Date(a.date).getTime());
+        add("line", {
+          x1: ax, y1: margin.top, x2: ax, y2: height-margin.bottom,
+          stroke: index % 2 ? "#1f6feb" : "#7e57c2",
+          "stroke-width": 1.5, "stroke-dasharray": "5 5", opacity: .65
+        });
+
+        const boxW = Math.min(150, Math.max(92, a.text.length * 7));
+        const boxX = Math.min(width - margin.right - boxW, Math.max(margin.left, ax + 8));
+        const boxY = margin.top + 8 + index * 48;
+
+        add("rect", {
+          x: boxX, y: boxY, width: boxW, height: 34, rx: 7,
+          fill: "#fff", stroke: index % 2 ? "#1f6feb" : "#7e57c2"
+        });
+        add("text", {
+          x: boxX+9, y: boxY+21, fill: "#334056",
+          "font-size": 11.5, "font-weight": 700
+        }, a.text);
+      });
+    }
+
+    rangeSelect.addEventListener("change", e => {
+      const value = e.target.value;
+      document.querySelectorAll("#quickRanges button").forEach(b =>
+        b.classList.toggle("active", b.dataset.range === value)
+      );
+      draw(value);
+    });
+
+    quickRanges.addEventListener("click", e => {
+      if (!e.target.matches("button")) return;
+      const value = e.target.dataset.range;
+      rangeSelect.value = value;
+      document.querySelectorAll("#quickRanges button").forEach(b => b.classList.remove("active"));
+      e.target.classList.add("active");
+      draw(value);
+    });
+
+    const modal = document.getElementById("modal");
+    document.getElementById("addAnnotation").onclick = () => {
+      modal.classList.add("open");
+      modal.setAttribute("aria-hidden", "false");
+    };
+    document.getElementById("cancelModal").onclick = () => {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    };
+    document.getElementById("saveAnnotation").onclick = () => {
+      const date = document.getElementById("annotationDate").value;
+      const text = document.getElementById("annotationText").value.trim();
+      if (!date || !text) return;
+      annotations.push({ date, text });
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+      draw(rangeSelect.value);
+    };
+
+    window.addEventListener("resize", () => draw(rangeSelect.value));
+    draw();
+  </script>
+</body>
+</html>
