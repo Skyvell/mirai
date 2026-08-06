@@ -4,6 +4,9 @@ set positional-arguments := true
 default:
     @just --list
 
+
+## -----Infra-----
+
 # Bootstrap the OpenTofu state bucket.
 bootstrap-state project region="europe-north1":
     ./infra/scripts/00_bootstrap_state.sh {{project}} {{region}}
