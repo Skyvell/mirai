@@ -15,9 +15,9 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabDraft, LabUploadDetail } from '@/client'
 import { pluralize } from '@/lib/text'
-import { detailPollInterval, invalidateAfterLabWrite } from '@/features/lab-uploads/api'
+import { invalidateAfterLabWrite } from '@/features/lab-uploads/api'
 import { DraftItemsTable, toRow, type DraftRow } from '@/features/lab-uploads/components/draft-items-table'
-import { IN_PROGRESS } from '@/features/lab-uploads/status'
+import { IN_PROGRESS, POLL_MS } from '@/features/lab-uploads/status'
 
 // The route owns the param and passes it in: a feature page importing its own
 // route file would invert the layer direction and cycle.
@@ -25,7 +25,8 @@ export function ReviewPage({ uploadId }: { uploadId: string }) {
   const detail = useQuery({
     ...getLabUploadOptions({ path: { upload_id: uploadId } }),
     // Keep polling if the user lands here before parsing has finished.
-    refetchInterval: (query) => detailPollInterval(query.state.data),
+    refetchInterval: (query) =>
+      query.state.data && IN_PROGRESS.has(query.state.data.status) ? POLL_MS : false,
   })
 
   return (

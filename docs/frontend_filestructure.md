@@ -20,12 +20,13 @@ src/
 │   │   ├── pages/
 │   │   └── components/         # biomarker-select, manual-entry-form
 │   ├── lab-uploads/            # own entity + lifecycle; produces measurements
-│   │   ├── api.ts              # polling predicates + invalidation
-│   │   ├── status.ts           # IN_PROGRESS
+│   │   ├── api.ts              # invalidation
+│   │   ├── status.ts           # IN_PROGRESS, POLL_MS, status label/variant maps
 │   │   ├── review-page.tsx
 │   │   └── components/         # upload-tab, report-section, draft-items-table
 │   ├── profile/
-│   │   ├── schema.ts
+│   │   ├── schema.ts           # zod + parseDateOfBirth (form only)
+│   │   ├── completeness.ts     # isProfileComplete — dependency-free on purpose
 │   │   ├── settings-page.tsx
 │   │   └── components/         # profile-form, onboarding
 │   ├── sources/                # fan-in: where your data comes from
@@ -34,7 +35,7 @@ src/
 │   └── overview/
 │       └── overview-page.tsx
 ├── components/                 # ui/ (shadcn) + domain-agnostic app components
-├── lib/                        # api, utils (cn), date, text
+├── lib/                        # api, utils (cn), text — dates use date-fns directly
 ├── main.tsx
 └── routeTree.gen.ts
 ```
@@ -73,4 +74,11 @@ Kept because these are the decisions most likely to be silently re-introduced.
 
 ## Lint
 
-`import/no-cycle` is the enforcement for rules 1, 3 and 6. A directory-wide ban on importing `@/routes/*` is **not** expressible: oxlint 1.71 implements `no-restricted-imports` with `paths` (exact specifiers) but not `patterns` (globs), and has no `import/no-restricted-paths` at all. Verified against the binary — do not re-add a `patterns` rule expecting it to fire; it is silently ignored. `no-cycle` covers the realistic violation anyway, since a feature importing its own route is inherently cyclic.
+`import/no-cycle` is **partial** enforcement: it catches a feature importing its own route (inherently cyclic, and the likeliest way to break rule 6) but nothing else. A layer inversion that isn't a cycle — `components/` importing a feature, `lib/` importing a feature, a feature importing an unrelated route — passes silently. Rules 1 and 3 are convention, not guardrail; treat the direction table as something a reviewer checks.
+
+A directory-wide ban on `@/routes/*` is **not** expressible in oxlint 1.71: it implements `no-restricted-imports` with `paths` (exact specifiers) but not `patterns` (globs), and has no `import/no-restricted-paths` at all. Verified against the binary — do not re-add a `patterns` rule expecting it to fire, it is silently ignored. If the direction is ever worth real enforcement, `dependency-cruiser` expresses layer rules with globs in ~15 lines.
+
+## Known exemptions
+
+- **The four placeholder routes** (`wearables`, `omics`, `insights`, `interventions`) hold their `<Page/>` inline, so rule 6's "one-line render of a feature page" does not hold for them. Deliberate: they get a feature directory when they get real code (rule 2), and the move is 5 lines either way.
+- **Bundle cost of the layout route.** `_authenticated.tsx` is code-split (unlike `__root.tsx`), so anything it imports statically becomes a second network wave in front of the `/me` query that gates every route — and in front of the backend's scale-to-zero cold start. `Onboarding` and the Add-data tabs are therefore `React.lazy`, and `completeness.ts` is kept free of zod/date-fns for the same reason. Before adding a static import here, check what chunk it drags in. Removing the extra wave entirely needs `queryClient` in router context so `/me` can move to a `loader` — not done yet.

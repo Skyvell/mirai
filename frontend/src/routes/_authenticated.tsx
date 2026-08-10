@@ -1,11 +1,23 @@
+import { Suspense, lazy, useEffect } from 'react'
 import { Link, Outlet, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { UserButton } from '@clerk/react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings } from 'lucide-react'
-import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
+import {
+  currentUserOptions,
+  listBiomarkersOptions,
+} from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { AddDataDialog } from '@/features/sources/add-data-dialog'
-import { Onboarding } from '@/features/profile/components/onboarding'
+import { isProfileComplete } from '@/features/profile/completeness'
+
+// Onboarding renders once per account but drags in the whole profile form, so it
+// stays off the shell's critical path.
+const Onboarding = lazy(() =>
+  import('@/features/profile/components/onboarding').then((m) => ({
+    default: m.Onboarding,
+  })),
+)
 
 export const Route = createFileRoute('/_authenticated')({
   component: AuthenticatedLayout,
@@ -14,17 +26,22 @@ export const Route = createFileRoute('/_authenticated')({
 const navLinkClass =
   'text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground'
 
+const fullScreenMessage = 'grid min-h-svh place-items-center text-sm text-muted-foreground'
+
 // Gate every route below this one on a complete health profile: sex and date of
 // birth are required before any biomarker range can be shown.
 function AuthenticatedLayout() {
   const me = useQuery(currentUserOptions())
 
+  // Warm the biomarker catalogue at shell mount rather than when the picker
+  // opens: the backend scales to zero, so this absorbs the cold start.
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    queryClient.prefetchQuery(listBiomarkersOptions())
+  }, [queryClient])
+
   if (me.isPending) {
-    return (
-      <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">
-        Loading…
-      </div>
-    )
+    return <div className={fullScreenMessage}>Loading…</div>
   }
 
   if (me.isError) {
@@ -37,8 +54,12 @@ function AuthenticatedLayout() {
     )
   }
 
-  if (me.data.sex == null || me.data.date_of_birth == null) {
-    return <Onboarding current={me.data} />
+  if (!isProfileComplete(me.data)) {
+    return (
+      <Suspense fallback={<div className={fullScreenMessage}>Loading…</div>}>
+        <Onboarding current={me.data} />
+      </Suspense>
+    )
   }
 
   return <AppShell />

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { invalidateBiomarkerSeries } from '@/features/biomarkers/api'
 import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
-import { localIsoDate } from '@/lib/date'
+import { format } from 'date-fns'
 
 // Self-contained Add-data tab for entering one measurement by hand.
 export function ManualEntryForm() {
@@ -22,7 +22,7 @@ export function ManualEntryForm() {
   const [unit, setUnit] = useState('')
   const [referenceLow, setReferenceLow] = useState('')
   const [referenceHigh, setReferenceHigh] = useState('')
-  const [measuredAt, setMeasuredAt] = useState(() => localIsoDate(new Date()))
+  const [measuredAt, setMeasuredAt] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
   const findBiomarker = (s: string) => biomarkers.data?.find((b) => b.slug === s)
   const selected = findBiomarker(slug)

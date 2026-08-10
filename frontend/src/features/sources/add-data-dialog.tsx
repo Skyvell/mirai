@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { Suspense, lazy, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,27 +10,35 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { prefetchBiomarkerCatalogue } from '@/features/biomarkers/api'
-import { ManualEntryForm } from '@/features/biomarkers/components/manual-entry-form'
-import { UploadTab } from '@/features/lab-uploads/components/upload-tab'
 
 // Every way data gets in, registered by the feature that owns it. Adding a
 // source — an Oura connection, a genome file — is one entry here plus a
 // self-contained component over there; this file stays the same size.
+// Loaded lazily: the trigger sits in the always-mounted nav, so a static import
+// would put every tab's dependencies on the shell's critical path.
 const TABS = [
-  { value: 'upload', label: 'Upload lab PDF', Component: UploadTab },
-  { value: 'manual', label: 'Manual entry', Component: ManualEntryForm },
-] as const
+  {
+    value: 'upload',
+    label: 'Upload lab PDF',
+    Component: lazy(() =>
+      import('@/features/lab-uploads/components/upload-tab').then((m) => ({
+        default: m.UploadTab,
+      })),
+    ),
+  },
+  {
+    value: 'manual',
+    label: 'Manual entry',
+    Component: lazy(() =>
+      import('@/features/biomarkers/components/manual-entry-form').then((m) => ({
+        default: m.ManualEntryForm,
+      })),
+    ),
+  },
+]
 
 export function AddDataDialog() {
   const [open, setOpen] = useState(false)
-
-  // Warm the catalogue when the shell mounts, not when the dialog opens, so the
-  // picker is already populated by the time anyone reaches it.
-  const queryClient = useQueryClient()
-  useEffect(() => {
-    prefetchBiomarkerCatalogue(queryClient)
-  }, [queryClient])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -45,7 +52,7 @@ export function AddDataDialog() {
             Upload a lab report or enter a biomarker value manually.
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue={TABS[0].value}>
+        <Tabs defaultValue="upload">
           <TabsList className="w-full">
             {TABS.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
@@ -62,7 +69,9 @@ export function AddDataDialog() {
               forceMount
               className="pt-2 data-[state=inactive]:hidden"
             >
-              <Component />
+              <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+                <Component />
+              </Suspense>
             </TabsContent>
           ))}
         </Tabs>

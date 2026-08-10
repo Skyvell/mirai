@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { format } from 'date-fns'
+import { differenceInYears, format } from 'date-fns'
 import { CalendarIcon, Check } from 'lucide-react'
 
 import type { MeResponse } from '@/client'
@@ -11,8 +11,11 @@ import {
   currentUserQueryKey,
   updateCurrentUserMutation,
 } from '@/client/@tanstack/react-query.gen'
-import { profileSchema, type ProfileFormValues } from '@/features/profile/schema'
-import { ageInYears, localIsoDate, parseIsoDate } from '@/lib/date'
+import {
+  parseDateOfBirth,
+  profileSchema,
+  type ProfileFormValues,
+} from '@/features/profile/schema'
 import { cn } from '@/lib/utils'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
@@ -54,7 +57,7 @@ export function ProfileForm({
     mode: 'onTouched',
     defaultValues: {
       sex: current.sex ?? undefined,
-      dateOfBirth: parseIsoDate(current.date_of_birth),
+      dateOfBirth: parseDateOfBirth(current.date_of_birth),
     },
   })
 
@@ -73,7 +76,7 @@ export function ProfileForm({
     update.mutate({
       body: {
         sex: values.sex,
-        date_of_birth: localIsoDate(values.dateOfBirth),
+        date_of_birth: format(values.dateOfBirth, 'yyyy-MM-dd'),
       },
     })
   }
@@ -159,7 +162,7 @@ export function ProfileForm({
                 </PopoverContent>
               </Popover>
               {field.value ? (
-                <FormDescription>{ageInYears(field.value)} years old</FormDescription>
+                <FormDescription>{differenceInYears(new Date(), field.value)} years old</FormDescription>
               ) : null}
               <FormMessage />
             </FormItem>

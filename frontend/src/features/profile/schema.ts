@@ -1,3 +1,4 @@
+import { parse } from 'date-fns'
 import { z } from 'zod'
 
 import type { Sex } from '@/client'
@@ -15,3 +16,10 @@ export const profileSchema = z.object({
 })
 
 export type ProfileFormValues = z.infer<typeof profileSchema>
+
+// The API sends YYYY-MM-DD; parse to local midnight, since `new Date(str)` reads
+// it as UTC and can shift a day in negative offsets.
+export function parseDateOfBirth(value: string | null | undefined): Date | undefined {
+  return value ? parse(value, 'yyyy-MM-dd', new Date()) : undefined
+}
+

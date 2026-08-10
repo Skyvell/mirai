@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { FileText, Trash2 } from 'lucide-react'
@@ -32,34 +32,24 @@ import {
   deleteLabUploadMutation,
   listLabUploadsOptions,
 } from '@/client/@tanstack/react-query.gen'
-import type { LabUploadSummary, UploadStatus } from '@/client'
+import type { LabUploadSummary } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
-import { invalidateAfterLabWrite, listPollInterval } from '@/features/lab-uploads/api'
-import { IN_PROGRESS } from '@/features/lab-uploads/status'
-import { localIsoDate } from '@/lib/date'
+import { invalidateAfterLabWrite } from '@/features/lab-uploads/api'
+import {
+  IN_PROGRESS,
+  POLL_MS,
+  STATUS_LABEL,
+  STATUS_VARIANT,
+} from '@/features/lab-uploads/status'
 import { pluralize } from '@/lib/text'
-
-// User-facing label per lifecycle state; queued and processing read the same.
-const STATUS_LABEL: Record<UploadStatus, string> = {
-  queued: 'Processing',
-  processing: 'Processing',
-  awaiting_review: 'Ready to review',
-  confirmed: 'Confirmed',
-  failed: 'Failed',
-}
-
-const STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant']> = {
-  queued: 'outline',
-  processing: 'outline',
-  awaiting_review: 'default',
-  confirmed: 'secondary',
-  failed: 'destructive',
-}
+import { format } from 'date-fns'
 
 export function ReportSection() {
   const uploads = useQuery({
     ...listLabUploadsOptions(),
-    refetchInterval: (query) => listPollInterval(query.state.data),
+    // Poll only while something is still parsing; stop once all rows are terminal.
+    refetchInterval: (query) =>
+      query.state.data?.some((u) => IN_PROGRESS.has(u.status)) ? POLL_MS : false,
   })
 
   return (
@@ -120,7 +110,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
   return (
     <TableRow>
       <TableCell>{upload.filename}</TableCell>
-      <TableCell>{localIsoDate(new Date(upload.created_at))}</TableCell>
+      <TableCell>{format(new Date(upload.created_at), 'yyyy-MM-dd')}</TableCell>
       <TableCell>
         <Badge variant={STATUS_VARIANT[upload.status]}>
           {STATUS_LABEL[upload.status]}
