@@ -1,86 +1,76 @@
-# Recommended Frontend Project Structure
+# Frontend Project Structure
 
 ```text
 src/
-├── api/
-│   ├── generated/
-│   │   └── schema.ts
-│   ├── client.ts
-│   └── api-error.ts
-│
-├── components/
-│   ├── ui/                       # shadcn primitives
-│   └── shared/                   # cross-domain app components
-│
-├── domains/
-│   ├── biomarkers/
-│   │   ├── api/
-│   │   │   ├── requests.ts
-│   │   │   ├── queries.ts
-│   │   │   ├── mutations.ts
-│   │   │   ├── query-keys.ts
-│   │   │   └── types.ts
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── schemas.ts
-│   │
-│   ├── wearables/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── providers/
-│   │   │   ├── oura/
-│   │   │   └── apple-health/
-│   │   └── schemas.ts
-│   │
-│   ├── omics/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── shared/
-│   │   ├── genomics/
-│   │   ├── transcriptomics/
-│   │   ├── proteomics/
-│   │   └── epigenomics/
-│   │
-│   └── interventions/
-│       ├── api/
-│       ├── components/
-│       ├── pages/
-│       └── schemas.ts
-│
-├── lib/
-│   ├── query-client.ts
-│   ├── env.ts
-│   ├── auth.ts
-│   └── utils.ts
-│
-├── routes/
-│   ├── __root.tsx
-│   ├── index.tsx
-│   ├── login.tsx
-│   ├── _authenticated.tsx
+├── client/                     # @hey-api output. Never edited, never moved.
+├── routes/                     # Route config only, ~6 lines each
+│   ├── __root.tsx              # Clerk boundary + <Outlet/>
+│   ├── _authenticated.tsx      # profile gate + nav shell
 │   └── _authenticated/
-│       ├── biomarkers/
-│       ├── wearables/
-│       ├── omics/
-│       └── interventions/
-│
-├── routeTree.gen.ts
-├── router.tsx
+│       ├── index.tsx           # /
+│       ├── biomarkers/index.tsx
+│       ├── sources/
+│       │   ├── index.tsx
+│       │   └── $uploadId.review.tsx
+│       ├── settings.tsx
+│       └── {wearables,omics,insights,interventions}.tsx   # placeholders
+├── features/
+│   ├── biomarkers/
+│   │   ├── api.ts              # composed options + invalidation
+│   │   ├── pages/
+│   │   └── components/         # biomarker-select, manual-entry-form
+│   ├── lab-uploads/            # own entity + lifecycle; produces measurements
+│   │   ├── api.ts              # polling predicates + invalidation
+│   │   ├── status.ts           # IN_PROGRESS
+│   │   ├── review-page.tsx
+│   │   └── components/         # upload-tab, report-section, draft-items-table
+│   ├── profile/
+│   │   ├── schema.ts
+│   │   ├── settings-page.tsx
+│   │   └── components/         # profile-form, onboarding
+│   ├── sources/                # fan-in: where your data comes from
+│   │   ├── sources-page.tsx
+│   │   └── add-data-dialog.tsx # tab registry; each feature owns its tab
+│   └── overview/
+│       └── overview-page.tsx
+├── components/                 # ui/ (shadcn) + domain-agnostic app components
+├── lib/                        # api, utils (cn), date, text
 ├── main.tsx
-└── vite-env.d.ts
+└── routeTree.gen.ts
 ```
 
 ## Rules
 
-- `routes/` follows TanStack Router file-based routing and stays thin.
-- `domains/` contains business-specific pages, components, API logic, and schemas.
-- `api/generated/` is fully generated from FastAPI OpenAPI and never edited manually.
-- `components/ui/` contains shadcn primitives only.
-- `components/shared/` contains components reused across unrelated domains.
-- Keep page-specific components beside the page until reuse is proven.
-- Put shared omics concepts in `domains/omics/shared/`; modality-specific logic stays in its subdomain.
-- Put Oura and Apple Health integrations under `domains/wearables/providers/`.
-- Define TanStack Query options and query keys inside each domain.
-- Pass route params and search state into domain pages rather than importing route files from domains.
+1. **Layer direction is one way:** `lib/`, `components/` → `features/` → `routes/`. `src/client/` is a leaf importable by anything and edited by nothing.
+2. **A feature is a coherent slice** — usually a nav destination, sometimes an entity with its own lifecycle (`lab-uploads`), sometimes a fan-in page (`overview`, `sources`). No directory without code: `wearables`, `omics`, `insights` and `interventions` keep placeholder JSX in the route file until built.
+3. **Features may depend on features, one way.** Current direction — `biomarkers`/`profile` depend on nothing; `lab-uploads` → `biomarkers`; `sources` → `lab-uploads`; `overview` → the domains it summarises. Enforced by `import/no-cycle`; the direction itself is convention.
+4. **Ingestion belongs to whatever owns the lifecycle.** `lab-uploads` is a sibling of `biomarkers`, not a child: its own table, status machine and audit rows, and a `failed` upload never becomes biomarker data. Wearables arrive by server-side API integration, so `features/wearables/` will hold only an OAuth connect tab and a connection row. Partner labs POST straight into the API, so the client does nothing.
+5. **Fan-in features arrange; contributors self-fetch.** A contributed section owns its query, polling, empty state and rows, so the fan-in page touches no other feature's types or query keys. `lab-uploads/components/report-section.tsx` keeps the `listLabUploadsOptions` query together with the `IN_PROGRESS`-keyed `refetchInterval` — splitting those is the bug. Sources renders sections ("Reports", later "Connected devices"), not one merged list.
+6. **Routes are config, not UI.** `createFileRoute` plus the non-splittable critical config (`validateSearch`, `loader`, `beforeLoad`) and a one-line render of a feature page. URL and code layout are decoupled: `/sources/$uploadId/review` renders `features/lab-uploads/review-page.tsx`.
+
+   **A feature page never imports its route file** — that inverts rule 1 and cycles. It takes params and search as props from the thin route, or uses `getRouteApi()`. Reaching for `Route.useParams()` inside the page is the natural move and the wrong one; `import/no-cycle` catches it, because the route already imports the page.
+7. **Query keys and API types come from `src/client/`.** Never hand-written. A feature `api.ts` may wrap generated options; it never redefines a key.
+8. **Grouping lands as soon as a cohesive group has two members** — `pages/`, `components/` — with no file-count trigger, since a trigger only guarantees a second pass over the same files. A *group* needs cohesion, so `api.ts` and `status.ts` stay at the feature root.
+9. **kebab-case files and folders, PascalCase exports.** macOS is case-insensitive and CI is not, so a case-only rename can pass locally and break the build. Number follows the backend convention — plural for a collection surface (`routers/lab_uploads.py`), singular for one entity or a mass noun (`models/lab_upload.py`, `me.py`). Hence `features/lab-uploads/` but `features/profile/` and `features/overview/`.
+10. **`components/` is for domain-agnostic UI.** Domain-typed UI stays in its feature even when another feature imports it (`BiomarkerSelect` takes `BiomarkerRead[]`). Promotion requires being useful without knowing any domain type.
+
+## Pinned paths
+
+- `src/lib/api.ts` — `openapi-ts.config.ts` sets `runtimeConfigPath: './src/lib/api'` and generated `client.gen.ts` imports it. Moving it breaks `pnpm generate:api`.
+- `src/lib/utils.ts`, `src/components/ui/` — `components.json` aliases drive where `shadcn add` writes and how registry components import each other. `cn` stays in `utils.ts`.
+- `src/client/` — `output.clean` empties it on every run.
+
+## Rejected, and why
+
+Kept because these are the decisions most likely to be silently re-introduced.
+
+- **`api/{requests,queries,mutations,query-keys,types}.ts` per feature** — hey-api already generates keys and every type; a hand-written factory is a second source of truth that loses on each spec change. One `api.ts`, for composition only.
+- **Pre-created `wearables/providers/*`, `omics/{genomics,…}`** — scaffolding for unbuilt code. Directories follow files.
+- **`domains/`** — Overview composes several features and has no model of its own; Sources arranges other features' data. Neither is a domain.
+- **Mutual isolation of features** (bulletproof-react's `import/no-restricted-paths` zones) — one hand-written rule per feature, and it breaks on real code: the review page needs `BiomarkerSelect`.
+- **An `app/` or `shell/` composition layer** — would make Overview the one nav item without a feature, and become the folder every feature change touches. Cross-feature pages work as features.
+- **`sources/` owning ingestion pipelines** — with wearables on server-side API integration and partner labs POSTing, the shared parent had exactly one member.
+
+## Lint
+
+`import/no-cycle` is the enforcement for rules 1, 3 and 6. A directory-wide ban on importing `@/routes/*` is **not** expressible: oxlint 1.71 implements `no-restricted-imports` with `paths` (exact specifiers) but not `patterns` (globs), and has no `import/no-restricted-paths` at all. Verified against the binary — do not re-add a `patterns` rule expecting it to fire; it is silently ignored. `no-cycle` covers the realistic violation anyway, since a feature importing its own route is inherently cyclic.
