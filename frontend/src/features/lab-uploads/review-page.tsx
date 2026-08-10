@@ -43,28 +43,34 @@ export function ReviewPage({ uploadId }: { uploadId: string }) {
   )
 }
 
+// Exhaustive over UploadStatus so a new lifecycle state is a compile error here,
+// not a silent fall-through to "Nothing to review".
 function ReviewBody({ detail }: { detail: LabUploadDetail }) {
-  if (IN_PROGRESS.has(detail.status)) {
-    return <p className="text-sm text-muted-foreground">Still reading this report…</p>
+  switch (detail.status) {
+    case 'queued':
+    case 'processing':
+      return <p className="text-sm text-muted-foreground">Still reading this report…</p>
+    case 'failed':
+      return <ApiErrorAlert message={detail.error_message ?? 'Parsing failed.'} />
+    case 'confirmed':
+      return <p className="text-sm text-muted-foreground">This report has been confirmed.</p>
+    case 'awaiting_review':
+      if (detail.draft === null) {
+        return <p className="text-sm text-muted-foreground">Nothing to review.</p>
+      }
+      // Key on the id so local edit state initializes once from the loaded draft.
+      return (
+        <ReviewForm
+          key={detail.id}
+          uploadId={detail.id}
+          filename={detail.filename}
+          draft={detail.draft}
+        />
+      )
+    default:
+      detail.status satisfies never
+      return null
   }
-  if (detail.status === 'failed') {
-    return <ApiErrorAlert message={detail.error_message ?? 'Parsing failed.'} />
-  }
-  if (detail.status === 'confirmed') {
-    return <p className="text-sm text-muted-foreground">This report has been confirmed.</p>
-  }
-  if (detail.draft === null) {
-    return <p className="text-sm text-muted-foreground">Nothing to review.</p>
-  }
-  // Key on the id so local edit state initializes once from the loaded draft.
-  return (
-    <ReviewForm
-      key={detail.id}
-      uploadId={detail.id}
-      filename={detail.filename}
-      draft={detail.draft}
-    />
-  )
 }
 
 function ReviewForm({
