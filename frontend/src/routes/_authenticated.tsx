@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Settings } from 'lucide-react'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
-import { AddDataDialog } from '@/components/add-data-dialog'
+import { AddDataDialog } from '@/features/sources/add-data-dialog'
 import { Onboarding } from '@/features/profile/components/onboarding'
 
 export const Route = createFileRoute('/_authenticated')({

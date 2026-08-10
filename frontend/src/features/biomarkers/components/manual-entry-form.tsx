@@ -1,136 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
-import { ApiErrorAlert } from '@/components/api-error-alert'
-import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   createBiomarkerMeasurementsMutation,
   listBiomarkersOptions,
-  uploadLabMutation,
 } from '@/client/@tanstack/react-query.gen'
+import { ApiErrorAlert } from '@/components/api-error-alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { invalidateBiomarkerSeries } from '@/features/biomarkers/api'
-import { invalidateLabUploads } from '@/features/lab-uploads/api'
+import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
 import { localIsoDate } from '@/lib/date'
 
-// Owned by the dialog (not the tab) so upload state survives tab switches;
-// reset on each open so an old error doesn't resurface.
-function useUploadLab() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    ...uploadLabMutation(),
-    // Parsing is async: the new report appears under Sources as queued.
-    onSuccess: () => {
-      invalidateLabUploads(queryClient)
-      toast.success('Report uploaded', {
-        description:
-          'We’re reading it now — review it under Sources before it’s added to your record.',
-      })
-    },
-  })
-}
-
-export function AddDataDialog() {
-  const [open, setOpen] = useState(false)
-  const upload = useUploadLab()
-
-  // Warm the biomarker catalogue when the shell mounts, not when the dialog
-  // opens: the backend scales to zero, so this absorbs the cold start during
-  // page load and the picker is already populated by the time it opens.
-  const queryClient = useQueryClient()
-  useEffect(() => {
-    queryClient.prefetchQuery(listBiomarkersOptions())
-  }, [queryClient])
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (next) upload.reset()
-        setOpen(next)
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button size="sm">Add data</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add data</DialogTitle>
-          <DialogDescription>
-            Upload a lab report or enter a biomarker value manually.
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs defaultValue="upload">
-          <TabsList className="w-full">
-            <TabsTrigger value="upload">Upload lab PDF</TabsTrigger>
-            <TabsTrigger value="manual">Manual entry</TabsTrigger>
-          </TabsList>
-          {/* forceMount keeps a half-filled form alive across tab switches;
-              the dialog unmounting on close still resets it per session. */}
-          <TabsContent value="upload" forceMount className="pt-2 data-[state=inactive]:hidden">
-            <UploadTab upload={upload} />
-          </TabsContent>
-          <TabsContent value="manual" forceMount className="pt-2 data-[state=inactive]:hidden">
-            <ManualEntryTab />
-          </TabsContent>
-        </Tabs>
-        {/* Not DialogClose: the Link's preventDefault would swallow Radix's
-            close, leaving the dialog open over the new route. */}
-        <Link
-          to="/sources"
-          onClick={() => setOpen(false)}
-          className="text-sm text-muted-foreground underline underline-offset-3 hover:text-foreground"
-        >
-          Manage your sources →
-        </Link>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function UploadTab({ upload }: { upload: ReturnType<typeof useUploadLab> }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    // Reset so re-selecting the same file fires onChange again.
-    event.target.value = ''
-    if (file) upload.mutate({ body: { file } })
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf"
-        className="hidden"
-        onChange={onFileChange}
-      />
-      <div>
-        <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-          {upload.isPending ? 'Uploading…' : 'Choose PDF'}
-        </Button>
-      </div>
-
-      {upload.isError && <ApiErrorAlert error={upload.error} />}
-    </div>
-  )
-}
-
-function ManualEntryTab() {
+// Self-contained Add-data tab for entering one measurement by hand.
+export function ManualEntryForm() {
   const queryClient = useQueryClient()
   const biomarkers = useQuery(listBiomarkersOptions())
   const [slug, setSlug] = useState('')
@@ -250,10 +134,7 @@ function ManualEntryTab() {
       {create.isError && <ApiErrorAlert error={create.error} />}
 
       <div>
-        <Button
-          type="submit"
-          disabled={!slug || !value || !measuredAt || create.isPending}
-        >
+        <Button type="submit" disabled={!slug || !value || !measuredAt || create.isPending}>
           {create.isPending ? 'Adding…' : 'Add measurement'}
         </Button>
       </div>
