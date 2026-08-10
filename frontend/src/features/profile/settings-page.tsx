@@ -1,16 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { Page } from '@/components/page'
-import { ProfileForm } from '@/components/profile-form'
 import { ApiErrorAlert } from '@/components/api-error-alert'
+import { ProfileForm } from '@/features/profile/components/profile-form'
 
-export const Route = createFileRoute('/settings')({
-  component: SettingsPage,
-})
-
-function SettingsPage() {
+export function SettingsPage() {
   const me = useQuery(currentUserOptions())
 
   return (

@@ -1,7 +1,7 @@
 import { UserButton } from '@clerk/react'
 
 import type { MeResponse } from '@/client'
-import { ProfileForm } from '@/components/profile-form'
+import { ProfileForm } from '@/features/profile/components/profile-form'
 
 // Blocking first-run step: the app stays unreachable until sex + DOB are set,
 // because every biomarker reference range depends on them.

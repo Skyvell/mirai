@@ -11,8 +11,9 @@ import {
   currentUserQueryKey,
   updateCurrentUserMutation,
 } from '@/client/@tanstack/react-query.gen'
-import { profileSchema, type ProfileFormValues } from '@/lib/profile-schema'
-import { ageInYears, cn, localIsoDate, parseIsoDate } from '@/lib/utils'
+import { profileSchema, type ProfileFormValues } from '@/features/profile/schema'
+import { ageInYears, localIsoDate, parseIsoDate } from '@/lib/date'
+import { cn } from '@/lib/utils'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'

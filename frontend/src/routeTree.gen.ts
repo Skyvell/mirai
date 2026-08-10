@@ -9,250 +9,253 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WearablesRouteImport } from './routes/wearables'
-import { Route as SourcesRouteImport } from './routes/sources'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as OmicsRouteImport } from './routes/omics'
-import { Route as InterventionsRouteImport } from './routes/interventions'
-import { Route as InsightsRouteImport } from './routes/insights'
-import { Route as BiomarkersRouteImport } from './routes/biomarkers'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as SourcesIndexRouteImport } from './routes/sources.index'
-import { Route as SourcesUploadIdReviewRouteImport } from './routes/sources.$uploadId.review'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedWearablesRouteImport } from './routes/_authenticated/wearables'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedOmicsRouteImport } from './routes/_authenticated/omics'
+import { Route as AuthenticatedInterventionsRouteImport } from './routes/_authenticated/interventions'
+import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated/insights'
+import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated/sources/index'
+import { Route as AuthenticatedBiomarkersIndexRouteImport } from './routes/_authenticated/biomarkers/index'
+import { Route as AuthenticatedSourcesUploadIdReviewRouteImport } from './routes/_authenticated/sources/$uploadId.review'
 
-const WearablesRoute = WearablesRouteImport.update({
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedWearablesRoute = AuthenticatedWearablesRouteImport.update({
   id: '/wearables',
   path: '/wearables',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const SourcesRoute = SourcesRouteImport.update({
-  id: '/sources',
-  path: '/sources',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const OmicsRoute = OmicsRouteImport.update({
+const AuthenticatedOmicsRoute = AuthenticatedOmicsRouteImport.update({
   id: '/omics',
   path: '/omics',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const InterventionsRoute = InterventionsRouteImport.update({
-  id: '/interventions',
-  path: '/interventions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InsightsRoute = InsightsRouteImport.update({
+const AuthenticatedInterventionsRoute =
+  AuthenticatedInterventionsRouteImport.update({
+    id: '/interventions',
+    path: '/interventions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const BiomarkersRoute = BiomarkersRouteImport.update({
-  id: '/biomarkers',
-  path: '/biomarkers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SourcesIndexRoute = SourcesIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SourcesRoute,
-} as any)
-const SourcesUploadIdReviewRoute = SourcesUploadIdReviewRouteImport.update({
-  id: '/$uploadId/review',
-  path: '/$uploadId/review',
-  getParentRoute: () => SourcesRoute,
-} as any)
+const AuthenticatedSourcesIndexRoute =
+  AuthenticatedSourcesIndexRouteImport.update({
+    id: '/sources/',
+    path: '/sources/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedBiomarkersIndexRoute =
+  AuthenticatedBiomarkersIndexRouteImport.update({
+    id: '/biomarkers/',
+    path: '/biomarkers/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSourcesUploadIdReviewRoute =
+  AuthenticatedSourcesUploadIdReviewRouteImport.update({
+    id: '/sources/$uploadId/review',
+    path: '/sources/$uploadId/review',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/biomarkers': typeof BiomarkersRoute
-  '/insights': typeof InsightsRoute
-  '/interventions': typeof InterventionsRoute
-  '/omics': typeof OmicsRoute
-  '/settings': typeof SettingsRoute
-  '/sources': typeof SourcesRouteWithChildren
-  '/wearables': typeof WearablesRoute
-  '/sources/': typeof SourcesIndexRoute
-  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/interventions': typeof AuthenticatedInterventionsRoute
+  '/omics': typeof AuthenticatedOmicsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/wearables': typeof AuthenticatedWearablesRoute
+  '/biomarkers/': typeof AuthenticatedBiomarkersIndexRoute
+  '/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/sources/$uploadId/review': typeof AuthenticatedSourcesUploadIdReviewRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/biomarkers': typeof BiomarkersRoute
-  '/insights': typeof InsightsRoute
-  '/interventions': typeof InterventionsRoute
-  '/omics': typeof OmicsRoute
-  '/settings': typeof SettingsRoute
-  '/wearables': typeof WearablesRoute
-  '/sources': typeof SourcesIndexRoute
-  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/interventions': typeof AuthenticatedInterventionsRoute
+  '/omics': typeof AuthenticatedOmicsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/wearables': typeof AuthenticatedWearablesRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/biomarkers': typeof AuthenticatedBiomarkersIndexRoute
+  '/sources': typeof AuthenticatedSourcesIndexRoute
+  '/sources/$uploadId/review': typeof AuthenticatedSourcesUploadIdReviewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/biomarkers': typeof BiomarkersRoute
-  '/insights': typeof InsightsRoute
-  '/interventions': typeof InterventionsRoute
-  '/omics': typeof OmicsRoute
-  '/settings': typeof SettingsRoute
-  '/sources': typeof SourcesRouteWithChildren
-  '/wearables': typeof WearablesRoute
-  '/sources/': typeof SourcesIndexRoute
-  '/sources/$uploadId/review': typeof SourcesUploadIdReviewRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/interventions': typeof AuthenticatedInterventionsRoute
+  '/_authenticated/omics': typeof AuthenticatedOmicsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/wearables': typeof AuthenticatedWearablesRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/biomarkers/': typeof AuthenticatedBiomarkersIndexRoute
+  '/_authenticated/sources/': typeof AuthenticatedSourcesIndexRoute
+  '/_authenticated/sources/$uploadId/review': typeof AuthenticatedSourcesUploadIdReviewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/biomarkers'
     | '/insights'
     | '/interventions'
     | '/omics'
     | '/settings'
-    | '/sources'
     | '/wearables'
+    | '/biomarkers/'
     | '/sources/'
     | '/sources/$uploadId/review'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/biomarkers'
     | '/insights'
     | '/interventions'
     | '/omics'
     | '/settings'
     | '/wearables'
+    | '/'
+    | '/biomarkers'
     | '/sources'
     | '/sources/$uploadId/review'
   id:
     | '__root__'
-    | '/'
-    | '/biomarkers'
-    | '/insights'
-    | '/interventions'
-    | '/omics'
-    | '/settings'
-    | '/sources'
-    | '/wearables'
-    | '/sources/'
-    | '/sources/$uploadId/review'
+    | '/_authenticated'
+    | '/_authenticated/insights'
+    | '/_authenticated/interventions'
+    | '/_authenticated/omics'
+    | '/_authenticated/settings'
+    | '/_authenticated/wearables'
+    | '/_authenticated/'
+    | '/_authenticated/biomarkers/'
+    | '/_authenticated/sources/'
+    | '/_authenticated/sources/$uploadId/review'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  BiomarkersRoute: typeof BiomarkersRoute
-  InsightsRoute: typeof InsightsRoute
-  InterventionsRoute: typeof InterventionsRoute
-  OmicsRoute: typeof OmicsRoute
-  SettingsRoute: typeof SettingsRoute
-  SourcesRoute: typeof SourcesRouteWithChildren
-  WearablesRoute: typeof WearablesRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/wearables': {
-      id: '/wearables'
-      path: '/wearables'
-      fullPath: '/wearables'
-      preLoaderRoute: typeof WearablesRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sources': {
-      id: '/sources'
-      path: '/sources'
-      fullPath: '/sources'
-      preLoaderRoute: typeof SourcesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/omics': {
-      id: '/omics'
-      path: '/omics'
-      fullPath: '/omics'
-      preLoaderRoute: typeof OmicsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/interventions': {
-      id: '/interventions'
-      path: '/interventions'
-      fullPath: '/interventions'
-      preLoaderRoute: typeof InterventionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/insights': {
-      id: '/insights'
-      path: '/insights'
-      fullPath: '/insights'
-      preLoaderRoute: typeof InsightsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/biomarkers': {
-      id: '/biomarkers'
-      path: '/biomarkers'
-      fullPath: '/biomarkers'
-      preLoaderRoute: typeof BiomarkersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/sources/': {
-      id: '/sources/'
-      path: '/'
+    '/_authenticated/wearables': {
+      id: '/_authenticated/wearables'
+      path: '/wearables'
+      fullPath: '/wearables'
+      preLoaderRoute: typeof AuthenticatedWearablesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/omics': {
+      id: '/_authenticated/omics'
+      path: '/omics'
+      fullPath: '/omics'
+      preLoaderRoute: typeof AuthenticatedOmicsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/interventions': {
+      id: '/_authenticated/interventions'
+      path: '/interventions'
+      fullPath: '/interventions'
+      preLoaderRoute: typeof AuthenticatedInterventionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/insights': {
+      id: '/_authenticated/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof AuthenticatedInsightsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sources/': {
+      id: '/_authenticated/sources/'
+      path: '/sources'
       fullPath: '/sources/'
-      preLoaderRoute: typeof SourcesIndexRouteImport
-      parentRoute: typeof SourcesRoute
+      preLoaderRoute: typeof AuthenticatedSourcesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/sources/$uploadId/review': {
-      id: '/sources/$uploadId/review'
-      path: '/$uploadId/review'
+    '/_authenticated/biomarkers/': {
+      id: '/_authenticated/biomarkers/'
+      path: '/biomarkers'
+      fullPath: '/biomarkers/'
+      preLoaderRoute: typeof AuthenticatedBiomarkersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/sources/$uploadId/review': {
+      id: '/_authenticated/sources/$uploadId/review'
+      path: '/sources/$uploadId/review'
       fullPath: '/sources/$uploadId/review'
-      preLoaderRoute: typeof SourcesUploadIdReviewRouteImport
-      parentRoute: typeof SourcesRoute
+      preLoaderRoute: typeof AuthenticatedSourcesUploadIdReviewRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface SourcesRouteChildren {
-  SourcesIndexRoute: typeof SourcesIndexRoute
-  SourcesUploadIdReviewRoute: typeof SourcesUploadIdReviewRoute
+interface AuthenticatedRouteChildren {
+  AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedInterventionsRoute: typeof AuthenticatedInterventionsRoute
+  AuthenticatedOmicsRoute: typeof AuthenticatedOmicsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedWearablesRoute: typeof AuthenticatedWearablesRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedBiomarkersIndexRoute: typeof AuthenticatedBiomarkersIndexRoute
+  AuthenticatedSourcesIndexRoute: typeof AuthenticatedSourcesIndexRoute
+  AuthenticatedSourcesUploadIdReviewRoute: typeof AuthenticatedSourcesUploadIdReviewRoute
 }
 
-const SourcesRouteChildren: SourcesRouteChildren = {
-  SourcesIndexRoute: SourcesIndexRoute,
-  SourcesUploadIdReviewRoute: SourcesUploadIdReviewRoute,
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedInterventionsRoute: AuthenticatedInterventionsRoute,
+  AuthenticatedOmicsRoute: AuthenticatedOmicsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedWearablesRoute: AuthenticatedWearablesRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedBiomarkersIndexRoute: AuthenticatedBiomarkersIndexRoute,
+  AuthenticatedSourcesIndexRoute: AuthenticatedSourcesIndexRoute,
+  AuthenticatedSourcesUploadIdReviewRoute:
+    AuthenticatedSourcesUploadIdReviewRoute,
 }
 
-const SourcesRouteWithChildren =
-  SourcesRoute._addFileChildren(SourcesRouteChildren)
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  BiomarkersRoute: BiomarkersRoute,
-  InsightsRoute: InsightsRoute,
-  InterventionsRoute: InterventionsRoute,
-  OmicsRoute: OmicsRoute,
-  SettingsRoute: SettingsRoute,
-  SourcesRoute: SourcesRouteWithChildren,
-  WearablesRoute: WearablesRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

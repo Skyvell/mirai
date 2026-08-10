@@ -1,14 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { Page } from '@/components/page'
 import { apiErrorMessage } from '@/lib/api'
 
-export const Route = createFileRoute('/')({
-  component: OverviewComponent,
-})
-
-function OverviewComponent() {
+export function OverviewPage() {
   const me = useQuery(currentUserOptions())
 
   return (

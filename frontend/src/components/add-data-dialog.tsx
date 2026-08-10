@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ApiErrorAlert } from '@/components/api-error-alert'
-import { BiomarkerSelect } from '@/components/biomarker-select'
+import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,12 +18,12 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   createBiomarkerMeasurementsMutation,
-  listBiomarkerSeriesQueryKey,
   listBiomarkersOptions,
-  listLabUploadsQueryKey,
   uploadLabMutation,
 } from '@/client/@tanstack/react-query.gen'
-import { localIsoDate } from '@/lib/utils'
+import { invalidateBiomarkerSeries } from '@/features/biomarkers/api'
+import { invalidateLabUploads } from '@/features/lab-uploads/api'
+import { localIsoDate } from '@/lib/date'
 
 // Owned by the dialog (not the tab) so upload state survives tab switches;
 // reset on each open so an old error doesn't resurface.
@@ -33,7 +33,7 @@ function useUploadLab() {
     ...uploadLabMutation(),
     // Parsing is async: the new report appears under Sources as queued.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
+      invalidateLabUploads(queryClient)
       toast.success('Report uploaded', {
         description:
           'We’re reading it now — review it under Sources before it’s added to your record.',
@@ -146,7 +146,7 @@ function ManualEntryTab() {
   const create = useMutation({
     ...createBiomarkerMeasurementsMutation(),
     onSuccess: ([created]) => {
-      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
+      invalidateBiomarkerSeries(queryClient)
       setValue('')
       toast.success(`Added ${created.display_name} — ${created.value} ${created.unit}`)
     },

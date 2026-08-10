@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ApiErrorAlert } from '@/components/api-error-alert'
-import { BiomarkerSelect } from '@/components/biomarker-select'
+import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
 import { QueryPane } from '@/components/query-pane'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -20,16 +20,16 @@ import {
 import {
   confirmLabUploadMutation,
   getLabUploadOptions,
-  listBiomarkerSeriesQueryKey,
   listBiomarkersOptions,
-  listLabUploadsQueryKey,
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerRead, LabDraft, LabDraftItemRead, LabUploadDetail } from '@/client'
-import { cn, pluralize } from '@/lib/utils'
-import { IN_PROGRESS } from '@/lib/lab-uploads'
+import { cn } from '@/lib/utils'
+import { pluralize } from '@/lib/text'
+import { detailPollInterval, invalidateAfterLabWrite } from '@/features/lab-uploads/api'
+import { IN_PROGRESS } from '@/features/lab-uploads/status'
 
-export const Route = createFileRoute('/sources/$uploadId/review')({
+export const Route = createFileRoute('/_authenticated/sources/$uploadId/review')({
   component: ReviewComponent,
 })
 
@@ -38,8 +38,7 @@ function ReviewComponent() {
   const detail = useQuery({
     ...getLabUploadOptions({ path: { upload_id: uploadId } }),
     // Keep polling if the user lands here before parsing has finished.
-    refetchInterval: (query) =>
-      query.state.data && IN_PROGRESS.has(query.state.data.status) ? 3000 : false,
+    refetchInterval: (query) => detailPollInterval(query.state.data),
   })
 
   return (
@@ -191,8 +190,7 @@ function ReviewForm({
       return
     }
 
-    queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
-    queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
+    invalidateAfterLabWrite(queryClient)
     navigate({ to: '/sources' })
   }
 

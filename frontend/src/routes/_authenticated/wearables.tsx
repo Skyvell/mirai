@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Page } from '@/components/page'
 
-export const Route = createFileRoute('/wearables')({
+export const Route = createFileRoute('/_authenticated/wearables')({
   component: WearablesComponent,
 })
 

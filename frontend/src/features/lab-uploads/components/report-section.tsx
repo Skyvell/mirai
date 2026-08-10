@@ -30,14 +30,14 @@ import {
 } from '@/components/ui/table'
 import {
   deleteLabUploadMutation,
-  listBiomarkerSeriesQueryKey,
   listLabUploadsOptions,
-  listLabUploadsQueryKey,
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary, UploadStatus } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
-import { IN_PROGRESS } from '@/lib/lab-uploads'
-import { localIsoDate, pluralize } from '@/lib/utils'
+import { invalidateAfterLabWrite, listPollInterval } from '@/features/lab-uploads/api'
+import { IN_PROGRESS } from '@/features/lab-uploads/status'
+import { localIsoDate } from '@/lib/date'
+import { pluralize } from '@/lib/text'
 
 // User-facing label per lifecycle state; queued and processing read the same.
 const STATUS_LABEL: Record<UploadStatus, string> = {
@@ -56,12 +56,10 @@ const STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant
   failed: 'destructive',
 }
 
-export function ReportsList() {
+export function ReportSection() {
   const uploads = useQuery({
     ...listLabUploadsOptions(),
-    // Poll only while something is still parsing; stop once all rows are terminal.
-    refetchInterval: (query) =>
-      query.state.data?.some((u) => IN_PROGRESS.has(u.status)) ? 3000 : false,
+    refetchInterval: (query) => listPollInterval(query.state.data),
   })
 
   return (
@@ -109,12 +107,9 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
       : null
   const remove = useMutation({
     ...deleteLabUploadMutation(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: listLabUploadsQueryKey() })
-      // Deletion removes points or nulls their lab_upload_id; either way the
-      // series payload changed.
-      queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
-    },
+    // Deletion removes points or nulls their lab_upload_id; either way the
+    // series payload changed alongside the report list.
+    onSuccess: () => invalidateAfterLabWrite(queryClient),
     // Row actions have no inline slot, so delete failures surface as a toast;
     // form and query errors elsewhere render inline via ApiErrorAlert.
     onError: (error) => toast.error(apiErrorMessage(error)),

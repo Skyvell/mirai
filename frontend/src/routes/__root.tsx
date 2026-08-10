@@ -1,19 +1,13 @@
-import { Link, Outlet, createRootRoute, useNavigate } from '@tanstack/react-router'
-import { ClerkLoaded, ClerkLoading, Show, SignIn, UserButton } from '@clerk/react'
-import { useQuery } from '@tanstack/react-query'
-import { Settings } from 'lucide-react'
-import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
-import { AddDataDialog } from '@/components/add-data-dialog'
-import { ApiErrorAlert } from '@/components/api-error-alert'
-import { Onboarding } from '@/components/onboarding'
+import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { ClerkLoaded, ClerkLoading, Show, SignIn } from '@clerk/react'
 
 export const Route = createRootRoute({
   component: RootComponent,
 })
 
-const navLinkClass =
-  'text-muted-foreground transition-colors hover:text-foreground [&.active]:text-foreground'
-
+// The authentication boundary, and nothing else: everything that assumes a
+// signed-in user lives under the _authenticated layout, so a future public
+// route (a shared report, an OAuth callback) can sit outside it.
 function RootComponent() {
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -24,7 +18,7 @@ function RootComponent() {
       </ClerkLoading>
       <ClerkLoaded>
         <Show when="signed-in">
-          <RequireProfile />
+          <Outlet />
         </Show>
         <Show when="signed-out">
           <div className="grid min-h-svh place-items-center p-6">
@@ -33,79 +27,5 @@ function RootComponent() {
         </Show>
       </ClerkLoaded>
     </div>
-  )
-}
-
-// Gate the whole signed-in app on a complete health profile: sex and date of
-// birth are required before any biomarker range can be shown.
-function RequireProfile() {
-  const me = useQuery(currentUserOptions())
-
-  if (me.isPending) {
-    return (
-      <div className="grid min-h-svh place-items-center text-sm text-muted-foreground">
-        Loading…
-      </div>
-    )
-  }
-
-  if (me.isError) {
-    return (
-      <div className="grid min-h-svh place-items-center p-6">
-        <div className="w-full max-w-md">
-          <ApiErrorAlert error={me.error} />
-        </div>
-      </div>
-    )
-  }
-
-  if (me.data.sex == null || me.data.date_of_birth == null) {
-    return <Onboarding current={me.data} />
-  }
-
-  return <AppShell />
-}
-
-function AppShell() {
-  const navigate = useNavigate()
-
-  return (
-    <>
-      <nav className="flex flex-wrap items-center gap-4 border-b px-6 py-4 text-sm font-medium">
-        <Link to="/" activeOptions={{ exact: true }} className={navLinkClass}>
-          Overview
-        </Link>
-        <Link to="/biomarkers" className={navLinkClass}>
-          Biomarkers
-        </Link>
-        <Link to="/wearables" className={navLinkClass}>
-          Wearables
-        </Link>
-        <Link to="/omics" className={navLinkClass}>
-          Omics
-        </Link>
-        <Link to="/insights" className={navLinkClass}>
-          Insights
-        </Link>
-        <Link to="/interventions" className={navLinkClass}>
-          Interventions
-        </Link>
-        <div className="ml-auto flex items-center gap-3">
-          <AddDataDialog />
-          <UserButton>
-            <UserButton.MenuItems>
-              <UserButton.Action
-                label="Settings"
-                labelIcon={<Settings className="size-4" />}
-                onClick={() => navigate({ to: '/settings' })}
-              />
-            </UserButton.MenuItems>
-          </UserButton>
-        </div>
-      </nav>
-      <main className="p-6">
-        <Outlet />
-      </main>
-    </>
   )
 }

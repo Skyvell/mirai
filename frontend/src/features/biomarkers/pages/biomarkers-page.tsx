@@ -1,4 +1,3 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Activity } from 'lucide-react'
 import {
@@ -18,10 +17,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-export const Route = createFileRoute('/biomarkers')({
-  component: BiomarkersComponent,
-})
-
 function referenceRange(low: string | null, high: string | null): string {
   if (low !== null && high !== null) return `${low}–${high}`
   if (low !== null) return `≥ ${low}`
@@ -35,7 +30,7 @@ function history(measurements: BiomarkerMeasurementPoint[]): string {
     .join(' → ')
 }
 
-function BiomarkersComponent() {
+export function BiomarkersPage() {
   const series = useQuery(listBiomarkerSeriesOptions())
 
   // Catalogue is the single source of truth for display names, joined by slug.
