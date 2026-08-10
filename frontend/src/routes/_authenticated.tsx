@@ -3,12 +3,10 @@ import { Link, Outlet, createFileRoute, useNavigate } from '@tanstack/react-rout
 import { UserButton } from '@clerk/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings } from 'lucide-react'
-import {
-  currentUserOptions,
-  listBiomarkersOptions,
-} from '@/client/@tanstack/react-query.gen'
+import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { AddDataDialog } from '@/features/sources/add-data-dialog'
+import { biomarkerCatalogueOptions } from '@/features/biomarkers/api'
 import { isProfileComplete } from '@/features/profile/completeness'
 
 // Onboarding renders once per account but drags in the whole profile form, so it
@@ -37,7 +35,7 @@ function AuthenticatedLayout() {
   // opens: the backend scales to zero, so this absorbs the cold start.
   const queryClient = useQueryClient()
   useEffect(() => {
-    queryClient.prefetchQuery(listBiomarkersOptions())
+    queryClient.prefetchQuery(biomarkerCatalogueOptions())
   }, [queryClient])
 
   if (me.isPending) {

@@ -1,8 +1,23 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { listBiomarkerSeriesQueryKey } from '@/client/@tanstack/react-query.gen'
+import {
+  listBiomarkerSeriesQueryKey,
+  listBiomarkersOptions,
+} from '@/client/@tanstack/react-query.gen'
+import type { BiomarkerRead } from '@/client'
 
-// Every measurement write — manual entry, a confirmed lab draft, a deleted
-// report — lands in the same series payload, so one helper states it once.
+// Reseeded only by a migration, so a reload is soon enough; refetching costs a
+// JWT verify plus a DB hit on a backend that scales to zero.
+export function biomarkerCatalogueOptions() {
+  return { ...listBiomarkersOptions(), staleTime: Infinity }
+}
+
+export function findBiomarker(
+  catalogue: BiomarkerRead[] | undefined,
+  slug: string,
+): BiomarkerRead | undefined {
+  return catalogue?.find((biomarker) => biomarker.slug === slug)
+}
+
 export function invalidateBiomarkerSeries(queryClient: QueryClient) {
   return queryClient.invalidateQueries({ queryKey: listBiomarkerSeriesQueryKey() })
 }

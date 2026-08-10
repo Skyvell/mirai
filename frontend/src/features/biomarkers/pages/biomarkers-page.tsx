@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity } from 'lucide-react'
-import {
-  listBiomarkerSeriesOptions,
-  listBiomarkersOptions,
-} from '@/client/@tanstack/react-query.gen'
+import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
 import type { BiomarkerMeasurementPoint } from '@/client'
+import { biomarkerCatalogueOptions, findBiomarker } from '@/features/biomarkers/api'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
 import { QueryPane } from '@/components/query-pane'
@@ -34,8 +32,7 @@ export function BiomarkersPage() {
   const series = useQuery(listBiomarkerSeriesOptions())
 
   // Catalogue is the single source of truth for display names, joined by slug.
-  const catalogue = useQuery(listBiomarkersOptions())
-  const nameBySlug = new Map((catalogue.data ?? []).map((b) => [b.slug, b.display_name]))
+  const catalogue = useQuery(biomarkerCatalogueOptions())
 
   return (
     <Page
@@ -68,7 +65,7 @@ export function BiomarkersPage() {
                 if (!latest) return null
                 return (
                   <TableRow key={slug}>
-                    <TableCell>{nameBySlug.get(slug) ?? slug}</TableCell>
+                    <TableCell>{findBiomarker(catalogue.data, slug)?.display_name ?? slug}</TableCell>
                     <TableCell>
                       <span className="font-mono">{latest.value}</span> {latest.unit}
                     </TableCell>

@@ -10,12 +10,12 @@ import { Label } from '@/components/ui/label'
 import {
   confirmLabUploadMutation,
   getLabUploadOptions,
-  listBiomarkersOptions,
   updateLabDraftMutation,
 } from '@/client/@tanstack/react-query.gen'
 import type { LabDraft, LabUploadDetail } from '@/client'
 import { pluralize } from '@/lib/text'
-import { invalidateAfterLabWrite } from '@/features/lab-uploads/api'
+import { biomarkerCatalogueOptions, findBiomarker } from '@/features/biomarkers/api'
+import { invalidateLabUploadsAndSeries } from '@/features/lab-uploads/api'
 import { DraftItemsTable, toRow, type DraftRow } from '@/features/lab-uploads/components/draft-items-table'
 import { IN_PROGRESS, POLL_MS } from '@/features/lab-uploads/status'
 
@@ -78,7 +78,7 @@ function ReviewForm({
 }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const biomarkers = useQuery(listBiomarkersOptions())
+  const biomarkers = useQuery(biomarkerCatalogueOptions())
 
   const [measuredAt, setMeasuredAt] = useState(draft.measured_at ?? '')
   const [rows, setRows] = useState<DraftRow[]>(() => [
@@ -108,7 +108,7 @@ function ReviewForm({
 
   // Mapping a marker keeps it and fills the unit from the mapped biomarker when blank.
   function mapRow(id: string, slug: string) {
-    const canonical = biomarkers.data?.find((b) => b.slug === slug)
+    const canonical = findBiomarker(biomarkers.data, slug)
     setRows((rs) =>
       rs.map((r) =>
         r.id === id
@@ -141,7 +141,7 @@ function ReviewForm({
       return
     }
 
-    invalidateAfterLabWrite(queryClient)
+    invalidateLabUploadsAndSeries(queryClient)
     navigate({ to: '/sources' })
   }
 

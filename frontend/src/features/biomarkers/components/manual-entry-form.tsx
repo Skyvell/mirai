@@ -1,22 +1,23 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import {
-  createBiomarkerMeasurementsMutation,
-  listBiomarkersOptions,
-} from '@/client/@tanstack/react-query.gen'
+import { createBiomarkerMeasurementsMutation } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { invalidateBiomarkerSeries } from '@/features/biomarkers/api'
+import {
+  biomarkerCatalogueOptions,
+  findBiomarker,
+  invalidateBiomarkerSeries,
+} from '@/features/biomarkers/api'
 import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
 import { format } from 'date-fns'
 
 // Self-contained Add-data tab for entering one measurement by hand.
 export function ManualEntryForm() {
   const queryClient = useQueryClient()
-  const biomarkers = useQuery(listBiomarkersOptions())
+  const biomarkers = useQuery(biomarkerCatalogueOptions())
   const [slug, setSlug] = useState('')
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('')
@@ -24,8 +25,7 @@ export function ManualEntryForm() {
   const [referenceHigh, setReferenceHigh] = useState('')
   const [measuredAt, setMeasuredAt] = useState(() => format(new Date(), 'yyyy-MM-dd'))
 
-  const findBiomarker = (s: string) => biomarkers.data?.find((b) => b.slug === s)
-  const selected = findBiomarker(slug)
+  const selected = findBiomarker(biomarkers.data, slug)
 
   const create = useMutation({
     ...createBiomarkerMeasurementsMutation(),
@@ -66,7 +66,7 @@ export function ManualEntryForm() {
           placeholder={biomarkers.isPending ? 'Loading biomarkers…' : 'Pick a biomarker'}
           onChange={(next) => {
             setSlug(next)
-            const picked = findBiomarker(next)
+            const picked = findBiomarker(biomarkers.data, next)
             if (picked) setUnit(picked.canonical_unit)
             // Ranges are biomarker-specific; don't carry them across a switch.
             setReferenceLow('')

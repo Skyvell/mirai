@@ -34,7 +34,7 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
-import { invalidateAfterLabWrite } from '@/features/lab-uploads/api'
+import { invalidateLabUploadsAndSeries } from '@/features/lab-uploads/api'
 import {
   IN_PROGRESS,
   POLL_MS,
@@ -99,7 +99,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
     ...deleteLabUploadMutation(),
     // Deletion removes points or nulls their lab_upload_id; either way the
     // series payload changed alongside the report list.
-    onSuccess: () => invalidateAfterLabWrite(queryClient),
+    onSuccess: () => invalidateLabUploadsAndSeries(queryClient),
     // Row actions have no inline slot, so delete failures surface as a toast;
     // form and query errors elsewhere render inline via ApiErrorAlert.
     onError: (error) => toast.error(apiErrorMessage(error)),

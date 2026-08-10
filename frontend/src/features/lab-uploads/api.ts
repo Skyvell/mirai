@@ -9,7 +9,7 @@ export function invalidateLabUploads(queryClient: QueryClient) {
 
 // Confirming a draft or deleting a report changes both the report list and the
 // series it feeds, so this reaches into biomarkers rather than restating its key.
-export function invalidateAfterLabWrite(queryClient: QueryClient) {
+export function invalidateLabUploadsAndSeries(queryClient: QueryClient) {
   invalidateLabUploads(queryClient)
   invalidateBiomarkerSeries(queryClient)
 }
