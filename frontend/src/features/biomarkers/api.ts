@@ -7,15 +7,15 @@ import type { BiomarkerRead } from '@/client'
 
 // Reseeded only by a migration, so a reload is soon enough; refetching costs a
 // JWT verify plus a DB hit on a backend that scales to zero.
-export function biomarkerCatalogueOptions() {
+export function biomarkersOptions() {
   return { ...listBiomarkersOptions(), staleTime: Infinity }
 }
 
 export function findBiomarker(
-  catalogue: BiomarkerRead[] | undefined,
+  biomarkers: BiomarkerRead[] | undefined,
   slug: string,
 ): BiomarkerRead | undefined {
-  return catalogue?.find((biomarker) => biomarker.slug === slug)
+  return biomarkers?.find((biomarker) => biomarker.slug === slug)
 }
 
 export function invalidateBiomarkerSeries(queryClient: QueryClient) {

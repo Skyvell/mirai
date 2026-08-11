@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  biomarkerCatalogueOptions,
+  biomarkersOptions,
   findBiomarker,
   invalidateBiomarkerSeries,
 } from '@/features/biomarkers/api'
@@ -17,7 +17,7 @@ import { format } from 'date-fns'
 // Self-contained Add-data tab for entering one measurement by hand.
 export function ManualEntryForm() {
   const queryClient = useQueryClient()
-  const biomarkers = useQuery(biomarkerCatalogueOptions())
+  const biomarkers = useQuery(biomarkersOptions())
   const [slug, setSlug] = useState('')
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState('')
@@ -92,7 +92,7 @@ export function ManualEntryForm() {
           <Input id="unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
           {selected && unit && unit !== selected.canonical_unit && (
             <p className="text-xs text-muted-foreground">
-              Catalogue unit is {selected.canonical_unit}.
+              Expected unit is {selected.canonical_unit}.
             </p>
           )}
         </div>

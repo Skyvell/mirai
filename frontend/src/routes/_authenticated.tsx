@@ -6,7 +6,7 @@ import { Settings } from 'lucide-react'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { AddDataDialog } from '@/features/sources/add-data-dialog'
-import { biomarkerCatalogueOptions } from '@/features/biomarkers/api'
+import { biomarkersOptions } from '@/features/biomarkers/api'
 import { isProfileComplete } from '@/features/profile/completeness'
 
 // Onboarding renders once per account but drags in the whole profile form, so it
@@ -31,11 +31,11 @@ const fullScreenMessage = 'grid min-h-svh place-items-center text-sm text-muted-
 function AuthenticatedLayout() {
   const me = useQuery(currentUserOptions())
 
-  // Warm the biomarker catalogue at shell mount rather than when the picker
-  // opens: the backend scales to zero, so this absorbs the cold start.
+  // Warm the biomarker list at shell mount rather than when the picker opens:
+  // the backend scales to zero, so this absorbs the cold start.
   const queryClient = useQueryClient()
   useEffect(() => {
-    queryClient.prefetchQuery(biomarkerCatalogueOptions())
+    queryClient.prefetchQuery(biomarkersOptions())
   }, [queryClient])
 
   if (me.isPending) {
