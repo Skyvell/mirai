@@ -61,15 +61,13 @@ class FakeLabUploadRepository:
     def get(self, upload_id: uuid.UUID) -> LabUpload | None:
         return self.uploads.get(upload_id)
 
-    def find_duplicate(self, user_id: uuid.UUID, content_sha256: str) -> LabUpload | None:
+    def list_by_content_sha256(self, user_id: uuid.UUID, content_sha256: str) -> list[LabUpload]:
         matches = [
             u
             for u in self.uploads.values()
-            if u.user_id == user_id
-            and u.content_sha256 == content_sha256
-            and u.status != UploadStatus.FAILED
+            if u.user_id == user_id and u.content_sha256 == content_sha256
         ]
-        return max(matches, key=lambda u: u.created_at, default=None)
+        return sorted(matches, key=lambda u: u.created_at, reverse=True)
 
     def list_with_counts(self, user_id: uuid.UUID) -> list[SimpleNamespace]:
         rows = [
@@ -414,6 +412,21 @@ def test_delete_processing_upload_is_rejected() -> None:
         _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=False)
 
 
+def test_delete_stuck_upload_is_allowed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A dispatch that never reached the worker must not leave an undeletable row."""
+    upload = _upload(
+        status=UploadStatus.QUEUED,
+        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+    )
+    lab_repo = FakeLabUploadRepository([upload])
+    result_repo = FakeLabResultRepository()
+    monkeypatch.setattr(storage, "delete_blob", lambda name: None)
+
+    _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=False)
+
+    assert lab_repo.deleted == [upload]
+
+
 def test_delete_unknown_upload_raises_not_found() -> None:
     lab_repo = FakeLabUploadRepository()
     result_repo = FakeLabResultRepository()
@@ -631,3 +644,36 @@ def test_submit_allows_reupload_after_prior_failed(pipeline: SimpleNamespace) ->
 
     assert detail.status == UploadStatus.AWAITING_REVIEW
     assert len(lab_repo.uploads) == 2
+
+
+def test_submit_allows_reupload_after_prior_stuck(pipeline: SimpleNamespace) -> None:
+    """A prior upload whose dispatch never landed reads as failed, so it cannot block."""
+    stuck = _upload(
+        status=UploadStatus.QUEUED,
+        content_sha256=_PDF_SHA256,
+        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+    )
+    lab_repo = FakeLabUploadRepository([stuck])
+    result_repo = FakeLabResultRepository()
+
+    detail = asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "report.pdf", _PDF))
+
+    assert detail.status == UploadStatus.AWAITING_REVIEW
+    assert len(lab_repo.uploads) == 2
+
+
+def test_submit_rejects_reupload_while_prior_still_in_flight(pipeline: SimpleNamespace) -> None:
+    """Inside the timeout the prior upload is genuinely in progress, so it still blocks."""
+    in_flight = _upload(
+        status=UploadStatus.QUEUED,
+        content_sha256=_PDF_SHA256,
+        created_at=datetime.now(UTC),
+    )
+    lab_repo = FakeLabUploadRepository([in_flight])
+    result_repo = FakeLabResultRepository()
+
+    with pytest.raises(DuplicateUploadError):
+        asyncio.run(_service(lab_repo, result_repo).submit(TEST_USER_ID, "again.pdf", _PDF))
+
+    assert len(lab_repo.uploads) == 1
+    assert pipeline.parse_calls == 0

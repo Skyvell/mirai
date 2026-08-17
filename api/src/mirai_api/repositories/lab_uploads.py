@@ -53,16 +53,19 @@ class LabUploadRepository:
         """Return the upload with this id, unscoped; for the parse worker."""
         return self._session.get(LabUpload, upload_id)
 
-    def find_duplicate(self, user_id: uuid.UUID, content_sha256: str) -> LabUpload | None:
-        """Return a non-failed upload of the same file for this user, or None."""
-        return self._session.scalar(
-            select(LabUpload)
-            .where(
-                LabUpload.user_id == user_id,
-                LabUpload.content_sha256 == content_sha256,
-                LabUpload.status != UploadStatus.FAILED,
+    def list_by_content_sha256(self, user_id: uuid.UUID, content_sha256: str) -> list[LabUpload]:
+        """Return the user's uploads of this exact file.
+
+        Unfiltered by status: whether one of these blocks a re-upload is a
+        timeout policy, which the service owns.
+        """
+        return list(
+            self._session.scalars(
+                select(LabUpload).where(
+                    LabUpload.user_id == user_id,
+                    LabUpload.content_sha256 == content_sha256,
+                )
             )
-            .limit(1)
         )
 
     def claim_for_processing(self, upload_id: uuid.UUID) -> bool:

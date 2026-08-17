@@ -120,13 +120,7 @@ class LabUploadService:
         return summaries
 
     def get(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
-        # Resolve the upload scoped to the user; a miss is not-found and not-owned alike.
-        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
-        if upload is None:
-            raise LabUploadNotFoundError(upload_id)
-
-        # A non-terminal upload that never progressed is reported as failed, not mutated.
-        status = _effective_status(upload.status, upload.created_at)
+        upload, status = self._resolve(user_id, upload_id)
 
         # The draft is loaded only while there is one to review.
         draft = None
@@ -149,10 +143,10 @@ class LabUploadService:
         """
         # Reject a byte-identical re-upload before spending storage or an LLM call.
         content_sha256 = hashlib.sha256(data).hexdigest()
-        existing = await run_in_threadpool(
-            self._lab_upload_repository.find_duplicate, user_id, content_sha256
+        previous = await run_in_threadpool(
+            self._lab_upload_repository.list_by_content_sha256, user_id, content_sha256
         )
-        if existing is not None:
+        if _blocks_reupload(previous):
             raise DuplicateUploadError()
 
         # Record the upload as queued and stash the PDF in GCS.
@@ -315,13 +309,11 @@ class LabUploadService:
         retried, and delete_blob tolerates an already-missing blob. Deleting the
         row first would risk unrecorded orphan blobs.
         """
-        # Resolve the upload scoped to the user; a miss is not-found and not-owned alike.
-        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
-        if upload is None:
-            raise LabUploadNotFoundError(upload_id)
+        upload, status = self._resolve(user_id, upload_id)
 
-        # Deleting mid-parse would strand the worker's inserts on a dead FK.
-        if upload.status in (UploadStatus.QUEUED, UploadStatus.PROCESSING):
+        # Deleting mid-parse would strand the worker's inserts on a dead FK; the
+        # effective status, so a row whose dispatch never landed stays deletable.
+        if status in (UploadStatus.QUEUED, UploadStatus.PROCESSING):
             raise LabUploadNotDeletableError(upload_id)
 
         # Remove the blob, then the rows; drafts cascade.
@@ -329,6 +321,23 @@ class LabUploadService:
         if delete_measurements:
             self._lab_upload_repository.delete_measurements(upload_id)
         self._lab_upload_repository.delete(upload)
+
+    def _resolve(
+        self,
+        user_id: uuid.UUID,
+        upload_id: uuid.UUID,
+    ) -> tuple[LabUpload, UploadStatus]:
+        """Resolve a user's upload with its effective status.
+
+        A miss is not-found and not-owned alike. The status is derived, never
+        written back: a non-terminal upload that never progressed reads as
+        failed without the row being mutated.
+        """
+        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
+        if upload is None:
+            raise LabUploadNotFoundError(upload_id)
+
+        return upload, _effective_status(upload.status, upload.created_at)
 
     def _require_reviewable(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUpload:
         """Resolve an upload that must be awaiting review, for a draft mutation."""
@@ -418,6 +427,15 @@ class LabUploadService:
         """Release a claim after an infrastructure failure so a retry can re-run. Blocking."""
         self._lab_upload_repository.reset_to_queued(upload_id)
         self._session.commit()
+
+
+def _blocks_reupload(previous: list[LabUpload]) -> bool:
+    """True if a prior upload of the same bytes still stands.
+
+    A failed one does not block — including one stuck non-terminal past the
+    timeout, or its file could never be uploaded again.
+    """
+    return any(_effective_status(u.status, u.created_at) != UploadStatus.FAILED for u in previous)
 
 
 def _effective_status(status: UploadStatus, created_at: datetime) -> UploadStatus:
