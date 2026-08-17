@@ -21,7 +21,7 @@ from typing import Annotated
 import typer
 
 import subject
-from mirai_api.core.db import session_scope
+from mirai_api.core.db import session_scope, transaction
 from mirai_api.core.deps import get_biomarker_service, get_user_service
 from mirai_api.core.enums import Sex
 from mirai_api.repositories.users import UserRepository
@@ -57,7 +57,8 @@ def main(
     """Load the demo biomarker measurements onto a user's record."""
     measurements = read_measurements()
 
-    with session_scope() as session:
+    # Same boundary a request gets, so --replace is one atomic delete-then-load.
+    with session_scope() as session, transaction(session):
         # Resolve the local row; it exists only once the user has authenticated once.
         user = UserRepository(session).get_user(clerk_user_id)
         if user is None:

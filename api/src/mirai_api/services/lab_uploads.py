@@ -81,7 +81,13 @@ class MissingCollectionDateError(LabUploadServiceError):
 
 
 class LabUploadService:
-    """Application logic for lab uploads; owns the transaction boundary.
+    """Application logic for lab uploads; the review endpoints commit nothing.
+
+    The parse saga is the one exception to the request-commits rule: submit()
+    and process() need intermediate durability, so the private methods they run
+    through commit their own boundaries and each says why. A caller must not
+    stage other writes around those two — committing the session commits
+    everything pending on it.
 
     Mutations take the subject user_id (whose data), never the caller: a
     future lab/admin flow authorizes the actor and passes another subject.
@@ -237,10 +243,17 @@ class LabUploadService:
             for field, value in edits.items():
                 setattr(row, field, value)
             if item.biomarker_slug is not None:
-                row.biomarker_id = by_slug[item.biomarker_slug].id
+                # Both sides: the read-back below returns these same instances, and
+                # an eager load will not overwrite a biomarker already loaded as
+                # None, so the relationship has to be set here and not just the FK.
+                biomarker = by_slug[item.biomarker_slug]
+                row.biomarker_id = biomarker.id
+                row.biomarker = biomarker
 
         upload.measured_at = payload.measured_at
-        self._session.commit()
+
+        # Leaves the rows and the database agreeing before the response is built.
+        self._session.flush()
         return self.get(user_id, upload_id)
 
     def confirm(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
@@ -288,7 +301,6 @@ class LabUploadService:
 
         upload.status = UploadStatus.CONFIRMED
         upload.confirmed_at = datetime.now(UTC)
-        self._session.commit()
         return self.get(user_id, upload_id)
 
     def delete(
@@ -312,12 +324,11 @@ class LabUploadService:
         if upload.status in (UploadStatus.QUEUED, UploadStatus.PROCESSING):
             raise LabUploadNotDeletableError(upload_id)
 
-        # Remove the blob, then the rows, as one transaction; drafts cascade.
+        # Remove the blob, then the rows; drafts cascade.
         storage.delete_blob(upload.gcs_object_name)
         if delete_measurements:
             self._lab_upload_repository.delete_measurements(upload_id)
         self._lab_upload_repository.delete(upload)
-        self._session.commit()
 
     def _require_reviewable(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUpload:
         """Resolve an upload that must be awaiting review, for a draft mutation."""

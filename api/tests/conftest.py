@@ -7,49 +7,7 @@ from mirai_api.core.db import get_session
 from mirai_api.core.deps import get_current_user
 from mirai_api.main import app
 from mirai_api.models import User
-from support import TEST_USER_ID
-
-
-class FakeResult:
-    def __init__(self, rows: list) -> None:
-        self._rows = rows
-
-    def all(self) -> list:
-        return self._rows
-
-
-class FakeSession:
-    """Session stub: canned rows out, writes recorded, no database."""
-
-    def __init__(self) -> None:
-        self.rows: list = []
-        self.added: list = []
-        self.deleted: list = []
-        self.executed: list = []
-        self.commits = 0
-        self.scalar_value: object = None
-
-    def execute(self, stmt: object) -> FakeResult:
-        self.executed.append(stmt)
-        return FakeResult(self.rows)
-
-    def scalar(self, stmt: object) -> object:
-        return self.scalar_value
-
-    def add(self, obj: object) -> None:
-        self.added.append(obj)
-
-    def add_all(self, objs: object) -> None:
-        self.added.extend(objs)
-
-    def delete(self, obj: object) -> None:
-        self.deleted.append(obj)
-
-    def flush(self) -> None:
-        pass
-
-    def commit(self) -> None:
-        self.commits += 1
+from support import TEST_USER_ID, FakeSession, session_override
 
 
 @pytest.fixture
@@ -72,7 +30,7 @@ def client(fake_session: FakeSession, fake_user: User) -> Iterator[TestClient]:
     Instantiated without a context manager so the lifespan (DB warm-up) never
     runs; get_current_user is never exercised (its upsert needs Postgres).
     """
-    app.dependency_overrides[get_session] = lambda: fake_session
+    app.dependency_overrides[get_session] = session_override(fake_session)
     app.dependency_overrides[get_current_user] = lambda: fake_user
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -81,6 +39,6 @@ def client(fake_session: FakeSession, fake_user: User) -> Iterator[TestClient]:
 @pytest.fixture
 def unauthenticated_client(fake_session: FakeSession) -> Iterator[TestClient]:
     """Client with a fake DB but real auth — pins unauthenticated behavior."""
-    app.dependency_overrides[get_session] = lambda: fake_session
+    app.dependency_overrides[get_session] = session_override(fake_session)
     yield TestClient(app)
     app.dependency_overrides.clear()

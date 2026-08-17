@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from mirai_api.models import User
+from support import FakeSession
 
 
 def test_me_returns_identity_and_profile(client: TestClient, fake_user: User) -> None:
@@ -20,7 +21,11 @@ def test_me_without_token_is_rejected(unauthenticated_client: TestClient) -> Non
     assert response.status_code == 401
 
 
-def test_patch_me_sets_profile(client: TestClient, fake_user: User) -> None:
+def test_patch_me_sets_profile(
+    client: TestClient,
+    fake_user: User,
+    fake_session: FakeSession,
+) -> None:
     response = client.patch(
         "/me",
         json={"sex": "female", "date_of_birth": "1990-04-12"},
@@ -33,13 +38,24 @@ def test_patch_me_sets_profile(client: TestClient, fake_user: User) -> None:
         "date_of_birth": "1990-04-12",
     }
 
+    # UserService does not commit; the request boundary does, once. This route
+    # stubs no service provider, so it resolves the real get_session.
+    assert (fake_session.commits, fake_session.rollbacks) == (1, 0)
 
-def test_patch_me_rejects_future_birth_date(client: TestClient) -> None:
+
+def test_patch_me_rejects_future_birth_date(
+    client: TestClient,
+    fake_session: FakeSession,
+) -> None:
     response = client.patch(
         "/me",
         json={"sex": "male", "date_of_birth": "2999-01-01"},
     )
     assert response.status_code == 422
+
+    # The session is opened before the body is validated, so a rejected request
+    # unwinds the boundary rather than committing.
+    assert (fake_session.commits, fake_session.rollbacks) == (0, 1)
 
 
 def test_patch_me_rejects_unknown_sex(client: TestClient) -> None:

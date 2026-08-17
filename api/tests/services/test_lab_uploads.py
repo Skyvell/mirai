@@ -29,7 +29,7 @@ from mirai_api.services.lab_uploads import (
     LabUploadService,
     MissingCollectionDateError,
 )
-from support import GLUCOSE, LDL, TEST_USER_ID, CommitCountingSession
+from support import GLUCOSE, LDL, TEST_USER_ID, FakeSession
 
 CATALOGUE = [GLUCOSE]
 
@@ -187,6 +187,7 @@ def _service(
     lab_repo: FakeLabUploadRepository,
     result_repo: FakeLabResultRepository,
     biomarker_repo: FakeBiomarkerRepository | None = None,
+    session: FakeSession | None = None,
 ) -> LabUploadService:
     biomarker_repo = biomarker_repo or FakeBiomarkerRepository(CATALOGUE)
     result_repo.catalogue = biomarker_repo.biomarkers
@@ -195,7 +196,7 @@ def _service(
         lab_repo,  # type: ignore[arg-type]
         result_repo,  # type: ignore[arg-type]
         biomarker_repo,  # type: ignore[arg-type]
-        CommitCountingSession(),  # type: ignore[arg-type]
+        session or FakeSession(),  # type: ignore[arg-type]
     )
 
 
@@ -395,10 +396,14 @@ def test_delete_confirmed_removes_upload(monkeypatch: pytest.MonkeyPatch) -> Non
     result_repo = FakeLabResultRepository()
     monkeypatch.setattr(storage, "delete_blob", lambda name: None)
 
-    _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=True)
+    session = FakeSession()
+    _service(lab_repo, result_repo, session=session).delete(
+        TEST_USER_ID, upload.id, delete_measurements=True
+    )
 
     assert lab_repo.deleted == [upload]
     assert lab_repo.deleted_measurements == [upload.id]
+    assert session.commits == 0
 
 
 def test_delete_processing_upload_is_rejected() -> None:
@@ -463,7 +468,8 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
             ),
         ],
     )
-    detail = _service(lab_repo, result_repo, biomarker_repo).update_draft(
+    session = FakeSession()
+    detail = _service(lab_repo, result_repo, biomarker_repo, session).update_draft(
         TEST_USER_ID, upload.id, payload
     )
 
@@ -476,6 +482,12 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
     assert detail.draft is not None
     assert len(detail.draft.items) == 2
     assert detail.draft.skipped == []
+
+    # The request owns the commit. The flush is asserted as a mechanism on
+    # purpose: the real hazard is the read-back re-joining biomarker on a stale
+    # biomarker_id, which these fakes resolve in memory and so cannot reproduce.
+    assert session.commits == 0
+    assert session.flushes >= 1
 
 
 def test_update_draft_unknown_item_raises_not_found() -> None:
@@ -517,7 +529,10 @@ def test_confirm_commits_only_kept_mapped_rows() -> None:
     result_repo = FakeLabResultRepository([kept, dropped, unmapped])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
 
-    detail = _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
+    session = FakeSession()
+    detail = _service(lab_repo, result_repo, biomarker_repo, session).confirm(
+        TEST_USER_ID, upload.id
+    )
 
     assert upload.status == UploadStatus.CONFIRMED
     assert upload.confirmed_at is not None
@@ -526,6 +541,7 @@ def test_confirm_commits_only_kept_mapped_rows() -> None:
     assert measurement.biomarker_id == GLUCOSE.id
     assert measurement.unit == "mmol/L"
     assert measurement.measured_at == date(2026, 7, 12)
+    assert session.commits == 0
 
 
 def test_confirm_is_idempotent_when_confirmed() -> None:

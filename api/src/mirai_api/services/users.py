@@ -1,18 +1,13 @@
-from sqlalchemy.orm import Session
-
 from mirai_api.models import User
 from mirai_api.repositories.users import UserRepository
 from mirai_api.schemas.me import MeResponse, MeUpdate
 
 
 class UserService:
-    """Application logic for the user profile; owns the transaction boundary."""
+    """Application logic for the user profile; the request owns the transaction."""
 
-    def __init__(self, user_repository: UserRepository, session: Session) -> None:
+    def __init__(self, user_repository: UserRepository) -> None:
         self._user_repository = user_repository
-
-        # Used for transaction control only; queries go through the repository.
-        self._session = session
 
     def update_profile(self, user: User, update: MeUpdate) -> MeResponse:
         self._user_repository.update_profile(
@@ -20,5 +15,4 @@ class UserService:
             sex=update.sex,
             date_of_birth=update.date_of_birth,
         )
-        self._session.commit()
         return MeResponse.from_user(user)

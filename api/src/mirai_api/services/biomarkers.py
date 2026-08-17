@@ -1,7 +1,5 @@
 import uuid
 
-from sqlalchemy.orm import Session
-
 from mirai_api.core.enums import IntervalType
 from mirai_api.models import BiomarkerMeasurement
 from mirai_api.repositories.biomarker_intervals import BiomarkerIntervalRepository
@@ -36,7 +34,7 @@ class MeasurementsNotFoundError(BiomarkerServiceError):
 
 
 class BiomarkerService:
-    """Application logic for biomarkers; owns the transaction boundary.
+    """Application logic for biomarkers; the request owns the transaction.
 
     Mutations take the subject user_id (whose data), never the caller: a
     future lab/admin flow authorizes the actor and passes another subject.
@@ -46,13 +44,9 @@ class BiomarkerService:
         self,
         biomarker_repository: BiomarkerRepository,
         interval_repository: BiomarkerIntervalRepository,
-        session: Session,
     ) -> None:
         self._biomarker_repository = biomarker_repository
         self._interval_repository = interval_repository
-
-        # Used for transaction control only; queries go through repositories.
-        self._session = session
 
     def list_biomarkers(self) -> list[BiomarkerRead]:
         biomarkers = self._biomarker_repository.list_biomarkers()
@@ -114,9 +108,7 @@ class BiomarkerService:
                 )
             )
 
-        # Persist as one transaction; the flush gives the rows their ids.
         self._biomarker_repository.add_measurements(measurements)
-        self._session.commit()
         return [BiomarkerMeasurementRead.from_measurement(m) for m in measurements]
 
     def update_measurements(
@@ -136,8 +128,6 @@ class BiomarkerService:
             for field, value in item.model_dump(exclude_unset=True, exclude={"id"}).items():
                 setattr(by_id[item.id], field, value)
 
-        # Commit once; return the updated rows in request order.
-        self._session.commit()
         return [BiomarkerMeasurementRead.from_measurement(by_id[item.id]) for item in items]
 
     def delete_measurements(
@@ -149,8 +139,6 @@ class BiomarkerService:
         requested = set(ids)
         deleted = self._biomarker_repository.delete_measurements(user_id, requested)
 
-        # Any miss aborts before commit, rolling the partial delete back.
+        # Any miss aborts, so the request rolls the partial delete back.
         if deleted != requested:
             raise MeasurementsNotFoundError(sorted(requested - deleted))
-
-        self._session.commit()
