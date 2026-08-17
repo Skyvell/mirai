@@ -1,8 +1,9 @@
 """Tests for the request transaction boundary.
 
 Services no longer commit, so `transaction` is the only thing that does. Routes
-whose service provider is stubbed never resolve `get_session`, so the composed
-case gets a route of its own here; `test_me.py` covers it on a real endpoint.
+whose service provider is stubbed never resolve `get_session`, so the cases that
+need a live boundary get routes of their own here. `test_me.py` covers the plain
+commit-on-success path on a real endpoint.
 """
 
 import pytest
@@ -12,13 +13,6 @@ from fastapi.testclient import TestClient
 from mirai_api.core.db import get_session, transaction
 from mirai_api.core.deps import DbSession
 from support import FakeSession, session_override
-
-
-def test_commits_on_success() -> None:
-    session = FakeSession()
-    with transaction(session):  # type: ignore[arg-type]
-        pass
-    assert (session.commits, session.rollbacks) == (1, 0)
 
 
 def test_rolls_back_and_reraises_on_error() -> None:

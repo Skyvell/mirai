@@ -39,7 +39,7 @@ class FakeResult:
 
 
 class FakeSession:
-    """Session stub: canned rows out, writes and transaction calls recorded, no database."""
+    """Session stub: canned rows out, writes and commit/rollback recorded, no database."""
 
     def __init__(self) -> None:
         self.rows: list = []
@@ -48,7 +48,6 @@ class FakeSession:
         self.executed: list = []
         self.commits = 0
         self.rollbacks = 0
-        self.flushes = 0
         self.scalar_value: object = None
 
     def execute(self, stmt: object) -> FakeResult:
@@ -68,7 +67,7 @@ class FakeSession:
         self.deleted.append(obj)
 
     def flush(self) -> None:
-        self.flushes += 1
+        pass
 
     def commit(self) -> None:
         self.commits += 1

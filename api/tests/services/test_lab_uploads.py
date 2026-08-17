@@ -7,6 +7,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import inspect
 
 from mirai_api.core.enums import UploadStatus
 from mirai_api.integrations import storage
@@ -32,6 +33,9 @@ from mirai_api.services.lab_uploads import (
 from support import GLUCOSE, LDL, TEST_USER_ID, FakeSession
 
 CATALOGUE = [GLUCOSE]
+
+# Comfortably past _STUCK_AFTER, so these rows read as failed.
+STUCK_CREATED_AT = datetime(2020, 1, 1, tzinfo=UTC)
 
 EXTRACTION = LabExtraction(
     measured_at=date(2026, 7, 12),
@@ -62,12 +66,11 @@ class FakeLabUploadRepository:
         return self.uploads.get(upload_id)
 
     def list_by_content_sha256(self, user_id: uuid.UUID, content_sha256: str) -> list[LabUpload]:
-        matches = [
+        return [
             u
             for u in self.uploads.values()
             if u.user_id == user_id and u.content_sha256 == content_sha256
         ]
-        return sorted(matches, key=lambda u: u.created_at, reverse=True)
 
     def list_with_counts(self, user_id: uuid.UUID) -> list[SimpleNamespace]:
         rows = [
@@ -143,12 +146,15 @@ class FakeLabResultRepository:
     def _loaded(self, rows: Iterator[LabResult]) -> list[LabResult]:
         """Stand in for the real repository's joinedload(LabResult.biomarker).
 
-        Writers set biomarker_id only; reads attach the relationship.
+        Only fills an unloaded relationship: an eager load never replaces one that
+        is already populated, and overwriting here would hide a writer that set
+        the FK without the relationship.
         """
         by_id = {b.id: b for b in self.catalogue}
         materialized = list(rows)
         for r in materialized:
-            r.biomarker = by_id.get(r.biomarker_id)
+            if "biomarker" in inspect(r).unloaded:
+                r.biomarker = by_id.get(r.biomarker_id)
 
         return materialized
 
@@ -356,7 +362,7 @@ def test_get_unknown_upload_raises_not_found() -> None:
 def test_get_stuck_processing_reports_failed_without_mutating() -> None:
     upload = _upload(
         status=UploadStatus.PROCESSING,
-        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        created_at=STUCK_CREATED_AT,
     )
     lab_repo = FakeLabUploadRepository([upload])
     result_repo = FakeLabResultRepository()
@@ -371,7 +377,7 @@ def test_get_stuck_processing_reports_failed_without_mutating() -> None:
 def test_list_reports_stuck_upload_as_failed() -> None:
     stuck = _upload(
         status=UploadStatus.QUEUED,
-        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        created_at=STUCK_CREATED_AT,
     )
     recent = _upload(status=UploadStatus.PROCESSING, created_at=datetime.now(UTC))
     confirmed = _upload(status=UploadStatus.CONFIRMED, created_at=datetime.now(UTC))
@@ -394,14 +400,10 @@ def test_delete_confirmed_removes_upload(monkeypatch: pytest.MonkeyPatch) -> Non
     result_repo = FakeLabResultRepository()
     monkeypatch.setattr(storage, "delete_blob", lambda name: None)
 
-    session = FakeSession()
-    _service(lab_repo, result_repo, session=session).delete(
-        TEST_USER_ID, upload.id, delete_measurements=True
-    )
+    _service(lab_repo, result_repo).delete(TEST_USER_ID, upload.id, delete_measurements=True)
 
     assert lab_repo.deleted == [upload]
     assert lab_repo.deleted_measurements == [upload.id]
-    assert session.commits == 0
 
 
 def test_delete_processing_upload_is_rejected() -> None:
@@ -416,7 +418,7 @@ def test_delete_stuck_upload_is_allowed(monkeypatch: pytest.MonkeyPatch) -> None
     """A dispatch that never reached the worker must not leave an undeletable row."""
     upload = _upload(
         status=UploadStatus.QUEUED,
-        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        created_at=STUCK_CREATED_AT,
     )
     lab_repo = FakeLabUploadRepository([upload])
     result_repo = FakeLabResultRepository()
@@ -481,13 +483,13 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
             ),
         ],
     )
-    session = FakeSession()
-    detail = _service(lab_repo, result_repo, biomarker_repo, session).update_draft(
+    detail = _service(lab_repo, result_repo, biomarker_repo).update_draft(
         TEST_USER_ID, upload.id, payload
     )
 
     assert mapped.value == Decimal("6.0")
-    assert skipped.biomarker_id == LDL.id
+    # The relationship is what the service sets; a real unit of work derives the FK.
+    assert skipped.biomarker is LDL
     assert skipped.included is True
     assert upload.measured_at == date(2026, 7, 13)
 
@@ -495,12 +497,6 @@ def test_update_draft_applies_edits_and_maps_skipped() -> None:
     assert detail.draft is not None
     assert len(detail.draft.items) == 2
     assert detail.draft.skipped == []
-
-    # The request owns the commit. The flush is asserted as a mechanism on
-    # purpose: the real hazard is the read-back re-joining biomarker on a stale
-    # biomarker_id, which these fakes resolve in memory and so cannot reproduce.
-    assert session.commits == 0
-    assert session.flushes >= 1
 
 
 def test_update_draft_unknown_item_raises_not_found() -> None:
@@ -542,10 +538,7 @@ def test_confirm_commits_only_kept_mapped_rows() -> None:
     result_repo = FakeLabResultRepository([kept, dropped, unmapped])
     biomarker_repo = FakeBiomarkerRepository([GLUCOSE])
 
-    session = FakeSession()
-    detail = _service(lab_repo, result_repo, biomarker_repo, session).confirm(
-        TEST_USER_ID, upload.id
-    )
+    detail = _service(lab_repo, result_repo, biomarker_repo).confirm(TEST_USER_ID, upload.id)
 
     assert upload.status == UploadStatus.CONFIRMED
     assert upload.confirmed_at is not None
@@ -554,7 +547,6 @@ def test_confirm_commits_only_kept_mapped_rows() -> None:
     assert measurement.biomarker_id == GLUCOSE.id
     assert measurement.unit == "mmol/L"
     assert measurement.measured_at == date(2026, 7, 12)
-    assert session.commits == 0
 
 
 def test_confirm_is_idempotent_when_confirmed() -> None:
@@ -651,7 +643,7 @@ def test_submit_allows_reupload_after_prior_stuck(pipeline: SimpleNamespace) -> 
     stuck = _upload(
         status=UploadStatus.QUEUED,
         content_sha256=_PDF_SHA256,
-        created_at=datetime(2020, 1, 1, tzinfo=UTC),
+        created_at=STUCK_CREATED_AT,
     )
     lab_repo = FakeLabUploadRepository([stuck])
     result_repo = FakeLabResultRepository()

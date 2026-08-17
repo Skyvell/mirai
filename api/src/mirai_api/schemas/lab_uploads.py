@@ -42,12 +42,18 @@ class LabDraftItemRead(BaseModel):
 
     @classmethod
     def from_lab_result(cls, result: LabResult) -> Self:
-        """Requires an eager-loaded `biomarker`; the relationship is lazy="raise"."""
-        mapped = result.biomarker_id is not None
+        """Requires an eager-loaded `biomarker`; the relationship is lazy="raise".
+
+        The relationship alone decides whether the row is mapped: lazy="raise"
+        turns a missing eager load into an error, so a None here means unmapped
+        rather than unloaded. Reading biomarker_id instead would be a second
+        source for the same fact, and the two disagree until a flush.
+        """
+        biomarker = result.biomarker
         return cls(
             id=result.id,
-            biomarker_slug=result.biomarker.slug if mapped else None,
-            display_name=result.biomarker.display_name if mapped else None,
+            biomarker_slug=biomarker.slug if biomarker is not None else None,
+            display_name=biomarker.display_name if biomarker is not None else None,
             value=result.value,
             raw_value=result.raw_value,
             unit=result.unit,
@@ -70,7 +76,7 @@ class LabDraft(BaseModel):
         skipped = []
         for result in results:
             item = LabDraftItemRead.from_lab_result(result)
-            if result.biomarker_id is None:
+            if result.biomarker is None:
                 skipped.append(item)
             else:
                 items.append(item)

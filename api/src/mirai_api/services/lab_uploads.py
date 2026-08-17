@@ -81,13 +81,12 @@ class MissingCollectionDateError(LabUploadServiceError):
 
 
 class LabUploadService:
-    """Application logic for lab uploads; the review endpoints commit nothing.
+    """Application logic for lab uploads; the parse saga owns its own commits.
 
-    The parse saga is the one exception to the request-commits rule: submit()
-    and process() need intermediate durability, so the private methods they run
-    through commit their own boundaries and each says why. A caller must not
-    stage other writes around those two — committing the session commits
-    everything pending on it.
+    submit() and process() need intermediate durability, so the private methods
+    they run through commit; the review endpoints leave the boundary to the
+    request. Because a commit lands everything pending on the session, a caller
+    must not stage other writes around those two.
 
     Mutations take the subject user_id (whose data), never the caller: a
     future lab/admin flow authorizes the actor and passes another subject.
@@ -237,17 +236,12 @@ class LabUploadService:
             for field, value in edits.items():
                 setattr(row, field, value)
             if item.biomarker_slug is not None:
-                # Both sides: the read-back below returns these same instances, and
-                # an eager load will not overwrite a biomarker already loaded as
-                # None, so the relationship has to be set here and not just the FK.
-                biomarker = by_slug[item.biomarker_slug]
-                row.biomarker_id = biomarker.id
-                row.biomarker = biomarker
+                # The relationship, not the FK: the read-back below returns these
+                # same instances, and an eager load will not replace a biomarker
+                # already loaded as None.
+                row.biomarker = by_slug[item.biomarker_slug]
 
         upload.measured_at = payload.measured_at
-
-        # Leaves the rows and the database agreeing before the response is built.
-        self._session.flush()
         return self.get(user_id, upload_id)
 
     def confirm(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
@@ -256,12 +250,10 @@ class LabUploadService:
         Idempotent: a repeat confirm on an already-confirmed upload is a no-op.
         Draft rows are retained as an audit trail of what was extracted.
         """
-        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
-        if upload is None:
-            raise LabUploadNotFoundError(upload_id)
-        if upload.status == UploadStatus.CONFIRMED:
+        upload, status = self._resolve(user_id, upload_id)
+        if status == UploadStatus.CONFIRMED:
             return self.get(user_id, upload_id)
-        if upload.status != UploadStatus.AWAITING_REVIEW:
+        if status != UploadStatus.AWAITING_REVIEW:
             raise LabUploadNotReviewableError(upload_id)
 
         # Measurements are time-series points; committing without a date is invalid.
@@ -327,11 +319,9 @@ class LabUploadService:
         user_id: uuid.UUID,
         upload_id: uuid.UUID,
     ) -> tuple[LabUpload, UploadStatus]:
-        """Resolve a user's upload with its effective status.
+        """Resolve a user's upload with its effective status; the only loader.
 
-        A miss is not-found and not-owned alike. The status is derived, never
-        written back: a non-terminal upload that never progressed reads as
-        failed without the row being mutated.
+        A miss is not-found and not-owned alike.
         """
         upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
         if upload is None:
@@ -341,10 +331,8 @@ class LabUploadService:
 
     def _require_reviewable(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUpload:
         """Resolve an upload that must be awaiting review, for a draft mutation."""
-        upload = self._lab_upload_repository.get_for_user(user_id, upload_id)
-        if upload is None:
-            raise LabUploadNotFoundError(upload_id)
-        if upload.status != UploadStatus.AWAITING_REVIEW:
+        upload, status = self._resolve(user_id, upload_id)
+        if status != UploadStatus.AWAITING_REVIEW:
             raise LabUploadNotReviewableError(upload_id)
         return upload
 

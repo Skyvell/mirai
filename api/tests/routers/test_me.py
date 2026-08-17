@@ -38,8 +38,7 @@ def test_patch_me_sets_profile(
         "date_of_birth": "1990-04-12",
     }
 
-    # UserService does not commit; the request boundary does, once. This route
-    # stubs no service provider, so it resolves the real get_session.
+    # UserService does not commit; the request boundary does, once.
     assert (fake_session.commits, fake_session.rollbacks) == (1, 0)
 
 
