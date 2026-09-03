@@ -258,7 +258,7 @@ class LabUploadService:
 
         # Only kept, mapped rows become measurements.
         rows = self._lab_result_repository.list_for_upload(upload_id)
-        committable = [r for r in rows if r.included and r.biomarker_id is not None]
+        committable = [r for r in rows if r.included and r.biomarker is not None]
 
         # Every committed measurement needs a numeric value.
         incomplete = sorted(r.id for r in committable if r.value is None)
