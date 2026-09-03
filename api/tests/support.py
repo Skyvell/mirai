@@ -6,9 +6,7 @@ not import them out of a pytest plugin module.
 """
 
 import uuid
-from collections.abc import Callable, Iterator
 
-from mirai_api.core.db import transaction
 from mirai_api.models import Biomarker
 
 TEST_USER_ID = uuid.UUID("00000000-0000-7000-8000-000000000001")
@@ -39,7 +37,7 @@ class FakeResult:
 
 
 class FakeSession:
-    """Session stub: canned rows out, writes and commit/rollback recorded, no database."""
+    """Session stub: canned rows out, writes and commits recorded, no database."""
 
     def __init__(self) -> None:
         self.rows: list = []
@@ -47,7 +45,6 @@ class FakeSession:
         self.deleted: list = []
         self.executed: list = []
         self.commits = 0
-        self.rollbacks = 0
         self.scalar_value: object = None
 
     def execute(self, stmt: object) -> FakeResult:
@@ -71,16 +68,3 @@ class FakeSession:
 
     def commit(self) -> None:
         self.commits += 1
-
-    def rollback(self) -> None:
-        self.rollbacks += 1
-
-
-def session_override(session: FakeSession) -> Callable[[], Iterator[FakeSession]]:
-    """Serve the fake through the real transaction helper; a lambda would skip it."""
-
-    def override() -> Iterator[FakeSession]:
-        with transaction(session):
-            yield session
-
-    return override

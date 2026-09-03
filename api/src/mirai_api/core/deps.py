@@ -21,9 +21,7 @@ from mirai_api.services.users import UserService
 
 _bearer = HTTPBearer(auto_error=True)
 
-# scope="function" runs the commit before the response is sent, so a failed
-# commit still reaches the client as a 500.
-DbSession = Annotated[Session, Depends(get_session, scope="function")]
+DbSession = Annotated[Session, Depends(get_session)]
 AppSettings = Annotated[Settings, Depends(get_settings)]
 
 
@@ -31,6 +29,7 @@ def get_biomarker_service(session: DbSession) -> BiomarkerService:
     return BiomarkerService(
         BiomarkerRepository(session),
         BiomarkerIntervalRepository(session),
+        session,
     )
 
 
@@ -51,7 +50,7 @@ LabUploadServiceDep = Annotated[LabUploadService, Depends(get_lab_upload_service
 
 
 def get_user_service(session: DbSession) -> UserService:
-    return UserService(UserRepository(session))
+    return UserService(UserRepository(session), session)
 
 
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]
@@ -111,9 +110,6 @@ def get_current_user(
             .values(clerk_user_id=clerk_user_id)
             .on_conflict_do_nothing(index_elements=["clerk_user_id"])
         )
-
-        # Its own unit of work: identity must not be discarded by a rollback
-        # the endpoint's own failure triggers.
         session.commit()
         user = repository.get_user(clerk_user_id)
     if user is None:

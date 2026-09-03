@@ -10,8 +10,8 @@ from mirai_api.models import User
 class UserRepository:
     """Database access for user rows.
 
-    Write methods flush but never commit; the request's session dependency
-    owns the transaction boundary.
+    Write methods flush but never commit; the owning service commits the
+    session as the transaction boundary.
     """
 
     def __init__(self, session: Session) -> None:

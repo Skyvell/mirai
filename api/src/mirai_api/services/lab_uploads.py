@@ -81,12 +81,7 @@ class MissingCollectionDateError(LabUploadServiceError):
 
 
 class LabUploadService:
-    """Application logic for lab uploads; the parse saga owns its own commits.
-
-    submit() and process() need intermediate durability, so the private methods
-    they run through commit; the review endpoints leave the boundary to the
-    request. Because a commit lands everything pending on the session, a caller
-    must not stage other writes around those two.
+    """Application logic for lab uploads; owns the transaction boundary.
 
     Mutations take the subject user_id (whose data), never the caller: a
     future lab/admin flow authorizes the actor and passes another subject.
@@ -242,6 +237,7 @@ class LabUploadService:
                 row.biomarker = by_slug[item.biomarker_slug]
 
         upload.measured_at = payload.measured_at
+        self._session.commit()
         return self.get(user_id, upload_id)
 
     def confirm(self, user_id: uuid.UUID, upload_id: uuid.UUID) -> LabUploadDetail:
@@ -287,6 +283,7 @@ class LabUploadService:
 
         upload.status = UploadStatus.CONFIRMED
         upload.confirmed_at = datetime.now(UTC)
+        self._session.commit()
         return self.get(user_id, upload_id)
 
     def delete(
@@ -308,11 +305,12 @@ class LabUploadService:
         if status in (UploadStatus.QUEUED, UploadStatus.PROCESSING):
             raise LabUploadNotDeletableError(upload_id)
 
-        # Remove the blob, then the rows; drafts cascade.
+        # Remove the blob, then the rows, as one transaction; drafts cascade.
         storage.delete_blob(upload.gcs_object_name)
         if delete_measurements:
             self._lab_upload_repository.delete_measurements(upload_id)
         self._lab_upload_repository.delete(upload)
+        self._session.commit()
 
     def _resolve(
         self,

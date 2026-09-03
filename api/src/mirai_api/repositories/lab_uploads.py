@@ -10,8 +10,8 @@ from mirai_api.models import BiomarkerMeasurement, LabUpload
 class LabUploadRepository:
     """Database access for lab uploads.
 
-    Write methods flush but never commit; LabUploadService owns the
-    transaction boundary for the parse saga.
+    Write methods flush but never commit; the owning service commits the
+    session as the transaction boundary.
     """
 
     def __init__(self, session: Session) -> None:

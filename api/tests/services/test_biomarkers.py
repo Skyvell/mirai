@@ -16,7 +16,7 @@ from mirai_api.services.biomarkers import (
     MeasurementsNotFoundError,
     UnknownBiomarkersError,
 )
-from support import GLUCOSE, LDL, TEST_USER_ID
+from support import GLUCOSE, LDL, TEST_USER_ID, FakeSession
 
 
 def _measurement(
@@ -39,13 +39,16 @@ def _measurement(
 
 
 class FakeBiomarkerRepository:
-    """Repository fake: in-memory lists."""
+    """Repository fake: in-memory lists over a shared fake session."""
 
     def __init__(
         self,
         biomarkers: list[Biomarker] | None = None,
         measurements: list[BiomarkerMeasurement] | None = None,
     ) -> None:
+        # The service commits this same session; the repository holds it too,
+        # mirroring the real BiomarkerRepository(session) wiring.
+        self.session = FakeSession()
         self.biomarkers = biomarkers or []
         self.measurements = measurements or []
         self.added: list[BiomarkerMeasurement] = []
@@ -138,6 +141,7 @@ def _service(
     return BiomarkerService(
         repo,
         interval_repo or FakeBiomarkerIntervalRepository(),
+        repo.session,
     )  # type: ignore[arg-type]
 
 
@@ -159,6 +163,7 @@ def test_create_defaults_unit_to_canonical() -> None:
     assert read.lab_upload_id is None
     (added,) = repo.added
     assert added.user_id == TEST_USER_ID
+    assert repo.session.commits == 1
 
 
 def test_create_keeps_explicit_unit() -> None:
@@ -177,7 +182,7 @@ def test_create_keeps_explicit_unit() -> None:
     assert read.unit == "mg/dL"
 
 
-def test_create_unknown_slug_stages_nothing() -> None:
+def test_create_unknown_slug_raises_before_commit() -> None:
     repo = FakeBiomarkerRepository(biomarkers=[GLUCOSE])
     with pytest.raises(UnknownBiomarkersError) as exc_info:
         _service(repo).create_measurements(
@@ -192,6 +197,7 @@ def test_create_unknown_slug_stages_nothing() -> None:
         )
     assert exc_info.value.slugs == ["nope"]
     assert repo.added == []
+    assert repo.session.commits == 0
 
 
 def test_list_series_groups_contiguous_measurements() -> None:
@@ -240,6 +246,7 @@ def test_update_applies_only_set_fields() -> None:
     # Omitted fields stay untouched.
     assert measurement.unit == "mmol/L"
     assert measurement.measured_at == date(2026, 1, 2)
+    assert repo.session.commits == 1
 
 
 def test_update_explicit_null_clears_nullable_field() -> None:
@@ -268,6 +275,7 @@ def test_update_foreign_measurement_raises_not_found() -> None:
             TEST_USER_ID,
             [BiomarkerMeasurementUpdate(id=foreign.id)],
         )
+    assert repo.session.commits == 0
 
 
 def test_delete_removes_owned_measurements() -> None:
@@ -275,9 +283,10 @@ def test_delete_removes_owned_measurements() -> None:
     repo = FakeBiomarkerRepository(measurements=[measurement])
     _service(repo).delete_measurements(TEST_USER_ID, [measurement.id])
     assert repo.measurements == []
+    assert repo.session.commits == 1
 
 
-def test_delete_partial_match_raises() -> None:
+def test_delete_partial_match_raises_before_commit() -> None:
     measurement = _measurement(GLUCOSE)
     repo = FakeBiomarkerRepository(measurements=[measurement])
     with pytest.raises(MeasurementsNotFoundError):
@@ -285,6 +294,7 @@ def test_delete_partial_match_raises() -> None:
             TEST_USER_ID,
             [measurement.id, uuid.uuid7()],
         )
+    assert repo.session.commits == 0
 
 
 def test_list_intervals_groups_by_biomarker() -> None:

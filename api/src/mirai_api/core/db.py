@@ -49,25 +49,8 @@ def session_scope() -> Generator[Session]:
         yield session
 
 
-@contextmanager
-def transaction(session: Session) -> Generator[None]:
-    """A caller's unit of work: commit on success, roll back on error.
-
-    The rollback is what leaves the session usable: a failed flush deactivates
-    the transaction, and every later use raises PendingRollbackError until
-    something rolls it back. The session may outlive this block, so it cannot
-    be left to whoever closes it.
-    """
-    try:
-        yield
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-
-
 def get_session() -> Generator[Session]:
-    with session_scope() as session, transaction(session):
+    with session_scope() as session:
         yield session
 
 

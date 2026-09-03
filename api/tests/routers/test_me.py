@@ -38,8 +38,8 @@ def test_patch_me_sets_profile(
         "date_of_birth": "1990-04-12",
     }
 
-    # UserService does not commit; the request boundary does, once.
-    assert (fake_session.commits, fake_session.rollbacks) == (1, 0)
+    # UserService owns the boundary and commits once.
+    assert fake_session.commits == 1
 
 
 def test_patch_me_rejects_future_birth_date(
@@ -52,9 +52,8 @@ def test_patch_me_rejects_future_birth_date(
     )
     assert response.status_code == 422
 
-    # The session is opened before the body is validated, so a rejected request
-    # unwinds the boundary rather than committing.
-    assert (fake_session.commits, fake_session.rollbacks) == (0, 1)
+    # A rejected body never reaches the service, so nothing is committed.
+    assert fake_session.commits == 0
 
 
 def test_patch_me_rejects_unknown_sex(client: TestClient) -> None:

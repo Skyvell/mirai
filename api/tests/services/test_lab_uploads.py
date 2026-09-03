@@ -191,7 +191,6 @@ def _service(
     lab_repo: FakeLabUploadRepository,
     result_repo: FakeLabResultRepository,
     biomarker_repo: FakeBiomarkerRepository | None = None,
-    session: FakeSession | None = None,
 ) -> LabUploadService:
     biomarker_repo = biomarker_repo or FakeBiomarkerRepository(CATALOGUE)
     result_repo.catalogue = biomarker_repo.biomarkers
@@ -200,7 +199,7 @@ def _service(
         lab_repo,  # type: ignore[arg-type]
         result_repo,  # type: ignore[arg-type]
         biomarker_repo,  # type: ignore[arg-type]
-        session or FakeSession(),  # type: ignore[arg-type]
+        FakeSession(),  # type: ignore[arg-type]
     )
 
 
