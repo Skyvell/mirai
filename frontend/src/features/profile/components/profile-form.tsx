@@ -16,7 +16,7 @@ import {
   profileSchema,
   type ProfileFormValues,
 } from '@/features/profile/schema'
-import { cn } from '@/lib/utils'
+import { cn } from 'cn'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'

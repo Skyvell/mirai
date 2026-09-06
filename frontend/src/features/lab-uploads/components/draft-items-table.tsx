@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
+import { cn } from 'cn'
 
 // One editable draft row, shared by both tables. Matched rows arrive pre-mapped;
 // unmatched rows carry the parser's original label and start unmapped.

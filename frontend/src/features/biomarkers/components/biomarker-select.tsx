@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
+import { cn } from 'cn'
 import type { BiomarkerRead } from '@/client'
 
 type BiomarkerSelectProps = {
