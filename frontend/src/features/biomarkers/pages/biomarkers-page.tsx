@@ -1,87 +1,52 @@
-import { useQuery } from '@tanstack/react-query'
-import { Activity } from 'lucide-react'
-import { listBiomarkerSeriesOptions } from '@/client/@tanstack/react-query.gen'
-import type { BiomarkerMeasurementPoint } from '@/client'
-import { biomarkersOptions, findBiomarker } from '@/features/biomarkers/api'
-import { EmptyState } from '@/components/empty-state'
+import { parse } from 'date-fns'
+import type { BiomarkerCardProps } from '@/features/biomarkers/components/biomarker-card'
+import { BiomarkerCardGrid } from '@/features/biomarkers/components/biomarker-card-grid'
 import { Page } from '@/components/page'
-import { QueryPane } from '@/components/query-pane'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
-function referenceRange(low: string | null, high: string | null): string {
-  if (low !== null && high !== null) return `${low}–${high}`
-  if (low !== null) return `≥ ${low}`
-  if (high !== null) return `≤ ${high}`
-  return '—'
-}
-
-function history(measurements: BiomarkerMeasurementPoint[]): string {
-  return measurements
-    .map((m) => (m.measured_at ? `${m.value} (${m.measured_at})` : m.value))
-    .join(' → ')
-}
+// Placeholder data while the card is built, read off docs/biomaker_page/card_designs/l.png.
+const FIXTURES: BiomarkerCardProps[] = [
+  {
+    name: 'HDL Cholesterol',
+    value: 1.6,
+    unit: 'mmol/L',
+    referenceLow: 1.0,
+    referenceHigh: 2.2,
+    optimalLow: 1.3,
+    optimalHigh: 2.0,
+    previousValue: 1.63,
+    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
+  },
+  {
+    name: 'Triglycerides',
+    value: 1.2,
+    unit: 'mmol/L',
+    referenceLow: 0.5,
+    referenceHigh: 1.7,
+    optimalLow: 0.5,
+    optimalHigh: 1.1,
+    previousValue: 1.2,
+    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
+  },
+  {
+    name: 'LDL Cholesterol',
+    value: 3.4,
+    unit: 'mmol/L',
+    referenceLow: 1.8,
+    referenceHigh: 3.0,
+    optimalLow: 1.8,
+    optimalHigh: 2.6,
+    previousValue: 3.12,
+    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
+  },
+]
 
 export function BiomarkersPage() {
-  const series = useQuery(listBiomarkerSeriesOptions())
-
-  // The biomarker list is the single source of truth for display names, joined by slug.
-  const biomarkers = useQuery(biomarkersOptions())
-
   return (
     <Page
       title="Biomarkers"
       description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
-      <QueryPane
-        query={series}
-        empty={
-          <EmptyState
-            icon={<Activity />}
-            title="No biomarkers yet"
-            description="Your measurements will appear here once you add data."
-          />
-        }
-      >
-        {(seriesBySlug) => (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Biomarker</TableHead>
-                <TableHead>Latest</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>History</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Object.entries(seriesBySlug).map(([slug, measurements]) => {
-                const latest = measurements.at(-1)
-                if (!latest) return null
-                return (
-                  <TableRow key={slug}>
-                    <TableCell>{findBiomarker(biomarkers.data, slug)?.display_name ?? slug}</TableCell>
-                    <TableCell>
-                      <span className="font-mono">{latest.value}</span> {latest.unit}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {referenceRange(latest.reference_low, latest.reference_high)}
-                    </TableCell>
-                    <TableCell className="text-xs whitespace-normal text-muted-foreground">
-                      {history(measurements)}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </QueryPane>
+      <BiomarkerCardGrid cards={FIXTURES} />
     </Page>
   )
 }
