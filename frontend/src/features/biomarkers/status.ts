@@ -1,30 +1,22 @@
+import { isOutsideInterval, type BiomarkerIntervals } from '@/features/biomarkers/intervals'
+
 export type BiomarkerStatus = 'optimal' | 'normal' | 'critical'
 
 type ComputeBiomarkerStatusInput = {
   value: number
-  referenceLow: number | null
-  referenceHigh: number | null
-  optimalLow: number | null
-  optimalHigh: number | null
+  intervals: BiomarkerIntervals
 }
 
 export function computeBiomarkerStatus({
   value,
-  referenceLow,
-  referenceHigh,
-  optimalLow,
-  optimalHigh,
+  intervals,
 }: ComputeBiomarkerStatusInput): BiomarkerStatus {
-  // If outside reference range --> critical.
-  if (isOutsideRange(value, referenceLow, referenceHigh)) return 'critical'
+  // If outside reference interval --> critical.
+  if (isOutsideInterval(value, intervals.reference)) return 'critical'
 
-  // No optimal range exists --> normal.
-  if (optimalLow === null && optimalHigh === null) return 'normal'
+  // No optimal interval exists --> normal.
+  if (intervals.optimal === null) return 'normal'
 
-  // Outside optimal range --> normal. If not outside --> optimal.
-  return isOutsideRange(value, optimalLow, optimalHigh) ? 'normal' : 'optimal'
-}
-
-function isOutsideRange(value: number, low: number | null, high: number | null): boolean {
-  return (low !== null && value < low) || (high !== null && value > high)
+  // Outside optimal interval --> normal. If not outside --> optimal.
+  return isOutsideInterval(value, intervals.optimal) ? 'normal' : 'optimal'
 }

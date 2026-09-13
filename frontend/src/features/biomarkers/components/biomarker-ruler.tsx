@@ -1,5 +1,12 @@
 import { cn } from 'cn'
+import type { BiomarkerIntervals } from '@/features/biomarkers/intervals'
 import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
+import {
+  computePercentWithin,
+  expandInterval,
+  sampleInterval,
+  type Interval,
+} from '@/lib/math/interval'
 
 const TICKS = 63
 
@@ -15,37 +22,36 @@ const TICK_CLASS: Record<BiomarkerStatus, string> = {
 
 type BiomarkerRulerProps = {
   value: number
-  referenceLow: number | null
-  referenceHigh: number | null
-  optimalLow: number | null
-  optimalHigh: number | null
+  intervals: BiomarkerIntervals
 }
 
-type Bounds = Omit<BiomarkerRulerProps, 'value'>
-type Range = { min: number; max: number }
-
-export function BiomarkerRuler({ value, ...bounds }: BiomarkerRulerProps) {
-  const range = drawnRange(bounds)
+export function BiomarkerRuler({ value, intervals }: BiomarkerRulerProps) {
+  const range = computeDrawnRange(intervals)
   if (range === null) return null
 
   return (
-    <div className="relative h-5.25">
-      <Ticks tiers={tierPerTick(range, bounds)} />
-      <Pin percent={percentOf(value, range)} />
+    <div className="flex flex-col gap-1.5">
+      <div className="relative h-5.25" aria-hidden="true">
+        <Ticks statuses={computeTickStatuses(range, intervals)} />
+        <Pin percent={computePercentWithin(value, range)} />
+      </div>
+      <Marks intervals={intervals} range={range} />
     </div>
   )
 }
 
-function Ticks({ tiers }: { tiers: BiomarkerStatus[] }) {
+function Ticks({ statuses }: { statuses: BiomarkerStatus[] }) {
   return (
     <div className="absolute inset-x-0 bottom-0 flex items-end justify-between">
-      {tiers.map((tier, i) => (
-        <div key={i} className={cn('w-px', TICK_CLASS[tier])} />
+      {statuses.map((status, i) => (
+        <div key={i} className={cn('w-px', TICK_CLASS[status])} />
       ))}
     </div>
   )
 }
 
+// Requires an ancestor defining --status-color; BiomarkerCard sets it from the
+// measurement's status.
 function Pin({ percent }: { percent: number }) {
   return (
     <div
@@ -58,26 +64,42 @@ function Pin({ percent }: { percent: number }) {
   )
 }
 
+function Marks({ intervals, range }: { intervals: BiomarkerIntervals; range: Interval }) {
+  const { reference, optimal } = intervals
+
+  // Reference and optimal bounds often coincide, and two labels at one position
+  // would overprint.
+  const marks = [...new Set([reference?.low, optimal?.low, optimal?.high, reference?.high])]
+    .filter((mark): mark is number => mark !== null && mark !== undefined)
+    .sort((a, b) => a - b)
+
+  return (
+    <div className="relative h-4 text-[11px] text-muted-foreground">
+      {marks.map((mark) => (
+        <span
+          key={mark}
+          className="absolute -translate-x-1/2"
+          style={{ left: `${computePercentWithin(mark, range)}%` }}
+        >
+          {mark}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 // The reference band padded at both ends, falling back to the optimal bound where
 // a reference bound is missing. Without both ends there is no scale to draw.
-function drawnRange({ referenceLow, referenceHigh, optimalLow, optimalHigh }: Bounds): Range | null {
-  const low = referenceLow ?? optimalLow
-  const high = referenceHigh ?? optimalHigh
-  if (low === null || high === null) return null
+function computeDrawnRange({ reference, optimal }: BiomarkerIntervals): Interval | null {
+  const min = reference?.low ?? optimal?.low ?? null
+  const max = reference?.high ?? optimal?.high ?? null
+  if (min === null || max === null) return null
 
-  const pad = PAD * (high - low)
-  return { min: low - pad, max: high + pad }
+  return expandInterval({ min, max }, PAD)
 }
 
-function percentOf(value: number, { min, max }: Range): number {
-  return ((Math.min(Math.max(value, min), max) - min) / (max - min)) * 100
-}
-
-// A tick's tier is the status its own position would read, so the scale and the
+// Each tick reports the status its own position would read, so the scale and the
 // label can never disagree.
-function tierPerTick(range: Range, bounds: Bounds): BiomarkerStatus[] {
-  return Array.from({ length: TICKS }, (_, i) => {
-    const value = range.min + (i / (TICKS - 1)) * (range.max - range.min)
-    return computeBiomarkerStatus({ value, ...bounds })
-  })
+function computeTickStatuses(range: Interval, intervals: BiomarkerIntervals): BiomarkerStatus[] {
+  return sampleInterval(range, TICKS).map((value) => computeBiomarkerStatus({ value, intervals }))
 }

@@ -1,4 +1,7 @@
-import { Card, CardAction, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { formatDistanceToNow } from 'date-fns'
+import { computePercentageChange } from '@/lib/math/percentage'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { BiomarkerIntervals } from '@/features/biomarkers/intervals'
 import { computeBiomarkerStatus } from '@/features/biomarkers/status'
 import { BiomarkerRuler } from '@/features/biomarkers/components/biomarker-ruler'
 
@@ -12,10 +15,7 @@ export type BiomarkerCardProps = {
   name: string
   value: number
   unit: string
-  referenceLow: number | null
-  referenceHigh: number | null
-  optimalLow: number | null
-  optimalHigh: number | null
+  intervals: BiomarkerIntervals
   previousValue: number | null
   measuredAt: Date
 }
@@ -24,18 +24,13 @@ export function BiomarkerCard({
   name,
   value,
   unit,
-  referenceLow,
-  referenceHigh,
-  optimalLow,
-  optimalHigh,
+  intervals,
+  previousValue,
+  measuredAt,
 }: BiomarkerCardProps) {
-  const status = computeBiomarkerStatus({
-    value,
-    referenceLow,
-    referenceHigh,
-    optimalLow,
-    optimalHigh,
-  })
+  const status = computeBiomarkerStatus({ value, intervals })
+  const change =
+    previousValue === null || previousValue === 0 ? null : computePercentageChange(value, previousValue)
 
   return (
     <Card data-status={status} className={STATUS_COLOR_VAR}>
@@ -52,14 +47,15 @@ export function BiomarkerCard({
           <span className="text-6xl font-light tracking-tight">{value}</span>
           <span className="text-sm text-muted-foreground">{unit}</span>
         </div>
-        <BiomarkerRuler
-          value={value}
-          referenceLow={referenceLow}
-          referenceHigh={referenceHigh}
-          optimalLow={optimalLow}
-          optimalHigh={optimalHigh}
-        />
+        <BiomarkerRuler value={value} intervals={intervals} />
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {change !== null && `${change > 0 ? '↑' : change < 0 ? '↓' : '→'} ${Math.abs(change)}%`}
+          </span>
+          <span>{formatDistanceToNow(measuredAt, { addSuffix: true })}</span>
+        </div>
       </CardContent>
     </Card>
   )
 }
+
