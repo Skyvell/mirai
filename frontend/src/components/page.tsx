@@ -1,19 +1,18 @@
 import type { ReactNode } from 'react'
+import { cn } from 'cn'
 
-// Standard page container: centered column with the shared title + blurb header.
-export function Page({
-  title,
-  description,
-  children,
-}: {
+type PageProps = {
   title: string
   description?: string
+  width?: 'prose' | 'wide'
   children?: ReactNode
-}) {
+}
+
+export function Page({ title, description, width = 'prose', children }: PageProps) {
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4">
+    <div className={cn('mx-auto flex flex-col gap-4', width === 'wide' ? 'max-w-6xl' : 'max-w-2xl')}>
       <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-      {description ? <p className="text-muted-foreground">{description}</p> : null}
+      {description ? <p className="max-w-2xl text-muted-foreground">{description}</p> : null}
       {children}
     </div>
   )
