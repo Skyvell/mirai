@@ -9,10 +9,10 @@ const FIXTURES: BiomarkerCardProps[] = [
     name: 'HDL Cholesterol',
     value: 1.6,
     unit: 'mmol/L',
-    referenceLow: 1.0,
-    referenceHigh: 2.2,
-    optimalLow: 1.3,
-    optimalHigh: 2.0,
+    intervals: {
+      reference: { low: 1.0, high: 2.2 },
+      optimal: { low: 1.3, high: 2.0 },
+    },
     previousValue: 1.63,
     measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
   },
@@ -20,10 +20,10 @@ const FIXTURES: BiomarkerCardProps[] = [
     name: 'Triglycerides',
     value: 1.2,
     unit: 'mmol/L',
-    referenceLow: 0.5,
-    referenceHigh: 1.7,
-    optimalLow: 0.5,
-    optimalHigh: 1.1,
+    intervals: {
+      reference: { low: 0.5, high: 1.7 },
+      optimal: { low: 0.5, high: 1.1 },
+    },
     previousValue: 1.2,
     measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
   },
@@ -31,10 +31,10 @@ const FIXTURES: BiomarkerCardProps[] = [
     name: 'LDL Cholesterol',
     value: 3.4,
     unit: 'mmol/L',
-    referenceLow: 1.8,
-    referenceHigh: 3.0,
-    optimalLow: 1.8,
-    optimalHigh: 2.6,
+    intervals: {
+      reference: { low: 1.8, high: 3.0 },
+      optimal: { low: 1.8, high: 2.6 },
+    },
     previousValue: 3.12,
     measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
   },
@@ -43,6 +43,7 @@ const FIXTURES: BiomarkerCardProps[] = [
 export function BiomarkersPage() {
   return (
     <Page
+      width="wide"
       title="Biomarkers"
       description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
