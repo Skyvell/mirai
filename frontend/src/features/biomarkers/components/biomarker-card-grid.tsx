@@ -6,7 +6,7 @@ type BiomarkerCardGridProps = {
 
 export function BiomarkerCardGrid({ cards }: BiomarkerCardGridProps) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
       {cards.map((card) => (
         <BiomarkerCard key={card.name} {...card} />
       ))}
