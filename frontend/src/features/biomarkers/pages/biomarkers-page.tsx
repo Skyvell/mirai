@@ -58,7 +58,7 @@ export function BiomarkersPage() {
     [q]
   )
 
-  const handleQueryChange = (value: string) =>
+  const updateSearchQuery = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, q: value || undefined }), replace: true })
 
   return (
@@ -67,7 +67,7 @@ export function BiomarkersPage() {
       title="Biomarkers"
       description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
-      <BiomarkerToolbar query={q ?? ''} onQueryChange={handleQueryChange} />
+      <BiomarkerToolbar query={q ?? ''} onQueryChange={updateSearchQuery} />
       <BiomarkerCardGrid cards={cards} />
     </Page>
   )
