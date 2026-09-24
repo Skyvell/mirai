@@ -75,7 +75,6 @@ export function BiomarkersPage() {
     <Page
       width="wide"
       title="Biomarkers"
-      description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
       <BiomarkerToolbar
         query={query ?? ''}
