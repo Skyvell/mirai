@@ -10,7 +10,7 @@ import { BiomarkerTileGrid } from '@/features/biomarkers/components/biomarker-ti
 import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
 import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
 import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
-import { useBiomarkerView } from '@/features/biomarkers/use-biomarker-view'
+import { useView } from '@/features/biomarkers/use-view'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
 
@@ -54,7 +54,7 @@ const FIXTURES: BiomarkerSummary[] = [
 export function BiomarkersPage() {
   const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
-  const { view, selectView } = useBiomarkerView()
+  const { view, selectView } = useView()
 
   const cards = useMemo(
     () =>
