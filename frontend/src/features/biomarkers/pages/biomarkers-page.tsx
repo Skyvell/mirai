@@ -5,10 +5,12 @@ import { SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
 import type { BiomarkerSummary } from '@/features/biomarkers/summary'
+import { BiomarkerRowList } from '@/features/biomarkers/components/biomarker-row-list'
 import { BiomarkerTileGrid } from '@/features/biomarkers/components/biomarker-tile-grid'
 import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
 import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
 import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
+import { useBiomarkerView } from '@/features/biomarkers/use-biomarker-view'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
 
@@ -52,6 +54,7 @@ const FIXTURES: BiomarkerSummary[] = [
 export function BiomarkersPage() {
   const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
+  const { view, selectView } = useBiomarkerView()
 
   const cards = useMemo(
     () =>
@@ -79,6 +82,8 @@ export function BiomarkersPage() {
         onQueryChange={updateSearchQuery}
         statusFilter={statusFilter}
         onStatusFilterChange={updateStatusFilter}
+        view={view}
+        onViewChange={selectView}
       />
       {cards.length === 0 ? (
         <EmptyState
@@ -86,8 +91,10 @@ export function BiomarkersPage() {
           title="No markers match"
           description="Adjust your search or status filter."
         />
-      ) : (
+      ) : view === 'tile' ? (
         <BiomarkerTileGrid cards={cards} />
+      ) : (
+        <BiomarkerRowList cards={cards} />
       )}
     </Page>
   )
