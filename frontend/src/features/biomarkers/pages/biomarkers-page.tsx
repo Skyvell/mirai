@@ -4,7 +4,7 @@ import { parse } from 'date-fns'
 import { SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
-import type { BiomarkerTileProps } from '@/features/biomarkers/components/biomarker-tile'
+import type { BiomarkerSummary } from '@/features/biomarkers/summary'
 import { BiomarkerTileGrid } from '@/features/biomarkers/components/biomarker-tile-grid'
 import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
 import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
@@ -13,7 +13,7 @@ import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomark
 const route = getRouteApi('/_authenticated/biomarkers/')
 
 // Placeholder data while the card is built, read off docs/biomaker_page/card_designs/l.png.
-const FIXTURES: BiomarkerTileProps[] = [
+const FIXTURES: BiomarkerSummary[] = [
   {
     name: 'HDL Cholesterol',
     value: 1.6,
