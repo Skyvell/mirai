@@ -1,11 +1,14 @@
 import { useMemo } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
 import { parse } from 'date-fns'
+import { SearchX } from 'lucide-react'
+import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
 import type { BiomarkerCardProps } from '@/features/biomarkers/components/biomarker-card'
 import { BiomarkerCardGrid } from '@/features/biomarkers/components/biomarker-card-grid'
 import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
-import { matchesQuery } from '@/features/biomarkers/filters'
+import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
+import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
 
@@ -47,19 +50,23 @@ const FIXTURES: BiomarkerCardProps[] = [
 ]
 
 export function BiomarkersPage() {
-  const { q } = route.useSearch()
+  const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
 
   const cards = useMemo(
     () =>
-      FIXTURES.filter((card) => matchesQuery(card.name, q)).sort((a, b) =>
-        a.name.localeCompare(b.name)
-      ),
-    [q]
+      FIXTURES.filter(
+        (card) =>
+          matchesName(card.name, query) && matchesStatus(computeBiomarkerStatus(card), statusFilter)
+      ).sort((a, b) => a.name.localeCompare(b.name)),
+    [query, statusFilter]
   )
 
   const updateSearchQuery = (value: string) =>
-    navigate({ search: (prev) => ({ ...prev, q: value || undefined }), replace: true })
+    navigate({ search: (prev) => ({ ...prev, query: value || undefined }), replace: true })
+
+  const updateStatusFilter = (value: BiomarkerStatus | undefined) =>
+    navigate({ search: (prev) => ({ ...prev, status: value }), replace: true })
 
   return (
     <Page
@@ -67,8 +74,21 @@ export function BiomarkersPage() {
       title="Biomarkers"
       description="Track your biomarkers over time. Use “Add data” in the top bar to upload a blood-test PDF or enter values manually."
     >
-      <BiomarkerToolbar query={q ?? ''} onQueryChange={updateSearchQuery} />
-      <BiomarkerCardGrid cards={cards} />
+      <BiomarkerToolbar
+        query={query ?? ''}
+        onQueryChange={updateSearchQuery}
+        statusFilter={statusFilter}
+        onStatusFilterChange={updateStatusFilter}
+      />
+      {cards.length === 0 ? (
+        <EmptyState
+          icon={<SearchX />}
+          title="No markers match"
+          description="Adjust your search or status filter."
+        />
+      ) : (
+        <BiomarkerCardGrid cards={cards} />
+      )}
     </Page>
   )
 }
