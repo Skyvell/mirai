@@ -23,9 +23,10 @@ const TICK_CLASS: Record<BiomarkerStatus, string> = {
 type BiomarkerRulerProps = {
   value: number
   intervals: BiomarkerIntervals
+  showBounds?: boolean
 }
 
-export function BiomarkerRuler({ value, intervals }: BiomarkerRulerProps) {
+export function BiomarkerRuler({ value, intervals, showBounds = true }: BiomarkerRulerProps) {
   const range = computeDrawnRange(intervals)
   if (range === null) return null
 
@@ -35,7 +36,7 @@ export function BiomarkerRuler({ value, intervals }: BiomarkerRulerProps) {
         <Ticks statuses={computeTickStatuses(range, intervals)} />
         <Pin percent={computePercentWithin(value, range)} />
       </div>
-      <Marks intervals={intervals} range={range} />
+      {showBounds ? <Marks intervals={intervals} range={range} /> : null}
     </div>
   )
 }
