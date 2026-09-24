@@ -1,15 +1,12 @@
 import { useState } from 'react'
-
-export const BIOMARKER_VIEWS = ['tile', 'row'] as const
-export type BiomarkerView = (typeof BIOMARKER_VIEWS)[number]
+import { parseView, type BiomarkerView } from '@/features/biomarkers/view'
 
 const STORAGE_KEY = 'mirai.biomarkers.view'
 const DEFAULT_VIEW: BiomarkerView = 'tile'
 
 function readStoredView(): BiomarkerView {
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    return BIOMARKER_VIEWS.find((view) => view === stored) ?? DEFAULT_VIEW
+    return parseView(window.localStorage.getItem(STORAGE_KEY)) ?? DEFAULT_VIEW
   } catch {
     return DEFAULT_VIEW
   }
@@ -23,7 +20,7 @@ function writeStoredView(view: BiomarkerView) {
   }
 }
 
-export function useBiomarkerView() {
+export function useView() {
   const [view, setView] = useState<BiomarkerView>(readStoredView)
 
   const selectView = (next: BiomarkerView) => {

@@ -3,6 +3,10 @@ import { isOutsideInterval, type BiomarkerIntervals } from '@/features/biomarker
 export const BIOMARKER_STATUSES = ['optimal', 'normal', 'critical'] as const
 export type BiomarkerStatus = (typeof BIOMARKER_STATUSES)[number]
 
+export function parseStatus(value: string | null): BiomarkerStatus | undefined {
+  return BIOMARKER_STATUSES.find((status) => status === value)
+}
+
 type ComputeBiomarkerStatusInput = {
   value: number
   intervals: BiomarkerIntervals
