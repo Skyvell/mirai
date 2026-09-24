@@ -1,6 +1,7 @@
 import { isOutsideInterval, type BiomarkerIntervals } from '@/features/biomarkers/intervals'
 
-export type BiomarkerStatus = 'optimal' | 'normal' | 'critical'
+export const BIOMARKER_STATUSES = ['optimal', 'normal', 'critical'] as const
+export type BiomarkerStatus = (typeof BIOMARKER_STATUSES)[number]
 
 type ComputeBiomarkerStatusInput = {
   value: number
