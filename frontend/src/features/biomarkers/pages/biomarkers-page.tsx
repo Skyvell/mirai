@@ -4,8 +4,8 @@ import { parse } from 'date-fns'
 import { SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
-import type { BiomarkerCardProps } from '@/features/biomarkers/components/biomarker-card'
-import { BiomarkerCardGrid } from '@/features/biomarkers/components/biomarker-card-grid'
+import type { BiomarkerTileProps } from '@/features/biomarkers/components/biomarker-tile'
+import { BiomarkerTileGrid } from '@/features/biomarkers/components/biomarker-tile-grid'
 import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
 import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
 import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
@@ -13,7 +13,7 @@ import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomark
 const route = getRouteApi('/_authenticated/biomarkers/')
 
 // Placeholder data while the card is built, read off docs/biomaker_page/card_designs/l.png.
-const FIXTURES: BiomarkerCardProps[] = [
+const FIXTURES: BiomarkerTileProps[] = [
   {
     name: 'HDL Cholesterol',
     value: 1.6,
@@ -87,7 +87,7 @@ export function BiomarkersPage() {
           description="Adjust your search or status filter."
         />
       ) : (
-        <BiomarkerCardGrid cards={cards} />
+        <BiomarkerTileGrid cards={cards} />
       )}
     </Page>
   )

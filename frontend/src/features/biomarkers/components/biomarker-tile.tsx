@@ -11,7 +11,7 @@ const STATUS_COLOR_VAR =
   'data-[status=normal]:[--status-color:var(--normal)] ' +
   'data-[status=critical]:[--status-color:var(--critical)]'
 
-export type BiomarkerCardProps = {
+export type BiomarkerTileProps = {
   name: string
   value: number
   unit: string
@@ -20,14 +20,14 @@ export type BiomarkerCardProps = {
   measuredAt: Date
 }
 
-export function BiomarkerCard({
+export function BiomarkerTile({
   name,
   value,
   unit,
   intervals,
   previousValue,
   measuredAt,
-}: BiomarkerCardProps) {
+}: BiomarkerTileProps) {
   const status = computeBiomarkerStatus({ value, intervals })
   const change =
     previousValue === null || previousValue === 0 ? null : computePercentageChange(value, previousValue)
