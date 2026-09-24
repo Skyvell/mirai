@@ -1,8 +1,8 @@
 import { formatDistanceToNow } from 'date-fns'
 import { computePercentageChange } from '@/lib/math/percentage'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { BiomarkerIntervals } from '@/features/biomarkers/intervals'
 import { computeBiomarkerStatus } from '@/features/biomarkers/status'
+import type { BiomarkerSummary } from '@/features/biomarkers/summary'
 import { BiomarkerRuler } from '@/features/biomarkers/components/biomarker-ruler'
 
 // Resolves the status colour once on the card; descendants read var(--status-color).
@@ -11,15 +11,6 @@ const STATUS_COLOR_VAR =
   'data-[status=normal]:[--status-color:var(--normal)] ' +
   'data-[status=critical]:[--status-color:var(--critical)]'
 
-export type BiomarkerTileProps = {
-  name: string
-  value: number
-  unit: string
-  intervals: BiomarkerIntervals
-  previousValue: number | null
-  measuredAt: Date
-}
-
 export function BiomarkerTile({
   name,
   value,
@@ -27,7 +18,7 @@ export function BiomarkerTile({
   intervals,
   previousValue,
   measuredAt,
-}: BiomarkerTileProps) {
+}: BiomarkerSummary) {
   const status = computeBiomarkerStatus({ value, intervals })
   const change =
     previousValue === null || previousValue === 0 ? null : computePercentageChange(value, previousValue)

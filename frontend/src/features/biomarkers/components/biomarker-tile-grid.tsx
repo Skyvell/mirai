@@ -1,7 +1,8 @@
-import { BiomarkerTile, type BiomarkerTileProps } from '@/features/biomarkers/components/biomarker-tile'
+import { BiomarkerTile } from '@/features/biomarkers/components/biomarker-tile'
+import type { BiomarkerSummary } from '@/features/biomarkers/summary'
 
 type BiomarkerTileGridProps = {
-  cards: BiomarkerTileProps[]
+  cards: BiomarkerSummary[]
 }
 
 export function BiomarkerTileGrid({ cards }: BiomarkerTileGridProps) {
