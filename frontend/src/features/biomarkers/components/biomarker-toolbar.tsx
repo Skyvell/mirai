@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { LayoutGrid, Rows3, Search } from 'lucide-react'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import {
   Select,
@@ -7,7 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { BIOMARKER_STATUSES, type BiomarkerStatus } from '@/features/biomarkers/status'
+import { BIOMARKER_VIEWS, type BiomarkerView } from '@/features/biomarkers/use-biomarker-view'
 
 const ALL_STATUSES = 'all'
 
@@ -22,10 +24,16 @@ type BiomarkerToolbarProps = {
   onQueryChange: (value: string) => void
   statusFilter: BiomarkerStatus | undefined
   onStatusFilterChange: (value: BiomarkerStatus | undefined) => void
+  view: BiomarkerView
+  onViewChange: (value: BiomarkerView) => void
 }
 
 function parseStatusFilter(value: string): BiomarkerStatus | undefined {
   return BIOMARKER_STATUSES.find((status) => status === value)
+}
+
+function parseView(value: string): BiomarkerView | undefined {
+  return BIOMARKER_VIEWS.find((view) => view === value)
 }
 
 export function BiomarkerToolbar({
@@ -33,6 +41,8 @@ export function BiomarkerToolbar({
   onQueryChange,
   statusFilter,
   onStatusFilterChange,
+  view,
+  onViewChange,
 }: BiomarkerToolbarProps) {
   return (
     <div className="flex items-center gap-2">
@@ -63,6 +73,23 @@ export function BiomarkerToolbar({
           ))}
         </SelectContent>
       </Select>
+      <ToggleGroup
+        type="single"
+        value={view}
+        onValueChange={(value) => {
+          const next = parseView(value)
+          if (next !== undefined) onViewChange(next)
+        }}
+        variant="outline"
+        className="ml-auto hidden md:flex"
+      >
+        <ToggleGroupItem value="tile" aria-label="Show as a grid of tiles">
+          <LayoutGrid />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="row" aria-label="Show as stacked rows">
+          <Rows3 />
+        </ToggleGroupItem>
+      </ToggleGroup>
     </div>
   )
 }
