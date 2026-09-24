@@ -1,15 +1,10 @@
 import { formatDistanceToNow } from 'date-fns'
-import { computePercentageChange } from '@/lib/math/percentage'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { computeBiomarkerStatus } from '@/features/biomarkers/status'
+import { resolveStatusColorProps } from '@/features/biomarkers/status-color'
 import type { BiomarkerSummary } from '@/features/biomarkers/summary'
 import { BiomarkerRuler } from '@/features/biomarkers/components/biomarker-ruler'
-
-// Resolves the status colour once on the card; descendants read var(--status-color).
-const STATUS_COLOR_VAR =
-  'data-[status=optimal]:[--status-color:var(--optimal)] ' +
-  'data-[status=normal]:[--status-color:var(--normal)] ' +
-  'data-[status=critical]:[--status-color:var(--critical)]'
+import { BiomarkerTrend } from '@/features/biomarkers/components/biomarker-trend'
 
 export function BiomarkerTile({
   name,
@@ -20,11 +15,9 @@ export function BiomarkerTile({
   measuredAt,
 }: BiomarkerSummary) {
   const status = computeBiomarkerStatus({ value, intervals })
-  const change =
-    previousValue === null || previousValue === 0 ? null : computePercentageChange(value, previousValue)
 
   return (
-    <Card data-status={status} className={STATUS_COLOR_VAR}>
+    <Card {...resolveStatusColorProps(status)}>
       <CardHeader>
         <CardTitle>{name}</CardTitle>
         <CardAction>
@@ -40,13 +33,10 @@ export function BiomarkerTile({
         </div>
         <BiomarkerRuler value={value} intervals={intervals} />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            {change !== null && `${change > 0 ? '↑' : change < 0 ? '↓' : '→'} ${Math.abs(change)}%`}
-          </span>
+          <BiomarkerTrend value={value} previousValue={previousValue} />
           <span>{formatDistanceToNow(measuredAt, { addSuffix: true })}</span>
         </div>
       </CardContent>
     </Card>
   )
 }
-
