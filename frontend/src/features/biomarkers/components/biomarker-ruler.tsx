@@ -50,7 +50,7 @@ function Ticks({ statuses }: { statuses: BiomarkerStatus[] }) {
   )
 }
 
-// Requires an ancestor defining --status-color; BiomarkerCard sets it from the
+// Requires an ancestor defining --status-color; BiomarkerTile sets it from the
 // measurement's status.
 function Pin({ percent }: { percent: number }) {
   return (
