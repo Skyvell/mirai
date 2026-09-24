@@ -4,6 +4,7 @@ import { computeBiomarkerStatus } from '@/features/biomarkers/status'
 import { resolveStatusColorProps } from '@/features/biomarkers/status-color'
 import type { BiomarkerSummary } from '@/features/biomarkers/summary'
 import { BiomarkerRuler } from '@/features/biomarkers/components/biomarker-ruler'
+import { BiomarkerStatusLabel } from '@/features/biomarkers/components/biomarker-status-label'
 import { BiomarkerTrend } from '@/features/biomarkers/components/biomarker-trend'
 
 export function BiomarkerTile({
@@ -21,9 +22,7 @@ export function BiomarkerTile({
       <CardHeader>
         <CardTitle>{name}</CardTitle>
         <CardAction>
-          <span className="text-[10px] font-medium tracking-widest uppercase text-(--status-color)">
-            {status}
-          </span>
+          <BiomarkerStatusLabel status={status} />
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
