@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { Page } from '@/components/page'
 import { ApiErrorAlert } from '@/components/api-error-alert'
-import { ProfileForm } from '@/features/profile/components/profile-form'
+import { ProfileForm } from './components/profile-form'
 
 export function SettingsPage() {
   const me = useQuery(currentUserOptions())

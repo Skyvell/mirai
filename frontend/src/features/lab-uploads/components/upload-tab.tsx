@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { uploadLabMutation } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
-import { invalidateLabUploads } from '@/features/lab-uploads/api'
+import { invalidateLabUploads } from '../api'
 
 // Self-contained Add-data tab: the dialog only registers it, so all upload
 // state lives here. The dialog unmounts its content on close, which is what
