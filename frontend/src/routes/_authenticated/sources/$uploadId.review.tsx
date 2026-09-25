@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ReviewPage } from '@/features/lab-uploads/review-page'
+import { ReviewPage } from '@/features/lab-uploads'
 
 export const Route = createFileRoute('/_authenticated/sources/$uploadId/review')({
   component: ReviewRoute,
