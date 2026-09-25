@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { BiomarkersPage } from '@/features/biomarkers/pages/biomarkers-page'
-import { biomarkerSearchSchema } from '@/features/biomarkers/search'
+import { BiomarkersPage, biomarkerSearchSchema } from '@/features/biomarkers'
 
 export const Route = createFileRoute('/_authenticated/biomarkers/')({
   validateSearch: biomarkerSearchSchema,

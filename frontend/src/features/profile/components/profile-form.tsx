@@ -15,7 +15,7 @@ import {
   parseDateOfBirth,
   profileSchema,
   type ProfileFormValues,
-} from '@/features/profile/schema'
+} from '../schema'
 import { cn } from 'cn'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'

@@ -1,6 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { listLabUploadsQueryKey } from '@/client/@tanstack/react-query.gen'
-import { invalidateBiomarkerSeries } from '@/features/biomarkers/api'
+import { invalidateBiomarkerSeries } from '@/features/biomarkers'
 
 // A new upload changes only the report list; no measurements exist yet.
 export function invalidateLabUploads(queryClient: QueryClient) {

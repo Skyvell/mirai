@@ -1,4 +1,4 @@
-import type { BiomarkerIntervals } from '@/features/biomarkers/intervals'
+import type { BiomarkerIntervals } from './intervals'
 
 export type BiomarkerSummary = {
   name: string

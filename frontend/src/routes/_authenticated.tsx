@@ -5,9 +5,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings } from 'lucide-react'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
-import { AddDataDialog } from '@/features/sources/add-data-dialog'
-import { biomarkersOptions } from '@/features/biomarkers/api'
-import { isProfileComplete } from '@/features/profile/completeness'
+import { AddDataDialog } from '@/features/sources'
+import { biomarkersOptions } from '@/features/biomarkers'
+import { isProfileComplete } from '@/features/profile'
 
 // Onboarding renders once per account but drags in the whole profile form, so it
 // stays off the shell's critical path.

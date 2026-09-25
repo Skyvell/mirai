@@ -1,11 +1,11 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { computeBiomarkerStatus } from '@/features/biomarkers/status'
-import { resolveStatusColorProps } from '@/features/biomarkers/status-color'
-import type { BiomarkerSummary } from '@/features/biomarkers/summary'
-import { BiomarkerRuler } from '@/features/biomarkers/components/biomarker-ruler'
-import { BiomarkerStatusLabel } from '@/features/biomarkers/components/biomarker-status-label'
-import { BiomarkerTrend } from '@/features/biomarkers/components/biomarker-trend'
+import { computeBiomarkerStatus } from '../domain/status'
+import { resolveStatusColorProps } from './status-color'
+import type { BiomarkerSummary } from '../domain/summary'
+import { BiomarkerBulletGraph } from './bullet-graph'
+import { BiomarkerStatusLabel } from './status-label'
+import { BiomarkerChange } from './change'
 
 export function BiomarkerTile({
   name,
@@ -30,9 +30,9 @@ export function BiomarkerTile({
           <span className="text-6xl font-light tracking-tight">{value}</span>
           <span className="text-sm text-muted-foreground">{unit}</span>
         </div>
-        <BiomarkerRuler value={value} intervals={intervals} />
+        <BiomarkerBulletGraph value={value} intervals={intervals} />
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <BiomarkerTrend value={value} previousValue={previousValue} />
+          <BiomarkerChange value={value} previousValue={previousValue} />
           <span>{formatDistanceToNow(measuredAt, { addSuffix: true })}</span>
         </div>
       </CardContent>
