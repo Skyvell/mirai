@@ -1,6 +1,6 @@
 import { cn } from 'cn'
-import type { BiomarkerIntervals } from '@/features/biomarkers/intervals'
-import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
+import type { BiomarkerIntervals } from '../domain/intervals'
+import { computeBiomarkerStatus, type BiomarkerStatus } from '../domain/status'
 import {
   computePercentWithin,
   expandInterval,
@@ -20,13 +20,13 @@ const TICK_CLASS: Record<BiomarkerStatus, string> = {
   optimal: 'h-4.5 bg-foreground/35',
 }
 
-type BiomarkerRulerProps = {
+type BiomarkerBulletGraphProps = {
   value: number
   intervals: BiomarkerIntervals
   showBounds?: boolean
 }
 
-export function BiomarkerRuler({ value, intervals, showBounds = true }: BiomarkerRulerProps) {
+export function BiomarkerBulletGraph({ value, intervals, showBounds = true }: BiomarkerBulletGraphProps) {
   const range = computeDrawnRange(intervals)
   if (range === null) return null
 

@@ -22,7 +22,7 @@ import {
 import { cn } from 'cn'
 import type { BiomarkerRead } from '@/client'
 
-type BiomarkerSelectProps = {
+type BiomarkerComboboxProps = {
   biomarkers: BiomarkerRead[]
   value: string
   onChange: (slug: string) => void
@@ -32,7 +32,7 @@ type BiomarkerSelectProps = {
   modal?: boolean
 }
 
-export function BiomarkerSelect({
+export function BiomarkerCombobox({
   biomarkers,
   value,
   onChange,
@@ -40,7 +40,7 @@ export function BiomarkerSelect({
   id,
   triggerClassName,
   modal,
-}: BiomarkerSelectProps) {
+}: BiomarkerComboboxProps) {
   const [open, setOpen] = useState(false)
 
   // Present the biomarkers alphabetically.

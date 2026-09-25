@@ -8,8 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { BIOMARKER_STATUSES, parseStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
-import { parseView, type BiomarkerView } from '@/features/biomarkers/view'
+import { BIOMARKER_STATUSES, parseStatus, type BiomarkerStatus } from '../domain/status'
+import { parseViewMode, type BiomarkerViewMode } from '../domain/view-mode'
 
 const ALL_STATUSES = 'all'
 
@@ -24,8 +24,8 @@ type BiomarkerToolbarProps = {
   onQueryChange: (value: string) => void
   statusFilter: BiomarkerStatus | undefined
   onStatusFilterChange: (value: BiomarkerStatus | undefined) => void
-  view: BiomarkerView
-  onViewChange: (value: BiomarkerView) => void
+  viewMode: BiomarkerViewMode
+  onViewModeChange: (value: BiomarkerViewMode) => void
 }
 
 export function BiomarkerToolbar({
@@ -33,8 +33,8 @@ export function BiomarkerToolbar({
   onQueryChange,
   statusFilter,
   onStatusFilterChange,
-  view,
-  onViewChange,
+  viewMode,
+  onViewModeChange,
 }: BiomarkerToolbarProps) {
   return (
     <div className="flex items-center gap-2">
@@ -67,10 +67,10 @@ export function BiomarkerToolbar({
       </Select>
       <ToggleGroup
         type="single"
-        value={view}
+        value={viewMode}
         onValueChange={(value) => {
-          const next = parseView(value)
-          if (next !== undefined) onViewChange(next)
+          const next = parseViewMode(value)
+          if (next !== undefined) onViewModeChange(next)
         }}
         variant="outline"
         className="ml-auto hidden md:flex"

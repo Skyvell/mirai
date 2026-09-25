@@ -1,4 +1,4 @@
-import type { BiomarkerStatus } from '@/features/biomarkers/status'
+import type { BiomarkerStatus } from './status'
 
 export function matchesName(
   name: string,

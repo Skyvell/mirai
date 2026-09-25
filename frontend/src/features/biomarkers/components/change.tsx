@@ -1,6 +1,6 @@
 import { computePercentageChange } from '@/lib/math/percentage'
 
-type BiomarkerTrendProps = {
+type BiomarkerChangeProps = {
   value: number
   previousValue: number | null
 }
@@ -12,7 +12,7 @@ function resolveTrendGlyph(change: number): string {
   return '→'
 }
 
-export function BiomarkerTrend({ value, previousValue }: BiomarkerTrendProps) {
+export function BiomarkerChange({ value, previousValue }: BiomarkerChangeProps) {
   const change =
     previousValue === null || previousValue === 0
       ? null
