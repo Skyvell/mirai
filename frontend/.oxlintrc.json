@@ -4,13 +4,66 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
-    "import/no-cycle": "error"
+    "import/no-cycle": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/features/*/**"],
+            "message": "Import another feature through its index: '@/features/<name>'."
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
     {
       "files": ["src/components/ui/**", "src/routes/**", "src/main.tsx"],
       "rules": {
         "react/only-export-components": "off"
+      }
+    },
+    {
+      "files": ["src/features/*/domain/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              { "name": "react", "message": "domain/ is pure: no React." },
+              { "name": "cn", "message": "domain/ is pure: no styling." }
+            ],
+            "patterns": [
+              {
+                "group": ["@/features/*/**"],
+                "message": "Import another feature through its index: '@/features/<name>'."
+              },
+              {
+                "group": ["@/client", "@/client/**"],
+                "allowTypeImports": true,
+                "message": "domain/ may import generated types, never the runtime client."
+              },
+              {
+                "group": ["@/components", "@/components/**"],
+                "message": "domain/ is pure: no UI components."
+              },
+              {
+                "group": [
+                  "../api",
+                  "../api/**",
+                  "../components",
+                  "../components/**",
+                  "../hooks",
+                  "../hooks/**",
+                  "../pages",
+                  "../pages/**"
+                ],
+                "message": "domain/ cannot depend on the layers built on top of it."
+              }
+            ]
+          }
+        ]
       }
     }
   ]
