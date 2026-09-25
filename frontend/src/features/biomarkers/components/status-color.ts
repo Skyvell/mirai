@@ -1,5 +1,5 @@
 import { cn } from 'cn'
-import type { BiomarkerStatus } from '@/features/biomarkers/status'
+import type { BiomarkerStatus } from '../domain/status'
 
 const STATUS_COLOR_VAR =
   'data-[status=optimal]:[--status-color:var(--optimal)] ' +

@@ -6,12 +6,9 @@ import { ApiErrorAlert } from '@/components/api-error-alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  biomarkersOptions,
-  findBiomarker,
-  invalidateBiomarkerSeries,
-} from '@/features/biomarkers/api'
-import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
+import { biomarkersOptions, invalidateBiomarkerSeries } from '../api/queries'
+import { findBiomarker } from '../domain/catalogue'
+import { BiomarkerCombobox } from './combobox'
 import { format } from 'date-fns'
 
 // Self-contained Add-data tab for entering one measurement by hand.
@@ -57,7 +54,7 @@ export function ManualEntryForm() {
     <form className="flex flex-col gap-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="biomarker">Biomarker</Label>
-        <BiomarkerSelect
+        <BiomarkerCombobox
           id="biomarker"
           modal
           triggerClassName="w-full"

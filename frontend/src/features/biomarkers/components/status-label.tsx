@@ -1,4 +1,4 @@
-import type { BiomarkerStatus } from '@/features/biomarkers/status'
+import type { BiomarkerStatus } from '../domain/status'
 
 type BiomarkerStatusLabelProps = {
   status: BiomarkerStatus

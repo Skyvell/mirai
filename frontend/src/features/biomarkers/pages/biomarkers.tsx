@@ -4,13 +4,13 @@ import { parse } from 'date-fns'
 import { SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
-import type { BiomarkerSummary } from '@/features/biomarkers/summary'
-import { BiomarkerRowList } from '@/features/biomarkers/components/biomarker-row-list'
-import { BiomarkerTileGrid } from '@/features/biomarkers/components/biomarker-tile-grid'
-import { BiomarkerToolbar } from '@/features/biomarkers/components/biomarker-toolbar'
-import { matchesName, matchesStatus } from '@/features/biomarkers/filters'
-import { computeBiomarkerStatus, type BiomarkerStatus } from '@/features/biomarkers/status'
-import { useView } from '@/features/biomarkers/use-view'
+import type { BiomarkerSummary } from '../domain/summary'
+import { BiomarkerRowList } from '../components/row-list'
+import { BiomarkerTileGrid } from '../components/tile-grid'
+import { BiomarkerToolbar } from '../components/toolbar'
+import { matchesName, matchesStatus } from '../domain/filters'
+import { computeBiomarkerStatus, type BiomarkerStatus } from '../domain/status'
+import { useViewMode } from '../hooks/use-view-mode'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
 
@@ -54,13 +54,14 @@ const FIXTURES: BiomarkerSummary[] = [
 export function BiomarkersPage() {
   const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
-  const { view, selectView } = useView()
+  const { viewMode, selectViewMode } = useViewMode()
 
-  const cards = useMemo(
+  const summaries = useMemo(
     () =>
       FIXTURES.filter(
-        (card) =>
-          matchesName(card.name, query) && matchesStatus(computeBiomarkerStatus(card), statusFilter)
+        (summary) =>
+          matchesName(summary.name, query) &&
+          matchesStatus(computeBiomarkerStatus(summary), statusFilter)
       ).sort((a, b) => a.name.localeCompare(b.name)),
     [query, statusFilter]
   )
@@ -81,19 +82,19 @@ export function BiomarkersPage() {
         onQueryChange={updateSearchQuery}
         statusFilter={statusFilter}
         onStatusFilterChange={updateStatusFilter}
-        view={view}
-        onViewChange={selectView}
+        viewMode={viewMode}
+        onViewModeChange={selectViewMode}
       />
-      {cards.length === 0 ? (
+      {summaries.length === 0 ? (
         <EmptyState
           icon={<SearchX />}
           title="No markers match"
           description="Adjust your search or status filter."
         />
-      ) : view === 'tile' ? (
-        <BiomarkerTileGrid cards={cards} />
+      ) : viewMode === 'tile' ? (
+        <BiomarkerTileGrid summaries={summaries} />
       ) : (
-        <BiomarkerRowList cards={cards} />
+        <BiomarkerRowList summaries={summaries} />
       )}
     </Page>
   )

@@ -1,4 +1,4 @@
-import { isOutsideInterval, type BiomarkerIntervals } from '@/features/biomarkers/intervals'
+import { isOutsideInterval, type BiomarkerIntervals } from './intervals'
 
 export const BIOMARKER_STATUSES = ['optimal', 'normal', 'critical'] as const
 export type BiomarkerStatus = (typeof BIOMARKER_STATUSES)[number]

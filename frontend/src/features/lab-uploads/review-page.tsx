@@ -14,7 +14,7 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabDraft, LabUploadDetail } from '@/client'
 import { pluralize } from '@/lib/text'
-import { biomarkersOptions, findBiomarker } from '@/features/biomarkers/api'
+import { biomarkersOptions, findBiomarker } from '@/features/biomarkers'
 import { invalidateLabUploadsAndSeries } from '@/features/lab-uploads/api'
 import { DraftItemsTable, toRow, type DraftRow } from '@/features/lab-uploads/components/draft-items-table'
 import { IN_PROGRESS, POLL_MS } from '@/features/lab-uploads/status'

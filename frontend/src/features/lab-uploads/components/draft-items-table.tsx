@@ -1,5 +1,5 @@
 import type { BiomarkerRead, LabDraftItemRead } from '@/client'
-import { BiomarkerSelect } from '@/features/biomarkers/components/biomarker-select'
+import { BiomarkerCombobox } from '@/features/biomarkers'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -114,7 +114,7 @@ export function DraftItemsTable({
                   {row.sourceName && (
                     <span className="text-xs text-muted-foreground">{row.sourceName}</span>
                   )}
-                  <BiomarkerSelect
+                  <BiomarkerCombobox
                     biomarkers={biomarkers}
                     value={row.slug}
                     onChange={(slug) => onMap(row.id, slug)}
