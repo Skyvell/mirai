@@ -1,7 +1,7 @@
 import type { LabDraftItemRead } from '@/client'
 
-// One editable draft row, shared by both tables. Matched rows arrive pre-mapped;
-// unmatched rows carry the parser's original label and start unmapped.
+// Matched rows arrive pre-mapped; unmatched rows carry the parser's original
+// label and start unmapped.
 export type LabUploadDraftRow = {
   id: string
   origin: 'matched' | 'unmatched'
@@ -15,8 +15,8 @@ export type LabUploadDraftRow = {
   included: boolean
 }
 
-// Strip trailing zeros (and a bare trailing dot) so parsed decimals read
-// cleanly; only touches strings that carry a decimal point.
+// Parsed decimals arrive padded ("1.5000"), so trim them to read cleanly; the
+// decimal-point guard keeps integers like "1200" intact.
 function trimDecimal(value: string): string {
   if (!value.includes('.')) return value
   return value.replace(/\.?0+$/, '')

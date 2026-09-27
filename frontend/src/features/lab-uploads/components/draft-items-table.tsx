@@ -25,9 +25,6 @@ const CELL_CLASS =
 const SELECT_CELL_CLASS =
   'h-8 w-full min-w-0 border-transparent bg-transparent px-1.5 shadow-none hover:border-input hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent'
 
-// Shared editable table for both matched and unmatched draft rows. Each row's
-// biomarker is a dropdown: pre-selected when matched, empty when the parser
-// couldn't map it (its original label shows above the dropdown).
 export function LabUploadDraftItemsTable({
   rows,
   biomarkers,

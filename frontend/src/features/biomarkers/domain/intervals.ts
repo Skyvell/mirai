@@ -1,11 +1,11 @@
-// A low/high band, mirroring the API's BiomarkerInterval. A null bound is open
-// on that side; the API guarantees at least one of the two is set.
+// A null bound is open on that side; the API guarantees at least one of the two
+// is set.
 export type BiomarkerInterval = {
   low: number | null
   high: number | null
 }
 
-// The bands a measurement is read against. Null means no such band exists.
+// Null means no such band exists.
 export type BiomarkerIntervals = {
   reference: BiomarkerInterval | null
   optimal: BiomarkerInterval | null

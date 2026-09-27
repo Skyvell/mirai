@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import type { UploadStatus } from '@/client'
 import type { Badge } from '@/components/ui/badge'
 
-// User-facing label per lifecycle state; queued and processing read the same.
+// Queued and processing read the same, since the user cannot act on the difference.
 export const LAB_UPLOAD_STATUS_LABEL: Record<UploadStatus, string> = {
   queued: 'Processing',
   processing: 'Processing',

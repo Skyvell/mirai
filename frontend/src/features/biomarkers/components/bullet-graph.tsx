@@ -51,8 +51,8 @@ function Ticks({ statuses }: { statuses: BiomarkerStatus[] }) {
   )
 }
 
-// Requires an ancestor defining --status-color; BiomarkerTile sets it from the
-// measurement's status.
+// Requires an ancestor defining --status-color; resolveBiomarkerStatusColorProps
+// sets it on the tile and the row.
 function Pin({ percent }: { percent: number }) {
   return (
     <div
@@ -89,8 +89,7 @@ function Marks({ intervals, range }: { intervals: BiomarkerIntervals; range: Int
   )
 }
 
-// The reference band padded at both ends, falling back to the optimal bound where
-// a reference bound is missing. Without both ends there is no scale to draw.
+// Without both ends there is no scale to draw.
 function computeDrawnRange({ reference, optimal }: BiomarkerIntervals): Interval | null {
   const min = reference?.low ?? optimal?.low ?? null
   const max = reference?.high ?? optimal?.high ?? null
