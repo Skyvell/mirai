@@ -7,10 +7,8 @@ import { differenceInYears, format } from 'date-fns'
 import { CalendarIcon, Check } from 'lucide-react'
 
 import type { MeResponse } from '@/client'
-import {
-  currentUserQueryKey,
-  updateCurrentUserMutation,
-} from '@/client/@tanstack/react-query.gen'
+import { updateCurrentUserMutation } from '@/client/@tanstack/react-query.gen'
+import { seedProfileCache } from '../api/queries'
 import {
   parseProfileDateOfBirth,
   profileSchema,
@@ -64,9 +62,7 @@ export function ProfileForm({
   const update = useMutation({
     ...updateCurrentUserMutation(),
     onSuccess: (data) => {
-      // The PATCH response is the authoritative MeResponse; seeding the cache
-      // flips the onboarding gate without a redundant refetch.
-      queryClient.setQueryData(currentUserQueryKey(), data)
+      seedProfileCache(queryClient, data)
 
       toast.success('Profile saved')
     },
