@@ -6,14 +6,12 @@ Guidance for Claude Code (claude.ai/code) working in this repository.
 
 **Mirai** — a direct-to-consumer precision-health app: individuals understand, track, and optimize their own biology from their own data. The loop is Measure → Interpret → Personalize → Intervene → Evaluate → Adjust.
 
-**MVP scope is blood biomarkers only** (users upload lab PDFs; biomarkers tracked over time). Physiology (Oura/wearables), omics, interventions, and AI recommendations are product vision, not MVP. Not positioned as a medical device.
-
 ## Source of truth
 
 `docs/` holds the decisions; code follows it, not the reverse.
 
 - `docs/description.md` — product, personalization loop, full data model, long-term vision.
-- `docs/stack.md` — frontend + backend stack, every choice tagged `[MVP]` (needed to ship) or `[LATER]` (add when a stated trigger hits). Consult before adding a dependency; respect the tags.
+- `docs/stack.md` — frontend + backend stack.
 
 ## Repo layout
 
@@ -21,8 +19,7 @@ Polyglot monorepo — each concern is a top-level sibling owning its own toolcha
 
 - `frontend/` — the web app (pnpm). Built.
 - `api/` — FastAPI on Cloud Run (uv). Settings, Cloud SQL engine, Clerk JWT auth, health endpoints, and the first domain feature: lab-PDF upload → GCS → LLM parse → biomarker tables. Named `api/` (not `backend/`) to match the package `mirai_api`, image/service `mirai-api`, and runtime SA `mirai-api-run`; future `[LATER]` siblings (lakehouse, transformation) are also backend concerns.
-- `infra/` — GCP infrastructure (OpenTofu). Cloud SQL + Cloud Run + a user-uploads GCS bucket + Secret Manager (Anthropic API key) + a Cloud Tasks queue (async lab parsing), for MVP.
-- `[LATER]` per `stack.md`: DuckLake lakehouse + SQLMesh once omics/wearable scale demands it; direct lab/FHIR integration.
+- `infra/` — GCP infrastructure (OpenTofu). Cloud SQL + Cloud Run + a user-uploads GCS bucket + Secret Manager (Anthropic API key)
 
 ## Frontend
 
@@ -74,11 +71,4 @@ src-layout single package `mirai_api` (`src/mirai_api/`) — `api/` is the monor
 - No mention of Claude / AI authorship (no `Co-Authored-By`, no generated-with footer).
 
 ## Writing
-Concise without losing vital context. Scientific report style writing. Zero fluff tolerated.
 
-## Code
-- Best coding practises.
-- Comments start wich capital letter and ends with period.
-- Use the latest versions unless they are unstable.
-- Multi-step function bodies: blank line between logical steps, one intent comment leading each step. No comments on trivial one-expression bodies; no trailing per-line comments.
-- Prefer python built in typehints.
