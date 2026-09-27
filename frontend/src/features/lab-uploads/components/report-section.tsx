@@ -44,7 +44,6 @@ import { format } from 'date-fns'
 export function LabUploadReportSection() {
   const uploads = useQuery({
     ...listLabUploadsOptions(),
-    // Poll only while something is still parsing; stop once all rows are terminal.
     refetchInterval: (query) =>
       query.state.data?.some((u) => LAB_UPLOAD_IN_PROGRESS.has(u.status)) ? LAB_UPLOAD_POLL_MS : false,
   })

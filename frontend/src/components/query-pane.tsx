@@ -3,8 +3,6 @@ import type { UseQueryResult } from '@tanstack/react-query'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { TableSkeleton } from '@/components/table-skeleton'
 
-// Standard query rendering: error alert → loading skeleton → optional empty
-// state (when the loaded data holds no items) → content from loaded data.
 export function QueryPane<T>({
   query,
   empty,

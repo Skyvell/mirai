@@ -109,14 +109,14 @@ function ReviewForm({
   const matched = rows.filter((r) => r.origin === 'matched')
   const unmatched = rows.filter((r) => r.origin === 'unmatched')
 
-  // A row commits only once kept and mapped to a known biomarker.
+  // Confirm commits only rows that are kept and mapped, so the count shows what will
+  // land.
   const keptCount = rows.filter((r) => r.included && r.slug).length
 
   function patchRow(id: string, patch: Partial<LabUploadDraftRow>) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
-  // Mapping a marker keeps it and fills the unit from the mapped biomarker when blank.
   function mapRow(id: string, slug: string) {
     const canonical = findBiomarker(biomarkers.data, slug)
     setRows((rs) =>
@@ -129,7 +129,6 @@ function ReviewForm({
   }
 
   async function confirmDraft() {
-    // One edit payload carries every row's fields and mapping, then commit.
     const body = {
       measured_at: measuredAt || null,
       items: rows.map((r) => ({

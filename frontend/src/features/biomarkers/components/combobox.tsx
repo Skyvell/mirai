@@ -51,16 +51,13 @@ export function BiomarkerCombobox({
 }: BiomarkerComboboxProps) {
   const [open, setOpen] = useState(false)
 
-  // Present the biomarkers alphabetically.
   const sortedBiomarkers = useMemo(
     () => [...biomarkers].sort((a, b) => a.display_name.localeCompare(b.display_name)),
     [biomarkers],
   )
 
-  // Resolve the selected slug to its biomarker for the trigger label.
   const selected = findBiomarker(biomarkers, value)
 
-  // Picking an item commits the mapping and closes the popover.
   function selectBiomarker(slug: string) {
     onChange(slug)
     setOpen(false)

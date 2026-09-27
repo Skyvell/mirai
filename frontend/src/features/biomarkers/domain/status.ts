@@ -16,12 +16,9 @@ export function computeBiomarkerStatus({
   value,
   intervals,
 }: ComputeBiomarkerStatusInput): BiomarkerStatus {
-  // If outside reference interval --> critical.
   if (isOutsideBiomarkerInterval(value, intervals.reference)) return 'critical'
 
-  // No optimal interval exists --> normal.
   if (intervals.optimal === null) return 'normal'
 
-  // Outside optimal interval --> normal. If not outside --> optimal.
   return isOutsideBiomarkerInterval(value, intervals.optimal) ? 'normal' : 'optimal'
 }
