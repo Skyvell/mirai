@@ -1,6 +1,6 @@
 # frontend/CLAUDE.md
 
-Frontend guidance for Claude Code. Product, repo layout, commits, writing and general code style live in the root `CLAUDE.md`; this file covers `frontend/` only.
+Frontend guidance for Claude Code.
 
 ## Commands
 
@@ -40,7 +40,7 @@ src/
 
 ## Features
 
-Every feature uses the same folders. Omit a folder the feature does not need; never create empty ones.
+Every feature uses the same folders. Create a each folder as soon as a candidate file exists. Never empty folders.
 
 ```
 features/<feature>/
@@ -125,6 +125,4 @@ Tailwind v4 with shadcn tokens in `src/index.css`. Colors are defined in `:root`
 Static SPA on Cloudflare Pages (`https://mirai-web.pages.dev`), deployed by `.github/workflows/_deploy-frontend.yml` via `wrangler pages deploy`. Deployment uses a Pages-scoped API token held in CI, deliberately in place of the Cloudflare GitHub App, which would grant a third party write access to this auto-deploying repo. `public/_redirects` serves the SPA catch-all. The API's CORS allow-list (`frontend_origins` in `infra/opentofu/environments/<env>/main.tf`) must include every origin the frontend is served from, so per-deployment preview URLs cannot reach the API.
 
 ## Conventions
-
-- Comments explain why: a non-obvious constraint or a deliberate choice. Keep existing why-comments when refactoring (cold-start retries in `main.tsx`, chunk splitting).
 - Keep modules off the shell's critical path: anything rendered once or behind a dialog is lazy-loaded.
