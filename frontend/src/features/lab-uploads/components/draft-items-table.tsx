@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from 'cn'
-import type { DraftRow } from './draft-row'
+import type { LabUploadDraftRow } from './draft-row'
 
 // Ghost cell input that sizes to its content (so the column fits the value —
 // no clipping, no fixed widths); min-width keeps empty cells clickable.
@@ -28,15 +28,15 @@ const SELECT_CELL_CLASS =
 // Shared editable table for both matched and unmatched draft rows. Each row's
 // biomarker is a dropdown: pre-selected when matched, empty when the parser
 // couldn't map it (its original label shows above the dropdown).
-export function DraftItemsTable({
+export function LabUploadDraftItemsTable({
   rows,
   biomarkers,
   onPatch,
   onMap,
 }: {
-  rows: DraftRow[]
+  rows: LabUploadDraftRow[]
   biomarkers: BiomarkerRead[]
-  onPatch: (id: string, patch: Partial<DraftRow>) => void
+  onPatch: (id: string, patch: Partial<LabUploadDraftRow>) => void
   onMap: (id: string, slug: string) => void
 }) {
   // Auto layout: the Biomarker column takes the slack, every other column

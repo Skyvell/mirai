@@ -9,7 +9,7 @@ import { invalidateLabUploads } from '../api/queries'
 // Self-contained Add-data tab: the dialog only registers it, so all upload
 // state lives here. The dialog unmounts its content on close, which is what
 // keeps a previous error from resurfacing on the next open.
-export function UploadTab() {
+export function LabUploadTab() {
   const queryClient = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
 

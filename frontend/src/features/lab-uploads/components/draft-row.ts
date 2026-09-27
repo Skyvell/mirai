@@ -2,7 +2,7 @@ import type { LabDraftItemRead } from '@/client'
 
 // One editable draft row, shared by both tables. Matched rows arrive pre-mapped;
 // unmatched rows carry the parser's original label and start unmapped.
-export type DraftRow = {
+export type LabUploadDraftRow = {
   id: string
   origin: 'matched' | 'unmatched'
   sourceName: string | null
@@ -22,7 +22,7 @@ function trimDecimal(value: string): string {
   return value.replace(/\.?0+$/, '')
 }
 
-export function toRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): DraftRow {
+export function constructLabUploadDraftRow(item: LabDraftItemRead, origin: 'matched' | 'unmatched'): LabUploadDraftRow {
   return {
     id: item.id,
     origin,
