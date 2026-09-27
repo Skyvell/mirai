@@ -37,7 +37,7 @@ const TABS = [
   },
 ]
 
-export function AddDataDialog() {
+export function SourcesAddDataDialog() {
   const [open, setOpen] = useState(false)
 
   return (
