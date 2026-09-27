@@ -21,6 +21,14 @@ import {
 } from '@/components/ui/popover'
 import { cn } from 'cn'
 import type { BiomarkerRead } from '@/client'
+import { findBiomarker } from '../domain/catalogue'
+import { matchesBiomarkerName } from '../domain/filters'
+
+// Replaces cmdk's fuzzy default, so this picker and the biomarkers page search
+// agree on what matches; `1 : 0` is cmdk's score contract.
+function scoreBiomarker(value: string, search: string, keywords?: string[]): number {
+  return [value, ...(keywords ?? [])].some((text) => matchesBiomarkerName(text, search)) ? 1 : 0
+}
 
 type BiomarkerComboboxProps = {
   biomarkers: BiomarkerRead[]
@@ -50,18 +58,12 @@ export function BiomarkerCombobox({
   )
 
   // Resolve the selected slug to its biomarker for the trigger label.
-  const selected = biomarkers.find((biomarker) => biomarker.slug === value)
+  const selected = findBiomarker(biomarkers, value)
 
   // Picking an item commits the mapping and closes the popover.
   function selectBiomarker(slug: string) {
     onChange(slug)
     setOpen(false)
-  }
-
-  // Match the query as a case-insensitive substring of the name or slug, replacing cmdk's fuzzy default.
-  function matchSubstring(value: string, search: string, keywords?: string[]) {
-    const haystack = [value, ...(keywords ?? [])].join(' ').toLowerCase()
-    return haystack.includes(search.toLowerCase()) ? 1 : 0
   }
 
   return (
@@ -81,7 +83,7 @@ export function BiomarkerCombobox({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-0" align="start">
-        <Command filter={matchSubstring}>
+        <Command filter={scoreBiomarker}>
           <CommandInput placeholder="Search biomarkers…" />
           <CommandList>
             <CommandEmpty>No biomarker found.</CommandEmpty>
