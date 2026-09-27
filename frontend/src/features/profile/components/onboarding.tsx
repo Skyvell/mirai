@@ -5,7 +5,7 @@ import { ProfileForm } from './profile-form'
 
 // Blocking first-run step: the app stays unreachable until sex + DOB are set,
 // because every biomarker reference range depends on them.
-export function Onboarding({ current }: { current: MeResponse }) {
+export function ProfileOnboarding({ current }: { current: MeResponse }) {
   return (
     <div className="grid min-h-svh place-items-center bg-background p-6">
       <div className="w-full max-w-md">

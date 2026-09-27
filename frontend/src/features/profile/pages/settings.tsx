@@ -5,7 +5,7 @@ import { Page } from '@/components/page'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { ProfileForm } from '../components/profile-form'
 
-export function SettingsPage() {
+export function ProfileSettingsPage() {
   const me = useQuery(currentUserOptions())
 
   return (
