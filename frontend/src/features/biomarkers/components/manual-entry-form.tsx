@@ -28,6 +28,7 @@ export function BiomarkerManualEntryForm() {
     ...createBiomarkerMeasurementsMutation(),
     onSuccess: ([created]) => {
       invalidateBiomarkerSeries(queryClient)
+
       setValue('')
       toast.success(`Added ${created.display_name} — ${created.value} ${created.unit}`)
     },
@@ -36,6 +37,7 @@ export function BiomarkerManualEntryForm() {
   function submitMeasurement(event: React.FormEvent) {
     event.preventDefault()
     if (!slug || !value || !measuredAt) return
+
     create.mutate({
       body: [
         {

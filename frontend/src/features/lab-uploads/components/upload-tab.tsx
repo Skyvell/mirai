@@ -18,6 +18,7 @@ export function LabUploadTab() {
     // Parsing is async: the new report appears under Sources as queued.
     onSuccess: () => {
       invalidateLabUploads(queryClient)
+
       toast.success('Report uploaded', {
         description:
           'We’re reading it now — review it under Sources before it’s added to your record.',
