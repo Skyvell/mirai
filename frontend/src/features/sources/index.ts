@@ -1,2 +1,2 @@
-export { AddDataDialog } from './add-data-dialog'
-export { SourcesPage } from './sources-page'
+export { AddDataDialog } from './components/add-data-dialog'
+export { SourcesPage } from './pages/sources'
