@@ -33,7 +33,7 @@ import {
   listLabUploadsOptions,
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary } from '@/client'
-import { apiErrorMessage } from '@/lib/api'
+import { extractApiErrorMessage } from '@/lib/api'
 import { invalidateLabUploadsAndSeries } from '../api/queries'
 import { LAB_UPLOAD_POLL_MS } from '../api/polling'
 import { LAB_UPLOAD_IN_PROGRESS } from '../domain/status'
@@ -99,7 +99,7 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
     onSuccess: () => invalidateLabUploadsAndSeries(queryClient),
     // Row actions have no inline slot, so delete failures surface as a toast;
     // form and query errors elsewhere render inline via ApiErrorAlert.
-    onError: (error) => toast.error(apiErrorMessage(error)),
+    onError: (error) => toast.error(extractApiErrorMessage(error)),
   })
 
   const inProgress = LAB_UPLOAD_IN_PROGRESS.has(upload.status)

@@ -25,7 +25,7 @@ export function LabUploadTab() {
     },
   })
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function uploadSelectedFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     // Reset so re-selecting the same file fires onChange again.
     event.target.value = ''
@@ -39,7 +39,7 @@ export function LabUploadTab() {
         type="file"
         accept="application/pdf"
         className="hidden"
-        onChange={onFileChange}
+        onChange={uploadSelectedFile}
       />
       <div>
         <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>

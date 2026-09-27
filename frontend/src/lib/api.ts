@@ -15,7 +15,7 @@ export const createClientConfig: CreateClientConfig = (config) => ({
 })
 
 /** Surface FastAPI's `detail` from a thrown error body, falling back to the raw error. */
-export function apiErrorMessage(error: unknown): string {
+export function extractApiErrorMessage(error: unknown): string {
   if (error !== null && typeof error === 'object' && 'detail' in error) {
     const { detail } = error as { detail: unknown }
     if (typeof detail === 'string') return detail
