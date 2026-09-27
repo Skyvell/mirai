@@ -1,6 +1,6 @@
 # Mirai
 
-Direct-to-consumer precision-health app. MVP: blood biomarkers.
+Direct-to-consumer precision-health app.
 
 ## Project structure
 

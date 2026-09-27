@@ -17,9 +17,9 @@ pnpm generate:api   # re-export the API's OpenAPI schema and regenerate src/clie
 
 ## Stack
 
-Vite 8, React 19, TypeScript, TanStack Router (file-based), TanStack Query, Tailwind v4, shadcn/ui (Radix, lucide-react, Geist), Clerk, zod, react-hook-form, date-fns, generated API client (`@hey-api/openapi-ts`). Consult `docs/stack.md` before adding a dependency; respect its `[MVP]`/`[LATER]` tags.
+Vite 8, React 19, TypeScript, TanStack Router (file-based), TanStack Query, Tailwind v4, shadcn/ui (Radix, lucide-react, Geist), Clerk, zod, react-hook-form, date-fns, generated API client (`@hey-api/openapi-ts`). Consult `docs/stack.md` before adding a dependency.
 
-Nine routes: `/` (Overview), `/biomarkers`, `/sources` + `/sources/$uploadId/review`, `/settings`, and placeholders for `/wearables`, `/omics`, `/insights`, `/interventions`. Only biomarkers and lab uploads are in MVP scope.
+Nine routes: `/` (Overview), `/biomarkers`, `/sources` + `/sources/$uploadId/review`, `/settings`, and placeholders for `/wearables`, `/omics`, `/insights`, `/interventions`.
 
 ## Layout
 

@@ -25,4 +25,4 @@ Users create interventions (actions taken over time) and track how the data chan
 Architected from the start to evolve into a precision-medicine platform; lab-test integration may come later.
 
 ## Regulatory and Healthcare Readiness
-Designed for future healthcare and regulatory requirements, though the MVP is not positioned as a medical device or diagnostic.
+Designed for future healthcare and regulatory requirements, though the first version is not positioned as a medical device or diagnostic.

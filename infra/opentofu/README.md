@@ -1,7 +1,5 @@
 # Infrastructure — OpenTofu (GCP)
 
-MVP infra for Mirai: **Cloud SQL (Postgres 17)** + **Cloud Run** (FastAPI).
-
 ```
 environments/<env>/  per-env root — backend + provider + inlined values, calls the module
 modules/app/         the whole app: APIs, registry, IAM, Cloud SQL, Cloud Run
