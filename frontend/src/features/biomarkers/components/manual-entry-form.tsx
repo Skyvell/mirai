@@ -33,7 +33,7 @@ export function BiomarkerManualEntryForm() {
     },
   })
 
-  function onSubmit(event: React.FormEvent) {
+  function submitMeasurement(event: React.FormEvent) {
     event.preventDefault()
     if (!slug || !value || !measuredAt) return
     create.mutate({
@@ -51,7 +51,7 @@ export function BiomarkerManualEntryForm() {
   }
 
   return (
-    <form className="flex flex-col gap-3" onSubmit={onSubmit}>
+    <form className="flex flex-col gap-3" onSubmit={submitMeasurement}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="biomarker">Biomarker</Label>
         <BiomarkerCombobox

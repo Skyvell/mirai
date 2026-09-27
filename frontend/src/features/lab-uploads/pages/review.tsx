@@ -128,7 +128,7 @@ function ReviewForm({
     )
   }
 
-  async function onConfirm() {
+  async function confirmDraft() {
     // One edit payload carries every row's fields and mapping, then commit.
     const body = {
       measured_at: measuredAt || null,
@@ -208,7 +208,7 @@ function ReviewForm({
 
       {/* The negative margin cancels the `p-6` padding on <main> in _authenticated.tsx so the bar spans full width. */}
       <div className="sticky bottom-0 -mx-6 flex items-center gap-3 border-t bg-background px-6 py-3">
-        <Button onClick={onConfirm} disabled={pending || keptCount === 0 || !measuredAt}>
+        <Button onClick={confirmDraft} disabled={pending || keptCount === 0 || !measuredAt}>
           {pending ? 'Adding…' : `Add ${pluralize(keptCount, 'measurement')} to my record`}
         </Button>
         {!measuredAt && (
