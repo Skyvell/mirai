@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, getRouteApi, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { ApiErrorAlert } from '@/components/api-error-alert'
 import { QueryPane } from '@/components/query-pane'
@@ -21,9 +21,11 @@ import { constructLabUploadDraftRow, type LabUploadDraftRow } from '../component
 import { LAB_UPLOAD_POLL_MS } from '../api/polling'
 import { LAB_UPLOAD_IN_PROGRESS } from '../domain/status'
 
-// The route owns the param and passes it in: a feature page importing its own
-// route file would invert the layer direction and cycle.
-export function LabUploadReviewPage({ uploadId }: { uploadId: string }) {
+const route = getRouteApi('/_authenticated/sources/$uploadId/review')
+
+export function LabUploadReviewPage() {
+  const { uploadId } = route.useParams()
+
   const detail = useQuery({
     ...getLabUploadOptions({ path: { upload_id: uploadId } }),
     // Keep polling if the user lands here before parsing has finished.
