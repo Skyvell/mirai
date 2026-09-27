@@ -9,11 +9,11 @@ import { AddDataDialog } from '@/features/sources'
 import { biomarkersOptions } from '@/features/biomarkers'
 import { isProfileComplete } from '@/features/profile'
 
-// Onboarding renders once per account but drags in the whole profile form, so it
+// ProfileOnboarding renders once per account but drags in the whole profile form, so it
 // stays off the shell's critical path.
-const Onboarding = lazy(() =>
+const ProfileOnboarding = lazy(() =>
   import('@/features/profile/components/onboarding').then((m) => ({
-    default: m.Onboarding,
+    default: m.ProfileOnboarding,
   })),
 )
 
@@ -55,7 +55,7 @@ function AuthenticatedLayout() {
   if (!isProfileComplete(me.data)) {
     return (
       <Suspense fallback={<div className={fullScreenMessage}>Loading…</div>}>
-        <Onboarding current={me.data} />
+        <ProfileOnboarding current={me.data} />
       </Suspense>
     )
   }

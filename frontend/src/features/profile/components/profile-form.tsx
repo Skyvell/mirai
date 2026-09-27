@@ -12,7 +12,7 @@ import {
   updateCurrentUserMutation,
 } from '@/client/@tanstack/react-query.gen'
 import {
-  parseDateOfBirth,
+  parseProfileDateOfBirth,
   profileSchema,
   type ProfileFormValues,
 } from '../domain/schema'
@@ -57,7 +57,7 @@ export function ProfileForm({
     mode: 'onTouched',
     defaultValues: {
       sex: current.sex ?? undefined,
-      dateOfBirth: parseDateOfBirth(current.date_of_birth),
+      dateOfBirth: parseProfileDateOfBirth(current.date_of_birth),
     },
   })
 
