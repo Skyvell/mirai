@@ -15,9 +15,11 @@ import {
 import type { LabDraft, LabUploadDetail } from '@/client'
 import { pluralize } from '@/lib/text'
 import { biomarkersOptions, findBiomarker } from '@/features/biomarkers'
-import { invalidateLabUploadsAndSeries } from './api'
-import { DraftItemsTable, toRow, type DraftRow } from './components/draft-items-table'
-import { IN_PROGRESS, POLL_MS } from './status'
+import { invalidateLabUploadsAndSeries } from '../api/queries'
+import { DraftItemsTable } from '../components/draft-items-table'
+import { toRow, type DraftRow } from '../components/draft-row'
+import { POLL_MS } from '../api/polling'
+import { IN_PROGRESS } from '../domain/status'
 
 // The route owns the param and passes it in: a feature page importing its own
 // route file would invert the layer direction and cycle.

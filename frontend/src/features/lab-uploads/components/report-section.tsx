@@ -34,13 +34,10 @@ import {
 } from '@/client/@tanstack/react-query.gen'
 import type { LabUploadSummary } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
-import { invalidateLabUploadsAndSeries } from '../api'
-import {
-  IN_PROGRESS,
-  POLL_MS,
-  STATUS_LABEL,
-  STATUS_VARIANT,
-} from '../status'
+import { invalidateLabUploadsAndSeries } from '../api/queries'
+import { POLL_MS } from '../api/polling'
+import { IN_PROGRESS } from '../domain/status'
+import { STATUS_LABEL, STATUS_VARIANT } from './status-badge'
 import { pluralize } from '@/lib/text'
 import { format } from 'date-fns'
 
