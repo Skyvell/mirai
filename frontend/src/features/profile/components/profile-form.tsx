@@ -6,10 +6,11 @@ import { toast } from 'sonner'
 import { differenceInYears, format } from 'date-fns'
 import { CalendarIcon, Check } from 'lucide-react'
 
-import type { MeResponse } from '@/client'
+import type { MeResponse, Sex } from '@/client'
 import { updateCurrentUserMutation } from '@/client/@tanstack/react-query.gen'
 import { seedProfileCache } from '../api/queries'
 import {
+  PROFILE_SEX_VALUES,
   parseProfileDateOfBirth,
   profileSchema,
   type ProfileFormValues,
@@ -31,10 +32,11 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
-const SEX_OPTIONS = [
-  { value: 'female', label: 'Female' },
-  { value: 'male', label: 'Male' },
-] as const
+// Keyed by Sex so a value added to the backend enum fails the build until labelled.
+const SEX_LABEL: Record<Sex, string> = {
+  female: 'Female',
+  male: 'Male',
+}
 
 // Fixed calendar bounds; the upper bound ("today") stays inline as it is time-dependent.
 const MIN_MONTH = new Date(1900, 0)
@@ -92,19 +94,19 @@ export function ProfileForm({
                   onValueChange={field.onChange}
                   className="grid grid-cols-2 gap-3"
                 >
-                  {SEX_OPTIONS.map((option) => (
+                  {PROFILE_SEX_VALUES.map((sex) => (
                     <Label
-                      key={option.value}
-                      htmlFor={`sex-${option.value}`}
+                      key={sex}
+                      htmlFor={`sex-${sex}`}
                       className="flex cursor-pointer items-center justify-between rounded-lg border border-input bg-background px-4 py-3 font-medium transition-colors hover:bg-accent has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
                     >
-                      <span>{option.label}</span>
+                      <span>{SEX_LABEL[sex]}</span>
                       <RadioGroupItem
-                        id={`sex-${option.value}`}
-                        value={option.value}
+                        id={`sex-${sex}`}
+                        value={sex}
                         className="sr-only"
                       />
-                      {field.value === option.value && (
+                      {field.value === sex && (
                         <Check className="size-4 text-primary" />
                       )}
                     </Label>
