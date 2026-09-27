@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns'
 import { Card } from '@/components/ui/card'
 import { computeBiomarkerStatus } from '../domain/status'
-import { resolveStatusColorProps } from './status-color'
+import { resolveBiomarkerStatusColorProps } from './status-color'
 import type { BiomarkerSummary } from '../domain/summary'
 import { BiomarkerBulletGraph } from './bullet-graph'
 import { BiomarkerStatusLabel } from './status-label'
@@ -22,7 +22,7 @@ export function BiomarkerRow({
   const status = computeBiomarkerStatus({ value, intervals })
 
   return (
-    <Card {...resolveStatusColorProps(status, ROW_LAYOUT)}>
+    <Card {...resolveBiomarkerStatusColorProps(status, ROW_LAYOUT)}>
       <span className="font-medium">{name}</span>
       <div className="flex items-baseline gap-1.5">
         <span className="text-xl font-light tracking-tight">{value}</span>

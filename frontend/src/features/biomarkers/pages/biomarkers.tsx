@@ -8,9 +8,9 @@ import type { BiomarkerSummary } from '../domain/summary'
 import { BiomarkerRowList } from '../components/row-list'
 import { BiomarkerTileGrid } from '../components/tile-grid'
 import { BiomarkerToolbar } from '../components/toolbar'
-import { matchesName, matchesStatus } from '../domain/filters'
+import { matchesBiomarkerName, matchesBiomarkerStatus } from '../domain/filters'
 import { computeBiomarkerStatus, type BiomarkerStatus } from '../domain/status'
-import { useViewMode } from '../hooks/use-view-mode'
+import { useBiomarkerViewMode } from '../hooks/use-view-mode'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
 
@@ -54,14 +54,14 @@ const FIXTURES: BiomarkerSummary[] = [
 export function BiomarkersPage() {
   const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
-  const { viewMode, selectViewMode } = useViewMode()
+  const { viewMode, selectViewMode } = useBiomarkerViewMode()
 
   const summaries = useMemo(
     () =>
       FIXTURES.filter(
         (summary) =>
-          matchesName(summary.name, query) &&
-          matchesStatus(computeBiomarkerStatus(summary), statusFilter)
+          matchesBiomarkerName(summary.name, query) &&
+          matchesBiomarkerStatus(computeBiomarkerStatus(summary), statusFilter)
       ).sort((a, b) => a.name.localeCompare(b.name)),
     [query, statusFilter]
   )

@@ -31,7 +31,7 @@ const TABS = [
     label: 'Manual entry',
     Component: lazy(() =>
       import('@/features/biomarkers/components/manual-entry-form').then((m) => ({
-        default: m.ManualEntryForm,
+        default: m.BiomarkerManualEntryForm,
       })),
     ),
   },

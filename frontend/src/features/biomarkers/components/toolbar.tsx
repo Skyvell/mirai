@@ -8,8 +8,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { BIOMARKER_STATUSES, parseStatus, type BiomarkerStatus } from '../domain/status'
-import { parseViewMode, type BiomarkerViewMode } from '../domain/view-mode'
+import { BIOMARKER_STATUSES, parseBiomarkerStatus, type BiomarkerStatus } from '../domain/status'
+import { parseBiomarkerViewMode, type BiomarkerViewMode } from '../domain/view-mode'
 
 const ALL_STATUSES = 'all'
 
@@ -51,7 +51,7 @@ export function BiomarkerToolbar({
       </InputGroup>
       <Select
         value={statusFilter ?? ALL_STATUSES}
-        onValueChange={(value) => onStatusFilterChange(parseStatus(value))}
+        onValueChange={(value) => onStatusFilterChange(parseBiomarkerStatus(value))}
       >
         <SelectTrigger className="w-40" aria-label="Filter by status">
           <SelectValue />
@@ -69,7 +69,7 @@ export function BiomarkerToolbar({
         type="single"
         value={viewMode}
         onValueChange={(value) => {
-          const next = parseViewMode(value)
+          const next = parseBiomarkerViewMode(value)
           if (next !== undefined) onViewModeChange(next)
         }}
         variant="outline"
