@@ -22,7 +22,7 @@ const TABS = [
     label: 'Upload lab PDF',
     Component: lazy(() =>
       import('@/features/lab-uploads/components/upload-tab').then((m) => ({
-        default: m.UploadTab,
+        default: m.LabUploadTab,
       })),
     ),
   },

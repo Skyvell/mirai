@@ -1,2 +1,2 @@
-export { ReportSection } from './components/report-section'
-export { ReviewPage } from './pages/review'
+export { LabUploadReportSection } from './components/report-section'
+export { LabUploadReviewPage } from './pages/review'

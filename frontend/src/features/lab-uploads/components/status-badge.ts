@@ -3,7 +3,7 @@ import type { UploadStatus } from '@/client'
 import type { Badge } from '@/components/ui/badge'
 
 // User-facing label per lifecycle state; queued and processing read the same.
-export const STATUS_LABEL: Record<UploadStatus, string> = {
+export const LAB_UPLOAD_STATUS_LABEL: Record<UploadStatus, string> = {
   queued: 'Processing',
   processing: 'Processing',
   awaiting_review: 'Ready to review',
@@ -11,7 +11,7 @@ export const STATUS_LABEL: Record<UploadStatus, string> = {
   failed: 'Failed',
 }
 
-export const STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant']> = {
+export const LAB_UPLOAD_STATUS_VARIANT: Record<UploadStatus, ComponentProps<typeof Badge>['variant']> = {
   queued: 'outline',
   processing: 'outline',
   awaiting_review: 'default',

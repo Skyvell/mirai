@@ -35,18 +35,18 @@ import {
 import type { LabUploadSummary } from '@/client'
 import { apiErrorMessage } from '@/lib/api'
 import { invalidateLabUploadsAndSeries } from '../api/queries'
-import { POLL_MS } from '../api/polling'
-import { IN_PROGRESS } from '../domain/status'
-import { STATUS_LABEL, STATUS_VARIANT } from './status-badge'
+import { LAB_UPLOAD_POLL_MS } from '../api/polling'
+import { LAB_UPLOAD_IN_PROGRESS } from '../domain/status'
+import { LAB_UPLOAD_STATUS_LABEL, LAB_UPLOAD_STATUS_VARIANT } from './status-badge'
 import { pluralize } from '@/lib/text'
 import { format } from 'date-fns'
 
-export function ReportSection() {
+export function LabUploadReportSection() {
   const uploads = useQuery({
     ...listLabUploadsOptions(),
     // Poll only while something is still parsing; stop once all rows are terminal.
     refetchInterval: (query) =>
-      query.state.data?.some((u) => IN_PROGRESS.has(u.status)) ? POLL_MS : false,
+      query.state.data?.some((u) => LAB_UPLOAD_IN_PROGRESS.has(u.status)) ? LAB_UPLOAD_POLL_MS : false,
   })
 
   return (
@@ -102,15 +102,15 @@ function ReportRow({ upload }: { upload: LabUploadSummary }) {
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
-  const inProgress = IN_PROGRESS.has(upload.status)
+  const inProgress = LAB_UPLOAD_IN_PROGRESS.has(upload.status)
 
   return (
     <TableRow>
       <TableCell>{upload.filename}</TableCell>
       <TableCell>{format(new Date(upload.created_at), 'yyyy-MM-dd')}</TableCell>
       <TableCell>
-        <Badge variant={STATUS_VARIANT[upload.status]}>
-          {STATUS_LABEL[upload.status]}
+        <Badge variant={LAB_UPLOAD_STATUS_VARIANT[upload.status]}>
+          {LAB_UPLOAD_STATUS_LABEL[upload.status]}
         </Badge>
       </TableCell>
       <TableCell>{upload.measurement_count || '—'}</TableCell>

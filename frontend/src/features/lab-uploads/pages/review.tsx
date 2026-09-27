@@ -16,19 +16,19 @@ import type { LabDraft, LabUploadDetail } from '@/client'
 import { pluralize } from '@/lib/text'
 import { biomarkersOptions, findBiomarker } from '@/features/biomarkers'
 import { invalidateLabUploadsAndSeries } from '../api/queries'
-import { DraftItemsTable } from '../components/draft-items-table'
-import { toRow, type DraftRow } from '../components/draft-row'
-import { POLL_MS } from '../api/polling'
-import { IN_PROGRESS } from '../domain/status'
+import { LabUploadDraftItemsTable } from '../components/draft-items-table'
+import { constructLabUploadDraftRow, type LabUploadDraftRow } from '../components/draft-row'
+import { LAB_UPLOAD_POLL_MS } from '../api/polling'
+import { LAB_UPLOAD_IN_PROGRESS } from '../domain/status'
 
 // The route owns the param and passes it in: a feature page importing its own
 // route file would invert the layer direction and cycle.
-export function ReviewPage({ uploadId }: { uploadId: string }) {
+export function LabUploadReviewPage({ uploadId }: { uploadId: string }) {
   const detail = useQuery({
     ...getLabUploadOptions({ path: { upload_id: uploadId } }),
     // Keep polling if the user lands here before parsing has finished.
     refetchInterval: (query) =>
-      query.state.data && IN_PROGRESS.has(query.state.data.status) ? POLL_MS : false,
+      query.state.data && LAB_UPLOAD_IN_PROGRESS.has(query.state.data.status) ? LAB_UPLOAD_POLL_MS : false,
   })
 
   return (
@@ -89,9 +89,9 @@ function ReviewForm({
   const biomarkers = useQuery(biomarkersOptions())
 
   const [measuredAt, setMeasuredAt] = useState(draft.measured_at ?? '')
-  const [rows, setRows] = useState<DraftRow[]>(() => [
-    ...draft.items.map((i) => toRow(i, 'matched')),
-    ...draft.skipped.map((i) => toRow(i, 'unmatched')),
+  const [rows, setRows] = useState<LabUploadDraftRow[]>(() => [
+    ...draft.items.map((i) => constructLabUploadDraftRow(i, 'matched')),
+    ...draft.skipped.map((i) => constructLabUploadDraftRow(i, 'unmatched')),
   ])
 
   const update = useMutation(updateLabDraftMutation())
@@ -110,7 +110,7 @@ function ReviewForm({
   // A row commits only once kept and mapped to a known biomarker.
   const keptCount = rows.filter((r) => r.included && r.slug).length
 
-  function patchRow(id: string, patch: Partial<DraftRow>) {
+  function patchRow(id: string, patch: Partial<LabUploadDraftRow>) {
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   }
 
@@ -178,7 +178,7 @@ function ReviewForm({
         {matched.length === 0 ? (
           <p className="text-sm text-muted-foreground">No biomarkers were matched.</p>
         ) : (
-          <DraftItemsTable
+          <LabUploadDraftItemsTable
             rows={matched}
             biomarkers={biomarkers.data ?? []}
             onPatch={patchRow}
@@ -193,7 +193,7 @@ function ReviewForm({
           <p className="text-sm text-muted-foreground">
             These labels weren&rsquo;t recognized. Map one to a biomarker to include it.
           </p>
-          <DraftItemsTable
+          <LabUploadDraftItemsTable
             rows={unmatched}
             biomarkers={biomarkers.data ?? []}
             onPatch={patchRow}
