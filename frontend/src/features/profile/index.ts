@@ -1,2 +1,2 @@
-export { isProfileComplete } from './completeness'
-export { SettingsPage } from './settings-page'
+export { isProfileComplete } from './domain/completeness'
+export { SettingsPage } from './pages/settings'
