@@ -11,7 +11,7 @@ export type BiomarkerIntervals = {
   optimal: BiomarkerInterval | null
 }
 
-export function isOutsideInterval(value: number, interval: BiomarkerInterval | null): boolean {
+export function isOutsideBiomarkerInterval(value: number, interval: BiomarkerInterval | null): boolean {
   if (interval === null) return false
 
   return (

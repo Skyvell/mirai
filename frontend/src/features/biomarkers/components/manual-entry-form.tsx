@@ -12,7 +12,7 @@ import { BiomarkerCombobox } from './combobox'
 import { format } from 'date-fns'
 
 // Self-contained Add-data tab for entering one measurement by hand.
-export function ManualEntryForm() {
+export function BiomarkerManualEntryForm() {
   const queryClient = useQueryClient()
   const biomarkers = useQuery(biomarkersOptions())
   const [slug, setSlug] = useState('')

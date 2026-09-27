@@ -1,6 +1,6 @@
 import type { BiomarkerStatus } from './status'
 
-export function matchesName(
+export function matchesBiomarkerName(
   name: string,
   query: string | undefined
 ): boolean {
@@ -10,7 +10,7 @@ export function matchesName(
   return name.toLowerCase().includes(needle)
 }
 
-export function matchesStatus(
+export function matchesBiomarkerStatus(
   status: BiomarkerStatus,
   filter: BiomarkerStatus | undefined
 ): boolean {
