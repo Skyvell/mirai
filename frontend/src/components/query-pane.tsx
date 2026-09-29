@@ -8,7 +8,7 @@ export function QueryPane<T>({
   empty,
   children,
 }: {
-  query: UseQueryResult<T, unknown>
+  query: Pick<UseQueryResult<T, unknown>, 'data' | 'isError' | 'error'>
   empty?: ReactNode
   children: (data: T) => ReactNode
 }) {

@@ -27,7 +27,7 @@ type BiomarkerBulletGraphProps = {
 }
 
 export function BiomarkerBulletGraph({ value, intervals, showBounds = true }: BiomarkerBulletGraphProps) {
-  const range = computeDrawnRange(intervals)
+  const range = computeDrawnRange(value, intervals)
   if (range === null) return null
 
   return (
@@ -89,13 +89,16 @@ function Marks({ intervals, range }: { intervals: BiomarkerIntervals; range: Int
   )
 }
 
-// Without both ends there is no scale to draw.
-function computeDrawnRange({ reference, optimal }: BiomarkerIntervals): Interval | null {
-  const min = reference?.low ?? optimal?.low ?? null
-  const max = reference?.high ?? optimal?.high ?? null
-  if (min === null || max === null) return null
+function computeDrawnRange(value: number, { reference, optimal }: BiomarkerIntervals): Interval | null {
+  const low = reference?.low ?? optimal?.low ?? null
+  const high = reference?.high ?? optimal?.high ?? null
+  if (low === null && high === null) return null
 
-  return expandInterval({ min, max }, PAD)
+  const min = low ?? 0
+  const max = high ?? Math.max(value, min * 2)
+  const padded = expandInterval({ min, max }, PAD)
+
+  return { min: low === null ? 0 : padded.min, max: padded.max }
 }
 
 // Each tick reports the status its own position would read, so the scale and the
