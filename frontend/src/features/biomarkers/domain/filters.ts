@@ -11,7 +11,7 @@ export function matchesBiomarkerName(
   return name.toLowerCase().includes(needle)
 }
 
-export function matchesBiomarkerStatus(
+function matchesBiomarkerStatus(
   status: BiomarkerStatus,
   filter: BiomarkerStatus | undefined
 ): boolean {
