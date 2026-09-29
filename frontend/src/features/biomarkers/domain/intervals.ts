@@ -20,17 +20,10 @@ type BiomarkerBandSubject = {
   measuredAt: Date
 }
 
-export function isOutsideBiomarkerInterval(value: number, interval: BiomarkerInterval | null): boolean {
-  if (interval === null) return false
-
-  return (
-    (interval.low !== null && value < interval.low) ||
-    (interval.high !== null && value > interval.high)
-  )
+export function isWithinBiomarkerInterval(value: number, { low, high }: BiomarkerInterval): boolean {
+  return (low === null || value >= low) && (high === null || value <= high)
 }
 
-// Age is taken at the draw, since that is what the value was measured against;
-// the age bounds are half-open, matching the seed.
 export function selectBiomarkerBand(
   bands: BiomarkerIntervalRead[],
   type: IntervalType,
