@@ -9,11 +9,11 @@ export type ClientOptions = {
  */
 export type BiomarkerIntervalRead = {
     type: IntervalType;
-    sex: Sex | null;
+    sex: Sex;
     /**
      * Age Min Days
      */
-    age_min_days: number | null;
+    age_min_days: number;
     /**
      * Age Max Days
      */
@@ -441,7 +441,7 @@ export type MeUpdate = {
  *
  * Reference sex — the biological partition a lab stratifies its intervals by.
  *
- * Distinct from gender identity; a null column value means "any sex".
+ * Distinct from gender identity.
  */
 export type Sex = 'male' | 'female';
 

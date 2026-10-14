@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from mirai_api.core.deps import get_biomarker_service
-from mirai_api.core.enums import IntervalType
+from mirai_api.core.enums import IntervalType, Sex
 from mirai_api.main import app
 from mirai_api.schemas.biomarker_intervals import (
     BiomarkerIntervalRead,
@@ -138,8 +138,8 @@ def test_list_biomarker_intervals_returns_grouped_bands(
             "glucose": [
                 BiomarkerIntervalRead(
                     type=IntervalType.REFERENCE,
-                    sex=None,
-                    age_min_days=None,
+                    sex=Sex.MALE,
+                    age_min_days=0,
                     age_max_days=None,
                     low=Decimal("3.9"),
                     high=Decimal("5.6"),
@@ -151,7 +151,8 @@ def test_list_biomarker_intervals_returns_grouped_bands(
     assert list(body.keys()) == ["glucose"]
     (band,) = body["glucose"]
     assert band["type"] == "reference"
-    assert band["sex"] is None
+    assert band["sex"] == "male"
+    assert band["age_min_days"] == 0
     assert band["low"] == "3.9"
     assert "display_name" not in band
     assert "canonical_unit" not in band

@@ -29,7 +29,7 @@ class BiomarkerIntervalRepository:
                 Biomarker.slug,
                 BiomarkerInterval.type,
                 BiomarkerInterval.sex,
-                BiomarkerInterval.age_min_days.asc().nulls_first(),
+                BiomarkerInterval.age_min_days,
             )
         )
 

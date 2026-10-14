@@ -1,24 +1,28 @@
 """Seed data for `biomarker_intervals`, imported by the 0001 migration.
 
-Extend this by appending dicts to ``INTERVALS`` — each is one canonical band,
-keyed by biomarker ``slug`` (the migration resolves the slug to its id). Ages
-are half-open ``[age_min_days, age_max_days)`` in canonical days; ``None`` means
-unbounded (or, for ``age_min_days``, birth). ``sex`` is ``"male"``/``"female"``
-or ``None`` (any). Either bound may be ``None`` for a one-sided interval.
+Each ``Curve`` is one (biomarker, sex) series of ``(from_age_days, low, high)``
+bands, sorted by age. A band covers the half-open age range
+``[from_age_days, next from_age_days)``; the last band is open-ended. Ages below
+the first band have no interval. ``low`` and ``high`` are inclusive; either may
+be ``None`` for a one-sided interval.
 
 Values are Karolinska Universitetslaboratoriet referensintervall in the
-biomarker's canonical unit. Age labels from the source are normalized to
-contiguous half-open ranges by tiling each band's upper to the next band's
-lower. Years/months have no fixed day count, so the helpers approximate
-(1 y = 365.25 d, 1 mo = 30.4375 d) — fine for partition boundaries.
+biomarker's canonical unit. Years/months have no fixed day count, so the
+helpers approximate (1 y = 365.25 d, 1 mo = 30.4375 d).
 """
 
+from dataclasses import dataclass
 from decimal import Decimal
+from itertools import pairwise
+
+from mirai_api.core.enums import IntervalType, Sex
 
 SOURCE = "Karolinska Universitetslaboratoriet"
 
+MALE = Sex.MALE
+FEMALE = Sex.FEMALE
 
-# Age helpers: source labels → canonical days.
+
 def years(n: float) -> int:
     return round(n * 365.25)
 
@@ -35,7 +39,6 @@ def days(n: int) -> int:
     return n
 
 
-# Per-analyte Karolinska source pages.
 GLUCOSE_URL = "https://www.karolinska.se/KUL/Alla-anvisningar/Anvisning/9095"
 CHOLESTEROL_URL = "https://www.karolinska.se/pta/klinisk-kemi/kolesterol-p-/"
 LDL_URL = "https://www.karolinska.se/pta/klinisk-kemi/ldl-kolesterol-fp-/"
@@ -48,695 +51,227 @@ FERRITIN_URL = "https://www.karolinska.se/KUL/Alla-anvisningar/Anvisning/9074"
 CREATININE_URL = "https://www.karolinska.se/KUL/Alla-anvisningar/Anvisning/9168"
 
 
-INTERVALS: list[dict] = [
-    # Glucose (mmol/L) — single fasting interval, all ages, unisex.
-    {
-        "slug": "glucose",
-        "sex": None,
-        "age_min_days": None,
-        "age_max_days": None,
-        "low": Decimal("4.2"),
-        "high": Decimal("6.0"),
-        "source": SOURCE,
-        "source_url": GLUCOSE_URL,
-    },
-    # Total cholesterol (mmol/L) — sex split only at 15-17 y.
-    {
-        "slug": "total_cholesterol",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": years(1),
-        "low": Decimal("2.4"),
-        "high": Decimal("5.3"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": None,
-        "age_min_days": years(1),
-        "age_max_days": years(15),
-        "low": Decimal("2.7"),
-        "high": Decimal("5.9"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": "female",
-        "age_min_days": years(15),
-        "age_max_days": years(18),
-        "low": Decimal("2.4"),
-        "high": Decimal("6.0"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": "male",
-        "age_min_days": years(15),
-        "age_max_days": years(18),
-        "low": Decimal("2.5"),
-        "high": Decimal("5.4"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": None,
-        "age_min_days": years(18),
-        "age_max_days": years(31),
-        "low": Decimal("2.9"),
-        "high": Decimal("6.1"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": None,
-        "age_min_days": years(31),
-        "age_max_days": years(51),
-        "low": Decimal("3.3"),
-        "high": Decimal("6.9"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    {
-        "slug": "total_cholesterol",
-        "sex": None,
-        "age_min_days": years(51),
-        "age_max_days": None,
-        "low": Decimal("3.9"),
-        "high": Decimal("7.8"),
-        "source": SOURCE,
-        "source_url": CHOLESTEROL_URL,
-    },
-    # LDL cholesterol (mmol/L) — unisex; source's 18-31/31-50 overlap split at 31.
-    {
-        "slug": "ldl_cholesterol",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": years(1),
-        "low": Decimal("0.8"),
-        "high": Decimal("3.5"),
-        "source": SOURCE,
-        "source_url": LDL_URL,
-    },
-    {
-        "slug": "ldl_cholesterol",
-        "sex": None,
-        "age_min_days": years(1),
-        "age_max_days": years(18),
-        "low": Decimal("1.3"),
-        "high": Decimal("4.0"),
-        "source": SOURCE,
-        "source_url": LDL_URL,
-    },
-    {
-        "slug": "ldl_cholesterol",
-        "sex": None,
-        "age_min_days": years(18),
-        "age_max_days": years(31),
-        "low": Decimal("1.2"),
-        "high": Decimal("4.3"),
-        "source": SOURCE,
-        "source_url": LDL_URL,
-    },
-    {
-        "slug": "ldl_cholesterol",
-        "sex": None,
-        "age_min_days": years(31),
-        "age_max_days": years(51),
-        "low": Decimal("1.4"),
-        "high": Decimal("4.7"),
-        "source": SOURCE,
-        "source_url": LDL_URL,
-    },
-    {
-        "slug": "ldl_cholesterol",
-        "sex": None,
-        "age_min_days": years(51),
-        "age_max_days": None,
-        "low": Decimal("2.0"),
-        "high": Decimal("5.3"),
-        "source": SOURCE,
-        "source_url": LDL_URL,
-    },
-    # HDL cholesterol (mmol/L) — sex split at 15-17 y and adult.
-    {
-        "slug": "hdl_cholesterol",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": years(15),
-        "low": Decimal("0.7"),
-        "high": Decimal("1.9"),
-        "source": SOURCE,
-        "source_url": HDL_URL,
-    },
-    {
-        "slug": "hdl_cholesterol",
-        "sex": "female",
-        "age_min_days": years(15),
-        "age_max_days": years(18),
-        "low": Decimal("0.6"),
-        "high": Decimal("2.2"),
-        "source": SOURCE,
-        "source_url": HDL_URL,
-    },
-    {
-        "slug": "hdl_cholesterol",
-        "sex": "male",
-        "age_min_days": years(15),
-        "age_max_days": years(18),
-        "low": Decimal("0.7"),
-        "high": Decimal("1.8"),
-        "source": SOURCE,
-        "source_url": HDL_URL,
-    },
-    {
-        "slug": "hdl_cholesterol",
-        "sex": "female",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("1.0"),
-        "high": Decimal("2.7"),
-        "source": SOURCE,
-        "source_url": HDL_URL,
-    },
-    {
-        "slug": "hdl_cholesterol",
-        "sex": "male",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("0.8"),
-        "high": Decimal("2.1"),
-        "source": SOURCE,
-        "source_url": HDL_URL,
-    },
-    # Triglycerides (mmol/L) — unisex, fasting.
-    {
-        "slug": "triglycerides",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": years(1),
-        "low": Decimal("0.59"),
-        "high": Decimal("2.6"),
-        "source": SOURCE,
-        "source_url": TRIGLYCERIDES_URL,
-    },
-    {
-        "slug": "triglycerides",
-        "sex": None,
-        "age_min_days": years(1),
-        "age_max_days": years(18),
-        "low": Decimal("0.43"),
-        "high": Decimal("2.8"),
-        "source": SOURCE,
-        "source_url": TRIGLYCERIDES_URL,
-    },
-    {
-        "slug": "triglycerides",
-        "sex": None,
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("0.45"),
-        "high": Decimal("2.6"),
-        "source": SOURCE,
-        "source_url": TRIGLYCERIDES_URL,
-    },
-    # HbA1c (mmol/mol) — unisex; the <50 y band has no lower age bound.
-    {
-        "slug": "hba1c",
-        "sex": None,
-        "age_min_days": None,
-        "age_max_days": years(50),
-        "low": Decimal("27"),
-        "high": Decimal("42"),
-        "source": SOURCE,
-        "source_url": HBA1C_URL,
-    },
-    {
-        "slug": "hba1c",
-        "sex": None,
-        "age_min_days": years(50),
-        "age_max_days": None,
-        "low": Decimal("31"),
-        "high": Decimal("46"),
-        "source": SOURCE,
-        "source_url": HBA1C_URL,
-    },
-    # TSH (mIU/L; page unit mE/L) — unisex, age-dependent.
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": weeks(1),
-        "low": Decimal("0.7"),
-        "high": Decimal("15"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": weeks(1),
-        "age_max_days": months(4),
-        "low": Decimal("0.7"),
-        "high": Decimal("11"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": months(4),
-        "age_max_days": years(1),
-        "low": Decimal("0.7"),
-        "high": Decimal("8.4"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": years(1),
-        "age_max_days": years(7),
-        "low": Decimal("0.7"),
-        "high": Decimal("6.0"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": years(7),
-        "age_max_days": years(12),
-        "low": Decimal("0.6"),
-        "high": Decimal("4.8"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": years(12),
-        "age_max_days": years(19),
-        "low": Decimal("0.5"),
-        "high": Decimal("4.3"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    {
-        "slug": "tsh",
-        "sex": None,
-        "age_min_days": years(19),
-        "age_max_days": None,
-        "low": Decimal("0.3"),
-        "high": Decimal("4.2"),
-        "source": SOURCE,
-        "source_url": TSH_URL,
-    },
-    # Hemoglobin (g/L) — many neonatal/pediatric bands, adult sex split.
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": days(2),
-        "low": Decimal("150"),
-        "high": Decimal("240"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": days(2),
-        "age_max_days": days(7),
-        "low": Decimal("140"),
-        "high": Decimal("220"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": days(7),
-        "age_max_days": days(22),
-        "low": Decimal("130"),
-        "high": Decimal("200"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": days(22),
-        "age_max_days": months(1),
-        "low": Decimal("100"),
-        "high": Decimal("180"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": months(1),
-        "age_max_days": months(4),
-        "low": Decimal("100"),
-        "high": Decimal("160"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": months(4),
-        "age_max_days": years(1),
-        "low": Decimal("100"),
-        "high": Decimal("140"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": years(1),
-        "age_max_days": years(7),
-        "low": Decimal("100"),
-        "high": Decimal("150"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": years(7),
-        "age_max_days": years(11),
-        "low": Decimal("105"),
-        "high": Decimal("150"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": None,
-        "age_min_days": years(11),
-        "age_max_days": years(18),
-        "low": Decimal("110"),
-        "high": Decimal("160"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": "female",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("117"),
-        "high": Decimal("153"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    {
-        "slug": "hemoglobin",
-        "sex": "male",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("134"),
-        "high": Decimal("170"),
-        "source": SOURCE,
-        "source_url": HEMOGLOBIN_URL,
-    },
-    # Ferritin (µg/L) — Karolinska publishes adults only; under-18 unbanded.
-    {
-        "slug": "ferritin",
-        "sex": "female",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("13"),
-        "high": Decimal("150"),
-        "source": SOURCE,
-        "source_url": FERRITIN_URL,
-    },
-    {
-        "slug": "ferritin",
-        "sex": "male",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": Decimal("30"),
-        "high": Decimal("400"),
-        "source": SOURCE,
-        "source_url": FERRITIN_URL,
-    },
-    # Creatinine (µmol/L) — upper-bound only; per-year pediatric, sex split from 13 y.
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": 0,
-        "age_max_days": days(15),
-        "low": None,
-        "high": Decimal("77"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": days(15),
-        "age_max_days": months(2),
-        "low": None,
-        "high": Decimal("60"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": months(2),
-        "age_max_days": years(3),
-        "low": None,
-        "high": Decimal("41"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(3),
-        "age_max_days": years(4),
-        "low": None,
-        "high": Decimal("44"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(4),
-        "age_max_days": years(5),
-        "low": None,
-        "high": Decimal("47"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(5),
-        "age_max_days": years(6),
-        "low": None,
-        "high": Decimal("50"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(6),
-        "age_max_days": years(7),
-        "low": None,
-        "high": Decimal("53"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(7),
-        "age_max_days": years(8),
-        "low": None,
-        "high": Decimal("56"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(8),
-        "age_max_days": years(9),
-        "low": None,
-        "high": Decimal("59"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(9),
-        "age_max_days": years(10),
-        "low": None,
-        "high": Decimal("62"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(10),
-        "age_max_days": years(11),
-        "low": None,
-        "high": Decimal("65"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(11),
-        "age_max_days": years(12),
-        "low": None,
-        "high": Decimal("68"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": None,
-        "age_min_days": years(12),
-        "age_max_days": years(13),
-        "low": None,
-        "high": Decimal("71"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(13),
-        "age_max_days": years(14),
-        "low": None,
-        "high": Decimal("74"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(13),
-        "age_max_days": years(14),
-        "low": None,
-        "high": Decimal("84"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(14),
-        "age_max_days": years(15),
-        "low": None,
-        "high": Decimal("77"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(14),
-        "age_max_days": years(15),
-        "low": None,
-        "high": Decimal("87"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(15),
-        "age_max_days": years(16),
-        "low": None,
-        "high": Decimal("80"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(15),
-        "age_max_days": years(16),
-        "low": None,
-        "high": Decimal("90"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(16),
-        "age_max_days": years(17),
-        "low": None,
-        "high": Decimal("83"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(16),
-        "age_max_days": years(17),
-        "low": None,
-        "high": Decimal("93"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(17),
-        "age_max_days": years(18),
-        "low": None,
-        "high": Decimal("86"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(17),
-        "age_max_days": years(18),
-        "low": None,
-        "high": Decimal("96"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "female",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": None,
-        "high": Decimal("90"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
-    {
-        "slug": "creatinine",
-        "sex": "male",
-        "age_min_days": years(18),
-        "age_max_days": None,
-        "low": None,
-        "high": Decimal("100"),
-        "source": SOURCE,
-        "source_url": CREATININE_URL,
-    },
+type Band = tuple[int, str | None, str | None]
+
+
+@dataclass(frozen=True)
+class Curve:
+    slug: str
+    sex: Sex
+    source_url: str
+    bands: list[Band]
+    type: IntervalType = IntervalType.REFERENCE
+
+
+# fmt: off
+CURVES: list[Curve] = [
+    Curve("glucose", MALE, GLUCOSE_URL, [
+        (0,          "4.2",  "6.0"),
+    ]),
+    Curve("glucose", FEMALE, GLUCOSE_URL, [
+        (0,          "4.2",  "6.0"),
+    ]),
+
+    Curve("total_cholesterol", MALE, CHOLESTEROL_URL, [
+        (0,          "2.4",  "5.3"),
+        (years(1),   "2.7",  "5.9"),
+        (years(15),  "2.5",  "5.4"),
+        (years(18),  "2.9",  "6.1"),
+        (years(31),  "3.3",  "6.9"),
+        (years(51),  "3.9",  "7.8"),
+    ]),
+    Curve("total_cholesterol", FEMALE, CHOLESTEROL_URL, [
+        (0,          "2.4",  "5.3"),
+        (years(1),   "2.7",  "5.9"),
+        (years(15),  "2.4",  "6.0"),
+        (years(18),  "2.9",  "6.1"),
+        (years(31),  "3.3",  "6.9"),
+        (years(51),  "3.9",  "7.8"),
+    ]),
+
+    Curve("ldl_cholesterol", MALE, LDL_URL, [
+        (0,          "0.8",  "3.5"),
+        (years(1),   "1.3",  "4.0"),
+        (years(18),  "1.2",  "4.3"),
+        (years(31),  "1.4",  "4.7"),
+        (years(51),  "2.0",  "5.3"),
+    ]),
+    Curve("ldl_cholesterol", FEMALE, LDL_URL, [
+        (0,          "0.8",  "3.5"),
+        (years(1),   "1.3",  "4.0"),
+        (years(18),  "1.2",  "4.3"),
+        (years(31),  "1.4",  "4.7"),
+        (years(51),  "2.0",  "5.3"),
+    ]),
+
+    Curve("hdl_cholesterol", MALE, HDL_URL, [
+        (0,          "0.7",  "1.9"),
+        (years(15),  "0.7",  "1.8"),
+        (years(18),  "0.8",  "2.1"),
+    ]),
+    Curve("hdl_cholesterol", FEMALE, HDL_URL, [
+        (0,          "0.7",  "1.9"),
+        (years(15),  "0.6",  "2.2"),
+        (years(18),  "1.0",  "2.7"),
+    ]),
+
+    Curve("triglycerides", MALE, TRIGLYCERIDES_URL, [
+        (0,          "0.59", "2.6"),
+        (years(1),   "0.43", "2.8"),
+        (years(18),  "0.45", "2.6"),
+    ]),
+    Curve("triglycerides", FEMALE, TRIGLYCERIDES_URL, [
+        (0,          "0.59", "2.6"),
+        (years(1),   "0.43", "2.8"),
+        (years(18),  "0.45", "2.6"),
+    ]),
+
+    Curve("hba1c", MALE, HBA1C_URL, [
+        (0,          "27",   "42"),
+        (years(50),  "31",   "46"),
+    ]),
+    Curve("hba1c", FEMALE, HBA1C_URL, [
+        (0,          "27",   "42"),
+        (years(50),  "31",   "46"),
+    ]),
+
+    Curve("tsh", MALE, TSH_URL, [
+        (0,          "0.7",  "15"),
+        (weeks(1),   "0.7",  "11"),
+        (months(4),  "0.7",  "8.4"),
+        (years(1),   "0.7",  "6.0"),
+        (years(7),   "0.6",  "4.8"),
+        (years(12),  "0.5",  "4.3"),
+        (years(19),  "0.3",  "4.2"),
+    ]),
+    Curve("tsh", FEMALE, TSH_URL, [
+        (0,          "0.7",  "15"),
+        (weeks(1),   "0.7",  "11"),
+        (months(4),  "0.7",  "8.4"),
+        (years(1),   "0.7",  "6.0"),
+        (years(7),   "0.6",  "4.8"),
+        (years(12),  "0.5",  "4.3"),
+        (years(19),  "0.3",  "4.2"),
+    ]),
+
+    Curve("hemoglobin", MALE, HEMOGLOBIN_URL, [
+        (0,          "150",  "240"),
+        (days(2),    "140",  "220"),
+        (days(7),    "130",  "200"),
+        (days(22),   "100",  "180"),
+        (months(1),  "100",  "160"),
+        (months(4),  "100",  "140"),
+        (years(1),   "100",  "150"),
+        (years(7),   "105",  "150"),
+        (years(11),  "110",  "160"),
+        (years(18),  "134",  "170"),
+    ]),
+    Curve("hemoglobin", FEMALE, HEMOGLOBIN_URL, [
+        (0,          "150",  "240"),
+        (days(2),    "140",  "220"),
+        (days(7),    "130",  "200"),
+        (days(22),   "100",  "180"),
+        (months(1),  "100",  "160"),
+        (months(4),  "100",  "140"),
+        (years(1),   "100",  "150"),
+        (years(7),   "105",  "150"),
+        (years(11),  "110",  "160"),
+        (years(18),  "117",  "153"),
+    ]),
+
+    Curve("ferritin", MALE, FERRITIN_URL, [
+        (years(18),  "30",   "400"),
+    ]),
+    Curve("ferritin", FEMALE, FERRITIN_URL, [
+        (years(18),  "13",   "150"),
+    ]),
+
+    Curve("creatinine", MALE, CREATININE_URL, [
+        (0,          None,   "77"),
+        (days(15),   None,   "60"),
+        (months(2),  None,   "41"),
+        (years(3),   None,   "44"),
+        (years(4),   None,   "47"),
+        (years(5),   None,   "50"),
+        (years(6),   None,   "53"),
+        (years(7),   None,   "56"),
+        (years(8),   None,   "59"),
+        (years(9),   None,   "62"),
+        (years(10),  None,   "65"),
+        (years(11),  None,   "68"),
+        (years(12),  None,   "71"),
+        (years(13),  None,   "84"),
+        (years(14),  None,   "87"),
+        (years(15),  None,   "90"),
+        (years(16),  None,   "93"),
+        (years(17),  None,   "96"),
+        (years(18),  None,   "100"),
+    ]),
+    Curve("creatinine", FEMALE, CREATININE_URL, [
+        (0,          None,   "77"),
+        (days(15),   None,   "60"),
+        (months(2),  None,   "41"),
+        (years(3),   None,   "44"),
+        (years(4),   None,   "47"),
+        (years(5),   None,   "50"),
+        (years(6),   None,   "53"),
+        (years(7),   None,   "56"),
+        (years(8),   None,   "59"),
+        (years(9),   None,   "62"),
+        (years(10),  None,   "65"),
+        (years(11),  None,   "68"),
+        (years(12),  None,   "71"),
+        (years(13),  None,   "74"),
+        (years(14),  None,   "77"),
+        (years(15),  None,   "80"),
+        (years(16),  None,   "83"),
+        (years(17),  None,   "86"),
+        (years(18),  None,   "90"),
+    ]),
 ]
+# fmt: on
+
+
+def parse_bound(value: str | None) -> Decimal | None:
+    return Decimal(value) if value is not None else None
+
+
+def validate_curve(curve: Curve) -> None:
+    label = f"{curve.slug} ({curve.sex})"
+    starts = [start for start, _, _ in curve.bands]
+
+    if not starts:
+        raise ValueError(f"{label}: no bands")
+    if starts[0] < 0:
+        raise ValueError(f"{label}: first band starts below 0")
+    if any(left >= right for left, right in pairwise(starts)):
+        raise ValueError(f"{label}: band starts must strictly increase")
+
+    for start, low, high in curve.bands:
+        if low is None and high is None:
+            raise ValueError(f"{label}: band at {start} has no bound")
+        if low is not None and high is not None and Decimal(low) > Decimal(high):
+            raise ValueError(f"{label}: band at {start} has low above high")
+
+
+def expand_curve(curve: Curve) -> list[dict]:
+    validate_curve(curve)
+
+    ends = [start for start, _, _ in curve.bands[1:]] + [None]
+    return [
+        {
+            "slug": curve.slug,
+            "type": curve.type,
+            "sex": curve.sex,
+            "age_min_days": start,
+            "age_max_days": end,
+            "low": parse_bound(low),
+            "high": parse_bound(high),
+            "source": SOURCE,
+            "source_url": curve.source_url,
+        }
+        for (start, low, high), end in zip(curve.bands, ends, strict=True)
+    ]
+
+
+INTERVALS: list[dict] = [row for curve in CURVES for row in expand_curve(curve)]
