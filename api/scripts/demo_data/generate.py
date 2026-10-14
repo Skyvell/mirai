@@ -305,17 +305,16 @@ def reference_band(
     for band in INTERVALS:
         if band["slug"] != slug:
             continue
-        if band["sex"] not in (None, sex):
+        if band["sex"] != sex:
             continue
 
         # The stratum key includes type; only population reference bands belong in a row.
         if band.get("type", IntervalType.REFERENCE) != IntervalType.REFERENCE:
             continue
 
-        # None on either bound means unbounded on that side.
-        age_min = band["age_min_days"]
+        # A None upper age bound is open-ended.
         age_max = band["age_max_days"]
-        if age_min is not None and age_days < age_min:
+        if age_days < band["age_min_days"]:
             continue
         if age_max is not None and age_days >= age_max:
             continue

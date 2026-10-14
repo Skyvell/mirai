@@ -9,8 +9,8 @@ from mirai_api.models import BiomarkerInterval
 
 class BiomarkerIntervalRead(BaseModel):
     type: IntervalType
-    sex: Sex | None
-    age_min_days: int | None
+    sex: Sex
+    age_min_days: int
     age_max_days: int | None
     low: Decimal | None
     high: Decimal | None

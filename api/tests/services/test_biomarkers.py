@@ -122,8 +122,8 @@ def _interval(biomarker: Biomarker, **overrides: object) -> BiomarkerInterval:
         "id": uuid.uuid7(),
         "biomarker": biomarker,
         "type": IntervalType.REFERENCE,
-        "sex": None,
-        "age_min_days": None,
+        "sex": Sex.MALE,
+        "age_min_days": 0,
         "age_max_days": None,
         "interval_low": Decimal("3.9"),
         "interval_high": Decimal("5.6"),
@@ -310,7 +310,7 @@ def test_list_intervals_groups_by_biomarker() -> None:
     (band,) = result.root["glucose"]
     assert band.low == Decimal("3.9")
     assert band.high == Decimal("5.6")
-    assert band.sex is None
+    assert band.sex == Sex.MALE
 
 
 def test_list_intervals_dimorphic_marker_keeps_both_bands() -> None:

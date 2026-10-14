@@ -23,11 +23,11 @@ from mirai_api.models.biomarker import Biomarker
 class BiomarkerInterval(Base):
     """A canonical, platform-owned low/high band for a biomarker.
 
-    One row per (biomarker, type, sex, age band). NULL on any stratification
-    axis means "no constraint": a null sex applies to any sex, a null age bound
-    is unbounded. Age is canonical days, half-open [min, max). Bounds are in the
-    biomarker's canonical_unit; the read endpoint projects that unit rather than
-    storing a copy that could drift.
+    One row per (biomarker, type, sex, age band); every stratum names its sex
+    and start age, so a lookup matches exactly one row. Age is canonical days,
+    half-open [min, max), with a null max open-ended. Bounds are inclusive and in
+    the biomarker's canonical_unit; the read endpoint projects that unit rather
+    than storing a copy that could drift.
     """
 
     __tablename__ = "biomarker_intervals"
@@ -52,8 +52,7 @@ class BiomarkerInterval(Base):
         server_default=IntervalType.REFERENCE.value,
     )
 
-    # Null applies to any sex.
-    sex: Mapped[Sex | None] = mapped_column(
+    sex: Mapped[Sex] = mapped_column(
         Enum(
             Sex,
             name="sex",
@@ -63,8 +62,8 @@ class BiomarkerInterval(Base):
         ),
     )
 
-    # Half-open [min, max) in canonical days; null is unbounded, 0 is from birth.
-    age_min_days: Mapped[int | None] = mapped_column(Integer)
+    # Half-open [min, max) in canonical days; 0 is from birth, a null max is open-ended.
+    age_min_days: Mapped[int] = mapped_column(Integer, server_default="0")
     age_max_days: Mapped[int | None] = mapped_column(Integer)
 
     # Either bound may be null for a one-sided interval.
@@ -93,7 +92,6 @@ class BiomarkerInterval(Base):
             "type",
             "sex",
             "age_min_days",
-            "age_max_days",
             name="uq_biomarker_intervals_stratum",
         ),
         CheckConstraint(

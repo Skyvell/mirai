@@ -18,7 +18,7 @@ class UploadStatus(StrEnum):
 class Sex(StrEnum):
     """Reference sex — the biological partition a lab stratifies its intervals by.
 
-    Distinct from gender identity; a null column value means "any sex".
+    Distinct from gender identity.
     """
 
     MALE = "male"
