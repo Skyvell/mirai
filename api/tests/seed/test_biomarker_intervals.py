@@ -7,15 +7,15 @@ from mirai_api.core.enums import Sex
 from mirai_api.seed.biomarker_intervals import (
     CURVES,
     INTERVALS,
+    Band,
     Curve,
-    Step,
     years,
 )
 from mirai_api.seed.biomarkers import BIOMARKERS
 
 
-def _curve(steps: list[Step]) -> Curve:
-    return Curve("glucose", Sex.MALE, "https://example.test", steps)
+def _curve(bands: list[Band]) -> Curve:
+    return Curve("glucose", Sex.MALE, "https://example.test", bands)
 
 
 def test_seed_has_one_curve_per_stratum() -> None:
@@ -47,9 +47,9 @@ def test_build_rows_tiles_ages_without_gaps() -> None:
 
 
 @pytest.mark.parametrize(
-    ("steps", "message"),
+    ("bands", "message"),
     [
-        ([], "no steps"),
+        ([], "no bands"),
         ([(-1, "4.0", "6.0")], "starts below 0"),
         ([(0, "4.0", "6.0"), (years(50), "4.0", "6.0"), (years(18), "4.0", "6.0")], "increase"),
         ([(0, "4.0", "6.0"), (0, "4.0", "6.0")], "increase"),
@@ -57,6 +57,6 @@ def test_build_rows_tiles_ages_without_gaps() -> None:
         ([(0, "6.0", "4.0")], "low above high"),
     ],
 )
-def test_curve_rejects_malformed_steps(steps: list[Step], message: str) -> None:
+def test_curve_rejects_malformed_bands(bands: list[Band], message: str) -> None:
     with pytest.raises(ValueError, match=message):
-        _curve(steps)
+        _curve(bands)
