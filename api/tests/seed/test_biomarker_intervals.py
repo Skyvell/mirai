@@ -7,22 +7,15 @@ from mirai_api.core.enums import Sex
 from mirai_api.seed.biomarker_intervals import (
     CURVES,
     INTERVALS,
-    Band,
     Curve,
-    expand_curve,
-    validate_curve,
+    Step,
     years,
 )
 from mirai_api.seed.biomarkers import BIOMARKERS
 
 
-def _curve(bands: list[Band]) -> Curve:
-    return Curve("glucose", Sex.MALE, "https://example.test", bands)
-
-
-@pytest.mark.parametrize("curve", CURVES, ids=lambda curve: f"{curve.slug}-{curve.sex}")
-def test_seed_curve_is_valid(curve: Curve) -> None:
-    validate_curve(curve)
+def _curve(steps: list[Step]) -> Curve:
+    return Curve("glucose", Sex.MALE, "https://example.test", steps)
 
 
 def test_seed_has_one_curve_per_stratum() -> None:
@@ -40,10 +33,10 @@ def test_seed_rows_name_sex_and_start_age() -> None:
     assert all(row["age_min_days"] is not None for row in INTERVALS)
 
 
-def test_expand_curve_tiles_ages_without_gaps() -> None:
-    rows = expand_curve(
-        _curve([(0, "4.0", "6.0"), (years(18), "4.2", None), (years(50), None, "6.5")])
-    )
+def test_build_rows_tiles_ages_without_gaps() -> None:
+    rows = _curve(
+        [(0, "4.0", "6.0"), (years(18), "4.2", None), (years(50), None, "6.5")]
+    ).build_rows()
 
     assert [(row["age_min_days"], row["age_max_days"]) for row in rows] == [
         (0, years(18)),
@@ -54,9 +47,9 @@ def test_expand_curve_tiles_ages_without_gaps() -> None:
 
 
 @pytest.mark.parametrize(
-    ("bands", "message"),
+    ("steps", "message"),
     [
-        ([], "no bands"),
+        ([], "no steps"),
         ([(-1, "4.0", "6.0")], "starts below 0"),
         ([(0, "4.0", "6.0"), (years(50), "4.0", "6.0"), (years(18), "4.0", "6.0")], "increase"),
         ([(0, "4.0", "6.0"), (0, "4.0", "6.0")], "increase"),
@@ -64,6 +57,6 @@ def test_expand_curve_tiles_ages_without_gaps() -> None:
         ([(0, "6.0", "4.0")], "low above high"),
     ],
 )
-def test_validate_curve_rejects_malformed_bands(bands: list[Band], message: str) -> None:
+def test_curve_rejects_malformed_steps(steps: list[Step], message: str) -> None:
     with pytest.raises(ValueError, match=message):
-        validate_curve(_curve(bands))
+        _curve(steps)
