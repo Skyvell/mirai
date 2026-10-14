@@ -1,9 +1,9 @@
 """Seed data for `biomarker_intervals`, imported by the 0001 migration.
 
 Each ``Curve`` is the age-dependent interval for one (biomarker, sex): a step
-function of ``(from_age_days, low, high)`` steps, sorted by age. A step covers
-the half-open age range ``[from_age_days, next from_age_days)``; the last step is
-open-ended. Ages below the first step have no interval. ``low`` and ``high`` are
+function of ``(from_age_days, low, high)`` bands, sorted by age. A band covers
+the half-open age range ``[from_age_days, next from_age_days)``; the last band is
+open-ended. Ages below the first band have no interval. ``low`` and ``high`` are
 inclusive; either may be ``None`` for a one-sided interval.
 
 Values are Karolinska Universitetslaboratoriet referensintervall in the
@@ -51,7 +51,7 @@ FERRITIN_URL = "https://www.karolinska.se/KUL/Alla-anvisningar/Anvisning/9074"
 CREATININE_URL = "https://www.karolinska.se/KUL/Alla-anvisningar/Anvisning/9168"
 
 
-type Step = tuple[int, str | None, str | None]
+type Band = tuple[int, str | None, str | None]
 
 
 def parse_bound(value: str | None) -> Decimal | None:
@@ -63,31 +63,31 @@ class Curve:
     slug: str
     sex: Sex
     source_url: str
-    steps: list[Step]
+    bands: list[Band]
     type: IntervalType = IntervalType.REFERENCE
 
     def __post_init__(self) -> None:
-        self.validate_steps()
+        self.validate_bands()
 
-    def validate_steps(self) -> None:
+    def validate_bands(self) -> None:
         label = f"{self.slug} ({self.sex})"
-        starts = [start for start, _, _ in self.steps]
+        starts = [start for start, _, _ in self.bands]
 
         if not starts:
-            raise ValueError(f"{label}: no steps")
+            raise ValueError(f"{label}: no bands")
         if starts[0] < 0:
-            raise ValueError(f"{label}: first step starts below 0")
+            raise ValueError(f"{label}: first band starts below 0")
         if any(left >= right for left, right in pairwise(starts)):
-            raise ValueError(f"{label}: step starts must strictly increase")
+            raise ValueError(f"{label}: band starts must strictly increase")
 
-        for start, low, high in self.steps:
+        for start, low, high in self.bands:
             if low is None and high is None:
-                raise ValueError(f"{label}: step at {start} has no bound")
+                raise ValueError(f"{label}: band at {start} has no bound")
             if low is not None and high is not None and Decimal(low) > Decimal(high):
-                raise ValueError(f"{label}: step at {start} has low above high")
+                raise ValueError(f"{label}: band at {start} has low above high")
 
     def build_rows(self) -> list[dict]:
-        ends = [start for start, _, _ in self.steps[1:]] + [None]
+        ends = [start for start, _, _ in self.bands[1:]] + [None]
         return [
             {
                 "slug": self.slug,
@@ -100,7 +100,7 @@ class Curve:
                 "source": SOURCE,
                 "source_url": self.source_url,
             }
-            for (start, low, high), end in zip(self.steps, ends, strict=True)
+            for (start, low, high), end in zip(self.bands, ends, strict=True)
         ]
 
 
