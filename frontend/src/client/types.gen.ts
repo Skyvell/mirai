@@ -438,10 +438,6 @@ export type MeUpdate = {
 
 /**
  * Sex
- *
- * Reference sex — the biological partition a lab stratifies its intervals by.
- *
- * Distinct from gender identity.
  */
 export type Sex = 'male' | 'female';
 
