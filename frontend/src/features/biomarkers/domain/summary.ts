@@ -1,6 +1,7 @@
 import type { BiomarkerIntervals } from './intervals'
 
 export type BiomarkerSummary = {
+  slug: string
   name: string
   value: number
   unit: string

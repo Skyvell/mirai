@@ -1,71 +1,23 @@
-import { useMemo } from 'react'
 import { getRouteApi } from '@tanstack/react-router'
-import { parse } from 'date-fns'
 import { SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state'
 import { Page } from '@/components/page'
-import type { BiomarkerSummary } from '../domain/summary'
+import { QueryPane } from '@/components/query-pane'
+import { useBiomarkerSummaries } from '../api/summaries'
 import { BiomarkerRowList } from '../components/row-list'
 import { BiomarkerTileGrid } from '../components/tile-grid'
 import { BiomarkerToolbar } from '../components/toolbar'
-import { matchesBiomarkerName, matchesBiomarkerStatus } from '../domain/filters'
-import { computeBiomarkerStatus, type BiomarkerStatus } from '../domain/status'
+import { selectVisibleBiomarkerSummaries } from '../domain/filters'
+import type { BiomarkerStatus } from '../domain/status'
 import { useBiomarkerViewMode } from '../hooks/use-view-mode'
 
 const route = getRouteApi('/_authenticated/biomarkers/')
-
-// Placeholder data until the biomarker series query replaces it, read off
-// docs/biomaker_page/card_designs/l.png.
-const FIXTURES: BiomarkerSummary[] = [
-  {
-    name: 'HDL Cholesterol',
-    value: 1.6,
-    unit: 'mmol/L',
-    intervals: {
-      reference: { low: 1.0, high: 2.2 },
-      optimal: { low: 1.3, high: 2.0 },
-    },
-    previousValue: 1.63,
-    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
-  },
-  {
-    name: 'Triglycerides',
-    value: 1.2,
-    unit: 'mmol/L',
-    intervals: {
-      reference: { low: 0.5, high: 1.7 },
-      optimal: { low: 0.5, high: 1.1 },
-    },
-    previousValue: 1.2,
-    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
-  },
-  {
-    name: 'LDL Cholesterol',
-    value: 3.4,
-    unit: 'mmol/L',
-    intervals: {
-      reference: { low: 1.8, high: 3.0 },
-      optimal: { low: 1.8, high: 2.6 },
-    },
-    previousValue: 3.12,
-    measuredAt: parse('2026-08-17', 'yyyy-MM-dd', new Date()),
-  },
-]
 
 export function BiomarkersPage() {
   const { query, status: statusFilter } = route.useSearch()
   const navigate = route.useNavigate()
   const { viewMode, selectViewMode } = useBiomarkerViewMode()
-
-  const summaries = useMemo(
-    () =>
-      FIXTURES.filter(
-        (summary) =>
-          matchesBiomarkerName(summary.name, query) &&
-          matchesBiomarkerStatus(computeBiomarkerStatus(summary), statusFilter)
-      ).sort((a, b) => a.name.localeCompare(b.name)),
-    [query, statusFilter]
-  )
+  const summaries = useBiomarkerSummaries()
 
   const updateSearchQuery = (value: string) =>
     navigate({ search: (prev) => ({ ...prev, query: value || undefined }), replace: true })
@@ -86,17 +38,27 @@ export function BiomarkersPage() {
         viewMode={viewMode}
         onViewModeChange={selectViewMode}
       />
-      {summaries.length === 0 ? (
-        <EmptyState
-          icon={<SearchX />}
-          title="No markers match"
-          description="Adjust your search or status filter."
-        />
-      ) : viewMode === 'tile' ? (
-        <BiomarkerTileGrid summaries={summaries} />
-      ) : (
-        <BiomarkerRowList summaries={summaries} />
-      )}
+      <QueryPane query={summaries}>
+        {(data) => {
+          const visible = selectVisibleBiomarkerSummaries(data, { query, status: statusFilter })
+
+          if (visible.length === 0) {
+            return (
+              <EmptyState
+                icon={<SearchX />}
+                title="No markers match"
+                description="Adjust your search or status filter."
+              />
+            )
+          }
+
+          return viewMode === 'tile' ? (
+            <BiomarkerTileGrid summaries={visible} />
+          ) : (
+            <BiomarkerRowList summaries={visible} />
+          )
+        }}
+      </QueryPane>
     </Page>
   )
 }

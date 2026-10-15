@@ -9,7 +9,7 @@ export function BiomarkerTileGrid({ summaries }: BiomarkerTileGridProps) {
   return (
     <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
       {summaries.map((summary) => (
-        <BiomarkerTile key={summary.name} {...summary} />
+        <BiomarkerTile key={summary.slug} {...summary} />
       ))}
     </div>
   )

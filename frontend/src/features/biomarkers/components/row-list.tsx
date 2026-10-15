@@ -9,7 +9,7 @@ export function BiomarkerRowList({ summaries }: BiomarkerRowListProps) {
   return (
     <div className="flex flex-col gap-3">
       {summaries.map((summary) => (
-        <BiomarkerRow key={summary.name} {...summary} />
+        <BiomarkerRow key={summary.slug} {...summary} />
       ))}
     </div>
   )
