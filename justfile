@@ -38,3 +38,10 @@ tofu-apply env *args: (tofu-init env)
 # Destroy resources for the given environment.
 tofu-destroy env: (tofu-init env)
     tofu -chdir=infra/opentofu/environments/{{env}} destroy
+
+
+## -----Docs-----
+
+# Generate er-diagram for postgres backend.
+generate-er-diagram:
+    d2 docs/architecture/data_models/er_diagram.d2 docs/architecture/data_models/er_diagram.svg
