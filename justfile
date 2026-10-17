@@ -44,4 +44,8 @@ tofu-destroy env: (tofu-init env)
 
 # Render the ER diagram from its D2 source.
 generate-er-diagram:
-    d2 docs/database/er_diagram/er_diagram.d2 docs/database/er_diagram/er_diagram.svg
+    d2 --elk-algorithm=stress --elk-nodeNodeBetweenLayers=110 --elk-edgeNodeBetweenLayers=60 docs/database/er_diagram/er_diagram.d2 docs/database/er_diagram/er_diagram.svg
+
+# Live-preview the ER diagram in the browser while editing its D2 source.
+watch-er-diagram:
+    d2 --watch --elk-algorithm=stress --elk-nodeNodeBetweenLayers=110 --elk-edgeNodeBetweenLayers=60 docs/database/er_diagram/er_diagram.d2 docs/database/er_diagram/er_diagram.svg

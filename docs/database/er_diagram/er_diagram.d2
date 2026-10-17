@@ -6,19 +6,19 @@ vars: {
     theme-overrides: {
       B4: "#d9e0de"
       N1: "#557770"
-      N2: "#6b7f7b"
+      N2: "#566a65"
       N7: "#ffffff"
       B1: "#0f9488"
       B2: "#1c2b29"
       AA2: "#0f9488"
     }
     dark-theme-overrides: {
-      B4: "#111413"
-      N1: "#16302b"
-      N2: "#9aa8a4"
-      N7: "#2c3431"
+      B4: "#1b1c1f"
+      N1: "#1f4d44"
+      N2: "#b3c2be"
+      N7: "#3a4945"
       B1: "#4fb3a3"
-      B2: "#e6ecea"
+      B2: "#eef3f1"
       AA2: "#6fcab9"
     }
   }
@@ -44,9 +44,12 @@ classes: {
   }
 }
 
-schema: "" {
+schema: Mirai data model {
   style: {
     stroke-width: 0
+    font-size: 40
+    font-color: "#557770"
+    bold: true
   }
 
   users: {
@@ -129,11 +132,11 @@ schema: "" {
     updated_at: timestamptz
   }
 
-  lab_uploads <-> users: {class: fk}
-  biomarker_measurements <-> users: {class: fk}
-  biomarker_intervals <-> biomarker_catalogue: {class: fk}
-  lab_results <-> biomarker_catalogue: {class: [fk; optional]}
-  biomarker_measurements <-> biomarker_catalogue: {class: fk}
-  lab_results <-> lab_uploads: {class: fk}
-  biomarker_measurements <-> lab_uploads: {class: [fk; optional]}
+  lab_uploads.user_id <-> users: {class: fk}
+  biomarker_measurements.user_id <-> users: {class: fk}
+  biomarker_intervals.biomarker_id <-> biomarker_catalogue: {class: fk}
+  lab_results.biomarker_id <-> biomarker_catalogue: {class: [fk; optional]}
+  biomarker_measurements.biomarker_id <-> biomarker_catalogue: {class: fk}
+  lab_results.lab_upload_id <-> lab_uploads: {class: fk}
+  biomarker_measurements.lab_upload_id <-> lab_uploads: {class: [fk; optional]}
 }
