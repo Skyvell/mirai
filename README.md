@@ -64,5 +64,6 @@ uv run alembic revision --autogenerate -m "describe the change"
 The ER diagram (`docs/database/er_diagram/er_diagram.d2`) is maintained by hand; update it in the same change as any model change, then re-render the SVG. Requires [D2](https://d2lang.com) (`brew install d2`).
 
 ```bash
-just generate-er-diagram
+just generate-er-diagram   # render the SVG
+just watch-er-diagram      # live preview in the browser while editing
 ```
