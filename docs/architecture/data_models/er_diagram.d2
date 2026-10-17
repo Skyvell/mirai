@@ -1,0 +1,165 @@
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 0
+    dark-theme-id: 200
+    pad: 48
+    theme-overrides: {
+      N1: "#334155"
+      N2: "#64748b"
+      N7: "#ffffff"
+      B1: "#6366f1"
+      B2: "#1e293b"
+      AA2: "#6366f1"
+    }
+    dark-theme-overrides: {
+      N1: "#334155"
+      N2: "#94a3b8"
+      N7: "#0b1120"
+      B1: "#818cf8"
+      B2: "#e2e8f0"
+      AA2: "#a5b4fc"
+    }
+  }
+}
+
+direction: down
+
+vars: {
+  d2-legend: {
+    canonical: Canonical data model {
+      shape: rectangle
+      style: {
+        fill: "#0f766e"
+        font-color: "#ffffff"
+        border-radius: 6
+      }
+    }
+    ingestion: Ingestion {
+      shape: rectangle
+      style: {
+        fill: "#334155"
+        font-color: "#ffffff"
+        border-radius: 6
+      }
+    }
+  }
+}
+
+classes: {
+  ingestion: {
+    shape: sql_table
+    style: {
+      border-radius: 10
+      shadow: true
+      font-color: "#ffffff"
+    }
+  }
+  canonical: {
+    shape: sql_table
+    style: {
+      border-radius: 10
+      shadow: true
+      font-color: "#ffffff"
+      fill: "#0f766e"
+    }
+  }
+  fk: {
+    source-arrowhead: N {shape: cf-many; style.font-color: "#6366f1"}
+    target-arrowhead: 1 {shape: cf-one-required; style.font-color: "#6366f1"}
+    style.stroke-width: 3
+  }
+  fk-optional: {
+    source-arrowhead: N {shape: cf-many; style.font-color: "#6366f1"}
+    target-arrowhead: 0..1 {shape: cf-one; style.font-color: "#6366f1"}
+    style.stroke-width: 3
+  }
+}
+
+users: {
+  class: canonical
+  id: uuid {constraint: primary_key}
+  clerk_user_id: text {constraint: unique}
+  sex: enum(sex)?
+  date_of_birth: date?
+  created_at: timestamptz
+}
+
+biomarker_catalogue: {
+  class: canonical
+  id: uuid {constraint: primary_key}
+  slug: text {constraint: unique}
+  display_name: text
+  loinc_code: text?
+  canonical_unit: text
+  category: text
+}
+
+lab_uploads: {
+  class: ingestion
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  filename: text
+  content_sha256: text?
+  status: enum(lab_upload_status)
+  measured_at: date?
+  error_message: text?
+  parsed_at: timestamptz?
+  confirmed_at: timestamptz?
+  created_at: timestamptz
+}
+
+lab_results: {
+  class: ingestion
+  id: uuid {constraint: primary_key}
+  lab_upload_id: uuid {constraint: foreign_key}
+  biomarker_id: uuid? {constraint: foreign_key}
+  value: numeric(12,4)?
+  raw_value: text?
+  unit: text?
+  reference_low: numeric(12,4)?
+  reference_high: numeric(12,4)?
+  source_name: text?
+  included: boolean
+  created_at: timestamptz
+  updated_at: timestamptz
+}
+
+biomarker_measurements: {
+  class: canonical
+  id: uuid {constraint: primary_key}
+  user_id: uuid {constraint: foreign_key}
+  biomarker_id: uuid {constraint: foreign_key}
+  lab_upload_id: uuid? {constraint: foreign_key}
+  value: numeric(12,4)
+  unit: text
+  reference_low: numeric(12,4)?
+  reference_high: numeric(12,4)?
+  measured_at: date
+  created_at: timestamptz
+  updated_at: timestamptz
+}
+
+biomarker_intervals: {
+  class: canonical
+  id: uuid {constraint: primary_key}
+  biomarker_id: uuid {constraint: foreign_key}
+  type: enum(interval_type)
+  sex: enum(sex)
+  age_min_days: integer
+  age_max_days: integer?
+  interval_low: numeric(12,4)?
+  interval_high: numeric(12,4)?
+  source: text
+  source_url: text?
+  created_at: timestamptz
+  updated_at: timestamptz
+}
+
+lab_uploads <-> users: {class: fk}
+biomarker_measurements <-> users: {class: fk}
+biomarker_intervals <-> biomarker_catalogue: {class: fk}
+lab_results <-> biomarker_catalogue: {class: fk-optional}
+biomarker_measurements <-> biomarker_catalogue: {class: fk}
+lab_results <-> lab_uploads: {class: fk}
+biomarker_measurements <-> lab_uploads: {class: fk-optional}
