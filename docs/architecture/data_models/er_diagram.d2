@@ -1,7 +1,6 @@
 vars: {
   d2-config: {
     layout-engine: elk
-    theme-id: 0
     dark-theme-id: 200
     pad: 0
     theme-overrides: {
@@ -25,8 +24,6 @@ vars: {
   }
 }
 
-direction: down
-
 classes: {
   table: {
     shape: sql_table
@@ -42,10 +39,8 @@ classes: {
     target-arrowhead: 1 {shape: cf-one-required; style.font-color: "#0b7f75"}
     style.stroke-width: 2
   }
-  fk-optional: {
-    source-arrowhead: N {shape: cf-many; style.font-color: "#0b7f75"}
+  optional: {
     target-arrowhead: 0..1 {shape: cf-one; style.font-color: "#0b7f75"}
-    style.stroke-width: 2
   }
 }
 
@@ -137,8 +132,8 @@ schema: "" {
   lab_uploads <-> users: {class: fk}
   biomarker_measurements <-> users: {class: fk}
   biomarker_intervals <-> biomarker_catalogue: {class: fk}
-  lab_results <-> biomarker_catalogue: {class: fk-optional}
+  lab_results <-> biomarker_catalogue: {class: [fk; optional]}
   biomarker_measurements <-> biomarker_catalogue: {class: fk}
   lab_results <-> lab_uploads: {class: fk}
-  biomarker_measurements <-> lab_uploads: {class: fk-optional}
+  biomarker_measurements <-> lab_uploads: {class: [fk; optional]}
 }

@@ -42,6 +42,6 @@ tofu-destroy env: (tofu-init env)
 
 ## -----Docs-----
 
-# Generate er-diagram for postgres backend.
+# Render the ER diagram from its D2 source.
 generate-er-diagram:
     d2 docs/architecture/data_models/er_diagram.d2 docs/architecture/data_models/er_diagram.svg
