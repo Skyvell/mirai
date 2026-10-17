@@ -61,7 +61,7 @@ schema: Mirai data model {
     created_at: timestamptz
   }
 
-  biomarker_catalogue: {
+  biomarkers: {
     class: table
     id: uuid {constraint: primary_key}
     slug: text {constraint: unique}
@@ -134,9 +134,9 @@ schema: Mirai data model {
 
   lab_uploads.user_id <-> users: {class: fk}
   biomarker_measurements.user_id <-> users: {class: fk}
-  biomarker_intervals.biomarker_id <-> biomarker_catalogue: {class: fk}
-  lab_results.biomarker_id <-> biomarker_catalogue: {class: [fk; optional]}
-  biomarker_measurements.biomarker_id <-> biomarker_catalogue: {class: fk}
+  biomarker_intervals.biomarker_id <-> biomarkers: {class: fk}
+  lab_results.biomarker_id <-> biomarkers: {class: [fk; optional]}
+  biomarker_measurements.biomarker_id <-> biomarkers: {class: fk}
   lab_results.lab_upload_id <-> lab_uploads: {class: fk}
   biomarker_measurements.lab_upload_id <-> lab_uploads: {class: [fk; optional]}
 }
