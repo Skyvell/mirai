@@ -44,4 +44,4 @@ tofu-destroy env: (tofu-init env)
 
 # Render the ER diagram from its D2 source.
 generate-er-diagram:
-    d2 docs/architecture/data_models/er_diagram.d2 docs/architecture/data_models/er_diagram.svg
+    d2 docs/database/er_diagram.d2 docs/database/er_diagram.svg

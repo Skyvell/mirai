@@ -67,7 +67,7 @@ No `types/` folder: API types are generated, domain types live with their logic 
 
 - Files are kebab-case and named for what they are **within their folder**: `components/tile.tsx`, `domain/status.ts`, `pages/biomarkers.tsx`.
 - Exports carry the feature noun, whatever their kind: `BiomarkerTile`, `BiomarkerStatus`, `BiomarkersPage`, `biomarkerSearchSchema`, `useBiomarkerViewMode`, `LAB_UPLOAD_POLL_MS`.
-- Vocabulary comes from the design docs: `docs/biomaker_page/biomarker_page.md` names the tile, the row, the bullet graph and the change, so the code does too.
+- Vocabulary comes from the design docs: `docs/design/biomarker_page/biomarker_page.md` names the tile, the row, the bullet graph and the change, so the code does too.
 - Named exports only.
 
 ### Imports
