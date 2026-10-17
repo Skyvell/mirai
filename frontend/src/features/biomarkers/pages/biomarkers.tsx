@@ -15,7 +15,7 @@ import { useBiomarkerViewMode } from '../hooks/use-view-mode'
 const route = getRouteApi('/_authenticated/biomarkers/')
 
 // Placeholder data until the biomarker series query replaces it, read off
-// docs/biomaker_page/card_designs/l.png.
+// docs/design/biomarker_page/card_designs/l.png.
 const FIXTURES: BiomarkerSummary[] = [
   {
     name: 'HDL Cholesterol',
