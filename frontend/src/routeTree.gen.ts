@@ -16,6 +16,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedOmicsRouteImport } from './routes/_authenticated/omics'
 import { Route as AuthenticatedInterventionsRouteImport } from './routes/_authenticated/interventions'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated/insights'
+import { Route as AuthenticatedDetailsRouteImport } from './routes/_authenticated/details'
 import { Route as AuthenticatedSourcesIndexRouteImport } from './routes/_authenticated/sources/index'
 import { Route as AuthenticatedBiomarkersIndexRouteImport } from './routes/_authenticated/biomarkers/index'
 import { Route as AuthenticatedSourcesUploadIdReviewRouteImport } from './routes/_authenticated/sources/$uploadId.review'
@@ -55,6 +56,11 @@ const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedDetailsRoute = AuthenticatedDetailsRouteImport.update({
+  id: '/details',
+  path: '/details',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSourcesIndexRoute =
   AuthenticatedSourcesIndexRouteImport.update({
     id: '/sources/',
@@ -76,6 +82,7 @@ const AuthenticatedSourcesUploadIdReviewRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/details': typeof AuthenticatedDetailsRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/interventions': typeof AuthenticatedInterventionsRoute
   '/omics': typeof AuthenticatedOmicsRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/sources/$uploadId/review': typeof AuthenticatedSourcesUploadIdReviewRoute
 }
 export interface FileRoutesByTo {
+  '/details': typeof AuthenticatedDetailsRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/interventions': typeof AuthenticatedInterventionsRoute
   '/omics': typeof AuthenticatedOmicsRoute
@@ -99,6 +107,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/details': typeof AuthenticatedDetailsRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/interventions': typeof AuthenticatedInterventionsRoute
   '/_authenticated/omics': typeof AuthenticatedOmicsRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/details'
     | '/insights'
     | '/interventions'
     | '/omics'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
     | '/sources/$uploadId/review'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/details'
     | '/insights'
     | '/interventions'
     | '/omics'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/_authenticated/details'
     | '/_authenticated/insights'
     | '/_authenticated/interventions'
     | '/_authenticated/omics'
@@ -201,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInsightsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/details': {
+      id: '/_authenticated/details'
+      path: '/details'
+      fullPath: '/details'
+      preLoaderRoute: typeof AuthenticatedDetailsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/sources/': {
       id: '/_authenticated/sources/'
       path: '/sources'
@@ -226,6 +245,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedDetailsRoute: typeof AuthenticatedDetailsRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedInterventionsRoute: typeof AuthenticatedInterventionsRoute
   AuthenticatedOmicsRoute: typeof AuthenticatedOmicsRoute
@@ -238,6 +258,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedDetailsRoute: AuthenticatedDetailsRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedInterventionsRoute: AuthenticatedInterventionsRoute,
   AuthenticatedOmicsRoute: AuthenticatedOmicsRoute,
