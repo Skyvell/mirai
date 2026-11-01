@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ClerkProvider, useAuth } from '@clerk/react'
 import { Toaster } from '@/components/ui/sonner'
 import { setApiTokenGetter } from '@/lib/api'
+import { restoreTheme } from '@/lib/theme'
 import { routeTree } from '@/routeTree.gen'
 import '@/index.css'
 
@@ -50,6 +51,8 @@ function ApiProvider({ children }: { children: ReactNode }) {
   setApiTokenGetter(getToken)
   return children
 }
+
+restoreTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
