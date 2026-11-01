@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Settings } from 'lucide-react'
 import { currentUserOptions } from '@/client/@tanstack/react-query.gen'
 import { ApiErrorAlert } from '@/components/api-error-alert'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { SourcesAddDataDialog } from '@/features/sources'
 import { biomarkersOptions } from '@/features/biomarkers'
 import { isProfileComplete } from '@/features/profile'
@@ -89,6 +90,7 @@ function AppShell() {
         </Link>
         <div className="ml-auto flex items-center gap-3">
           <SourcesAddDataDialog />
+          <ThemeToggle />
           <UserButton>
             <UserButton.MenuItems>
               <UserButton.Action
